@@ -1,0 +1,677 @@
+당신은 첨단산업 인재양성 부트캠프(AI) 사업단 홈페이지 및 통합관리 포털의 프로토타입을 구현하는 시니어 풀스택 개발자입니다.
+
+대상 GitHub Repository:
+- Nawii06/bootcampAI_page
+
+현재 repo는 홈페이지 소스 저장소가 아니라, 국립한국교통대학교 첨단산업 인재양성 부트캠프(AI) 사업의 운영관리 자료 저장소입니다.
+README와 각 폴더의 Markdown/CSV/JSON 자료를 검토하여, 현행 구조를 홈페이지와 내부관리시스템의 정보구조로 전환하는 Replit 실행형 웹 프로토타입을 작성하세요.
+
+중요:
+- 실제 개인정보, 학생 연락처, 기업 담당자 연락처, 계좌번호, 이메일, 학번, 주민등록번호, SSO 토큰, API 키, 라이선스 키를 절대 생성·저장·노출하지 마세요.
+- 모든 학생·기업·예산·성과 데이터는 가상 샘플 데이터로만 구성하세요.
+- 실제 학교 정보시스템 SSO는 구현하지 말고, Mock SSO Adapter와 인터페이스만 구현하세요.
+- RCMS, K-PASS, 학사정보시스템, 그룹웨어, 전자결재 시스템과 실제 연동하지 마세요. 연동 예정 구조와 mock connector만 작성하세요.
+- Replit에서 즉시 실행 가능한 형태로 구성하세요.
+
+────────────────────────
+1. 구현 목표
+────────────────────────
+
+다음 요구사항을 반영한 “부트캠프 통합 홈페이지·포털 프로토타입”을 구현하세요.
+
+핵심 목적:
+1) 홈페이지를 통한 사업 자체 홍보
+2) 홈페이지를 활용한 학생 프로그램 신청
+3) 홈페이지를 통한 유관기관 정보 확인 및 연계
+4) 기존 학교 정보시스템과의 SSO 토큰 연결을 위한 구조 설계
+5) 사업 성과관리시스템 구성
+6) 사업 예산 집행현황 입력 시스템 및 예산 변경내역 관리
+7) 학생 신청, 교육과정 운영, 참여기업, 예산, 증빙, 성과지표가 연결되는 성과관리 구조 구현
+
+프로토타입은 “공개 홈페이지 + 학생 포털 + 기업/유관기관 포털 + 관리자 시스템”의 4개 영역으로 구성하세요.
+
+────────────────────────
+2. 기술 스택
+────────────────────────
+
+Replit에서 안정적으로 실행될 수 있도록 다음 방식으로 구현하세요.
+
+- Frontend: React + TypeScript + Vite
+- Styling: CSS Modules 또는 일반 CSS. Tailwind는 사용하지 않아도 됩니다.
+- Routing: react-router-dom 사용 가능
+- State: React useState/useContext 중심
+- Storage: localStorage 기반 mock persistence
+- Backend: 이번 프로토타입에서는 별도 서버 없이 frontend-only로 구현
+- 데이터: src/data/*.ts 또는 src/data/*.json에 mock data 구성
+- Export: CSV 다운로드 기능은 frontend에서 구현
+- Chart: 외부 차트 라이브러리 사용은 최소화하고, CSS 기반 bar/progress UI로 구현
+
+필수 생성 파일:
+- package.json
+- index.html
+- .replit
+- replit.nix
+- src/main.tsx
+- src/App.tsx
+- src/types.ts
+- src/data/mockData.ts
+- src/services/authService.ts
+- src/services/storageService.ts
+- src/services/exportService.ts
+- src/components/*
+- src/pages/*
+- src/styles/global.css
+- README_REPLIT_PROTOTYPE.md
+
+가능하면 다음 폴더 구조를 사용하세요.
+
+src/
+├─ components/
+│  ├─ Layout.tsx
+│  ├─ Header.tsx
+│  ├─ Sidebar.tsx
+│  ├─ StatCard.tsx
+│  ├─ DataTable.tsx
+│  ├─ ProgressBar.tsx
+│  ├─ RoleBadge.tsx
+│  └─ FormField.tsx
+├─ pages/
+│  ├─ public/
+│  │  ├─ HomePage.tsx
+│  │  ├─ BusinessIntroPage.tsx
+│  │  ├─ CurriculumPage.tsx
+│  │  ├─ StudentRecruitmentPage.tsx
+│  │  ├─ PartnerInfoPage.tsx
+│  │  ├─ PublicPerformancePage.tsx
+│  │  └─ NoticePage.tsx
+│  ├─ student/
+│  │  ├─ StudentDashboard.tsx
+│  │  ├─ ProgramApplicationPage.tsx
+│  │  ├─ ApplicationStatusPage.tsx
+│  │  ├─ CompletionStatusPage.tsx
+│  │  └─ PortfolioPage.tsx
+│  ├─ partner/
+│  │  ├─ PartnerDashboard.tsx
+│  │  ├─ DemandSurveyPage.tsx
+│  │  ├─ ProjectProposalPage.tsx
+│  │  └─ PartnerEvaluationPage.tsx
+│  └─ admin/
+│     ├─ AdminDashboard.tsx
+│     ├─ ProgramManagementPage.tsx
+│     ├─ ApplicationReviewPage.tsx
+│     ├─ CompletionManagementPage.tsx
+│     ├─ PartnerManagementPage.tsx
+│     ├─ KpiManagementPage.tsx
+│     ├─ BudgetExecutionPage.tsx
+│     ├─ BudgetChangeLogPage.tsx
+│     ├─ EvidenceManagementPage.tsx
+│     ├─ EvaluationResponsePage.tsx
+│     └─ SystemSettingsPage.tsx
+├─ data/
+│  └─ mockData.ts
+├─ services/
+│  ├─ authService.ts
+│  ├─ storageService.ts
+│  └─ exportService.ts
+├─ styles/
+│  └─ global.css
+├─ App.tsx
+├─ main.tsx
+└─ types.ts
+
+────────────────────────
+3. 정보구조 및 메뉴
+────────────────────────
+
+A. 공개 홈페이지
+
+상단 메뉴:
+- 사업소개
+- 교육과정
+- 학생모집
+- 참여기업·기관
+- 성과·소식
+- 자료실
+- 로그인
+
+사업소개 페이지:
+- 사업명: 첨단산업 인재양성 부트캠프 사업
+- 분야: AI
+- 운영기관: 국립한국교통대학교
+- 사업기간: 2026.03.01. ~ 2031.02.28.
+- 총괄 목표: 5년간 780명 양성
+- 추진방향: 모빌리티 AI 기반 초·중·고급 인재양성
+- 공개 가능한 조직도 카드 UI
+
+교육과정 페이지:
+- 기초공통 → 초급 → 중급 → 고급 → 현장검증 → 취업연계 구조
+- 4대 트랙:
+  1. 자율주행 모빌리티 AI
+  2. 항공 모빌리티 AI
+  3. 철도 모빌리티 AI
+  4. 모빌리티 인프라 AI
+- 각 트랙별 설명, 대표 교과목, PBL 예시, 필요 인프라 표시
+
+학생모집 페이지:
+- 모집공고 카드
+- 프로그램별 신청 가능 상태
+- 신청자격, 이수기준, 개인정보 동의 안내
+- “신청하기” 버튼은 로그인 또는 mock student role로 연결
+
+참여기업·기관 페이지:
+- 참여기업/유관기관 공개 목록
+- 협력유형:
+  - 교과목 공동개발
+  - 공동운영
+  - PBL·캡스톤
+  - 현장실습
+  - 인턴십
+  - 채용연계
+- 기업 참여 안내 CTA
+
+성과·소식 페이지:
+- 공개 가능한 성과 요약만 표시
+- 양성목표, 프로그램 운영 수, 참여기업 수, 만족도 등 mock summary
+- 내부 예산 상세내역은 공개하지 않음
+
+자료실:
+- 신청 안내
+- 개인정보 수집·이용 동의서 예시
+- FAQ
+- 운영 서식 예시
+
+B. 학생 포털
+
+학생 로그인 후 메뉴:
+- 내 대시보드
+- 프로그램 신청
+- 신청현황
+- 이수현황
+- 포트폴리오
+- 만족도 조사
+
+학생 대시보드:
+- 신청 중 프로그램
+- 선발 상태
+- 이수 중 과정
+- 수료 가능 여부
+- 중급·고급 이수 여부
+- 포트폴리오 작성률
+
+프로그램 신청:
+- 프로그램 목록 필터:
+  - 연차
+  - 수준
+  - 트랙
+  - 교과/비교과/몰입형/PBL
+- 신청 폼:
+  - mock student id
+  - 소속학과
+  - 학년
+  - 희망 트랙
+  - 신청 사유
+  - 개인정보 수집·이용 동의 체크
+- 실제 학번, 전화번호, 이메일 입력 필드는 만들지 말고 mock ID만 사용
+
+신청현황:
+- 접수
+- 검토중
+- 보완요청
+- 선발
+- 미선발
+- 대기
+
+이수현황:
+- 교과 이수
+- 비교과 이수
+- PBL 참여
+- 현장실습·인턴십 참여
+- 최종 이수 여부
+- 성과 인정 여부
+
+포트폴리오:
+- 프로젝트 요약
+- 기술스택
+- 산출물 링크
+- 기업평가 요약
+- 공개동의 여부
+- 연락처 등 개인정보 입력 금지 안내
+
+C. 기업/유관기관 포털
+
+기업 role 로그인 후 메뉴:
+- 기관 대시보드
+- 수요조사 제출
+- 프로젝트 제안
+- 현장실습·인턴십 제안
+- 학생 산출물 평가
+- 채용연계 현황
+
+수요조사:
+- JD/JTA 기반 항목
+- 필요 기술
+- 필요 교과목
+- 프로젝트 주제
+- 현장실습 가능 여부
+- 인턴십 가능 여부
+- 채용연계 가능 여부
+- 필요 인원
+
+프로젝트 제안:
+- 과제명
+- 참여 트랙
+- 문제 정의
+- 제공 가능 데이터 유형
+- 기대 산출물
+- 기업 멘토 역할
+- 평가 기준
+
+D. 관리자 시스템
+
+관리자 role 로그인 후 메뉴:
+- 관리자 대시보드
+- 프로그램 관리
+- 신청·선발 관리
+- 이수·수료 관리
+- 참여기업 관리
+- 성과지표 관리
+- 예산 집행현황
+- 예산 변경이력
+- 증빙자료 관리
+- 평가대응
+- 시스템 설정
+
+관리자 대시보드:
+- 총 신청자 수
+- 선발자 수
+- 이수자 수
+- 중급·고급 이수자 비율
+- 참여기업 수
+- 프로그램 운영 수
+- 예산 집행률
+- 증빙자료 연결률
+- 리스크 알림
+
+프로그램 관리:
+- 프로그램 생성/수정 mock 기능
+- 필드:
+  - 프로그램명
+  - 연차
+  - 학기
+  - 수준
+  - 트랙
+  - 운영방식
+  - 모집정원
+  - 신청기간
+  - 이수기준
+  - 담당부서
+  - 연계 KPI
+
+신청·선발 관리:
+- 신청자 목록
+- 상태 변경
+- 선발/미선발/보완요청 처리
+- CSV 다운로드
+
+이수·수료 관리:
+- 학생별 이수 상태
+- 프로그램별 이수율
+- 중도탈락자
+- 성과 인정 여부
+- 수료증 발급 대상 mock 표시
+
+성과지표 관리:
+- KPI 목록
+- 목표값
+- 실적값
+- 달성률 자동계산
+- 담당부서
+- 증빙자료 연결
+- 미달 지표 리스크 표시
+- KPI CSV 다운로드
+
+관리할 KPI 예시:
+- 부트캠프사업단 전담 인력 수
+- 제도 개선 건수
+- 참여기업 수
+- 참여교원 수
+- 몰입형 교육프로그램 운영 건수
+- 교과형 교육프로그램 운영 건수
+- 교과목 개발 건수
+- 양성인원
+- 중·고급 이수자
+- 배출인원
+- 취·창업률
+- 연계취업률
+- 참여기업 취업자
+- 참여학생 만족도
+- 참여기업 만족도
+- 비교과 프로그램 운영
+- 현장실습 참여 학생 수
+- 인턴십 참여 학생 수
+- 기업수요 산학공동과제 수
+
+예산 집행현황:
+- 예산구분
+- 세부항목
+- 편성액
+- 집행액
+- 집행률
+- 잔액
+- 집행월
+- 연결 프로그램
+- 연결 KPI
+- 증빙자료
+- 검토상태
+- 공개 여부
+- CSV 다운로드
+
+예산 변경이력:
+- 변경일자
+- 변경 항목
+- 변경 전 금액
+- 변경 후 금액
+- 증감액
+- 변경 사유
+- 승인권자 mock
+- 관련 문서
+- 관련 KPI
+- 변경 후 집행률 영향
+
+증빙자료 관리:
+- 증빙ID
+- 연차
+- 영역
+- 지표명
+- 실적명
+- 파일명
+- 원본 보관 위치
+- 원본 여부
+- 개인정보 포함 여부
+- 마스킹 여부
+- 담당부서
+- 외부제출 여부
+- 연결 KPI
+- 연결 예산항목
+
+주의:
+- 파일 업로드는 실제 구현하지 말고 mock metadata 입력 방식으로 구현
+- 원본 파일은 “기관 승인 저장소”에 보관된다는 mock text만 표시
+
+평가대응:
+- 평가 질문
+- 답변 요지
+- 관련 KPI
+- 관련 실적
+- 관련 증빙
+- 한계 및 보완계획
+- 출력용 요약 카드
+
+시스템 설정:
+- 역할 관리 mock
+- SSO 연동 상태 mock
+- 외부시스템 연동 상태 mock
+- 데이터 백업 안내
+- 개인정보 업로드 금지 정책
+
+────────────────────────
+4. Mock SSO 구조
+────────────────────────
+
+실제 SSO를 구현하지 말고, 다음 구조만 작성하세요.
+
+authService.ts:
+- loginAs(role)
+- logout()
+- getCurrentUser()
+- handleMockSsoCallback(token)
+- mapSsoTokenToUser(token)
+- hasPermission(user, permission)
+
+Mock role:
+- public
+- student
+- partner
+- admin
+- superAdmin
+
+Mock SSO callback route:
+- /auth/sso-callback?token=mock-student
+- /auth/sso-callback?token=mock-admin
+- /auth/sso-callback?token=mock-partner
+
+화면에는 다음 안내를 표시하세요.
+“본 화면은 SSO 연동 구조 검토용 mock입니다. 실제 학내 SSO 토큰, 학번, 개인정보는 저장하지 않습니다.”
+
+────────────────────────
+5. 데이터 모델
+────────────────────────
+
+types.ts에 다음 타입을 정의하세요.
+
+- User
+- Role
+- Program
+- Application
+- CompletionRecord
+- Partner
+- DemandSurvey
+- IndustryProject
+- KpiItem
+- BudgetItem
+- BudgetChangeLog
+- EvidenceItem
+- EvaluationResponse
+- Notice
+- Track
+- ProgramLevel
+- ProgramType
+
+각 타입은 최소한 화면 구현에 필요한 필드를 포함하세요.
+
+mockData.ts에는 충분한 샘플 데이터를 작성하세요.
+단, 모두 가상 데이터임을 명시하세요.
+
+샘플 데이터 기준:
+- 프로그램 8개 이상
+- 학생 신청 10건 이상
+- KPI 12개 이상
+- 예산 집행 항목 10개 이상
+- 예산 변경 이력 5개 이상
+- 참여기업 8개 이상
+- 증빙자료 15개 이상
+- 평가대응 Q&A 5개 이상
+
+────────────────────────
+6. UI/UX 기준
+────────────────────────
+
+디자인 방향:
+- 대학 행정문서와 공공사업 홈페이지에 맞는 정돈된 UI
+- 과도한 애니메이션 지양
+- 신뢰감 있는 행정형 대시보드
+- 반응형 레이아웃
+- PC 화면 우선, 모바일도 기본 대응
+
+색상:
+- Primary: #0D2E8B
+- Accent: #590000
+- Text Main: #1F2937
+- Text Sub: #4C4C45
+- Line: #CCCCC2
+- Background: #F8FAFC
+- Card: #FFFFFF
+
+공통 컴포넌트:
+- StatCard
+- ProgressBar
+- DataTable
+- RoleBadge
+- StatusBadge
+- FormField
+- EmptyState
+- SectionHeader
+
+────────────────────────
+7. 성과-예산-증빙 연결 구조
+────────────────────────
+
+성과관리시스템과 예산관리시스템은 분리하지 말고 다음 연결성을 보여주세요.
+
+예시:
+- 프로그램 운영비 집행
+  → 연결 프로그램
+  → 연결 KPI
+  → 증빙자료
+  → 성과 달성률 반영
+
+KPI 상세 화면에는 다음을 표시하세요.
+- 목표값
+- 실적값
+- 달성률
+- 관련 프로그램
+- 관련 예산항목
+- 관련 증빙자료
+- 담당부서
+- 미달 시 개선계획 입력란
+
+예산 상세 화면에는 다음을 표시하세요.
+- 집행 목적
+- 연결 KPI
+- 연결 프로그램
+- 증빙자료
+- 변경이력
+- 성과 기여 메모
+
+────────────────────────
+8. Replit 실행 설정
+────────────────────────
+
+Replit에서 바로 실행되도록 .replit과 replit.nix를 작성하세요.
+
+예시:
+- Node.js 20 이상 사용
+- npm install
+- npm run dev -- --host 0.0.0.0
+
+.replit에는 실행 명령을 명확히 작성하세요.
+배포 preview도 가능하도록 npm run build와 npm run preview 스크립트를 package.json에 포함하세요.
+
+package.json scripts:
+- dev
+- build
+- preview
+- typecheck
+
+타입 오류가 없도록 작성하세요.
+
+────────────────────────
+9. README 작성
+────────────────────────
+
+README_REPLIT_PROTOTYPE.md를 작성하세요.
+
+포함 내용:
+1. 프로젝트 목적
+2. 실행 방법
+3. 주요 화면
+4. Mock 계정
+5. SSO mock 구조
+6. 데이터 구조
+7. 성과-예산-증빙 연결 구조
+8. 실제 구축 전 추가 검토사항
+9. 개인정보 및 보안 주의사항
+10. 향후 고도화 과제
+
+Mock 계정 예시:
+- student / 학생 포털
+- partner / 기업 포털
+- admin / 관리자 시스템
+- superAdmin / 전체 관리자
+
+────────────────────────
+10. 실제 구축 전 검토사항 문서화
+────────────────────────
+
+README 또는 별도 문서 docs/implementation-considerations.md를 만들어 다음을 정리하세요.
+
+- 학내 SSO 연동 전 정보전산원 협의 필요
+- 개인정보 수집·이용 동의 문구 검토 필요
+- 학생 학적정보 연동 범위 검토 필요
+- 장학금 지급 대상 산정 기준 검토 필요
+- 예산 집행자료는 RCMS 대체가 아니라 내부관리·보고보조 기능으로 한정
+- K-PASS/RCMS/학사정보시스템/전자결재 연동은 2단계 이후 검토
+- 원본 증빙자료는 GitHub 또는 공개 웹서버에 저장하지 않음
+- 기업 담당자 정보와 계약상 민감정보는 별도 보안 저장소 관리
+- 공개 홈페이지와 관리자 시스템의 권한 분리 필요
+- 로그 관리 및 접근권한 관리 필요
+- 향후 DB 도입 시 PostgreSQL 또는 Replit Database 검토 가능
+- 향후 백엔드 도입 시 Node/Express 또는 NestJS 검토 가능
+
+────────────────────────
+11. 수용 기준
+────────────────────────
+
+작업 완료 후 다음 기준을 만족해야 합니다.
+
+필수:
+- npm install 후 npm run dev 실행 가능
+- TypeScript 오류 없음
+- Replit Run 버튼으로 실행 가능
+- 공개 홈페이지 주요 메뉴 접근 가능
+- mock login으로 student, partner, admin 화면 전환 가능
+- 학생 프로그램 신청 mock 기능 작동
+- 관리자 신청 상태 변경 mock 기능 작동
+- KPI 달성률 자동 계산
+- 예산 집행률 자동 계산
+- 예산 변경이력 목록 표시
+- KPI와 예산항목과 증빙자료가 연결되어 표시
+- CSV 다운로드 기능 1개 이상 구현
+- 개인정보 업로드 금지 안내가 주요 입력 화면에 표시
+- README_REPLIT_PROTOTYPE.md 작성
+
+선택:
+- localStorage 초기화 버튼
+- 샘플 데이터 복원 버튼
+- 다크모드
+- 간단한 검색/필터 기능
+- KPI 미달 경고 표시
+- 권한별 메뉴 숨김 처리
+
+────────────────────────
+12. 작업 방식
+────────────────────────
+
+1. 먼저 repo 구조를 확인하세요.
+2. 기존 운영관리 문서와 데이터 구조를 훼손하지 마세요.
+3. 홈페이지 프로토타입은 새 폴더에 구성하거나, 기존 repo 루트가 웹앱 구조로 전환되어도 기존 문서 폴더는 유지하세요.
+4. 기존 Markdown/CSV 파일은 삭제하지 마세요.
+5. 필요한 경우 app 또는 prototype-web 폴더를 생성하세요.
+6. 작업 완료 후 변경 파일 목록과 실행 방법을 요약하세요.
+7. 테스트 또는 typecheck 결과를 요약하세요.
+8. 실제 연동이 필요한 부분은 TODO 주석과 문서로 남기세요.
+
+권장 구현 위치:
+- prototype-web/
+
+단, Replit에서 루트 실행이 더 안정적이면 루트에 package.json을 두고 기존 문서 폴더를 유지하는 방식도 허용합니다.
+
+────────────────────────
+13. 최종 산출물
+────────────────────────
+
+최종적으로 다음을 제공하세요.
+
+- 실행 가능한 React + TypeScript + Vite 앱
+- Replit 실행 설정
+- mock 데이터
+- 공개 홈페이지
+- 학생 포털
+- 기업/유관기관 포털
+- 관리자 시스템
+- 성과관리 mock
+- 예산관리 mock
+- 증빙관리 mock
+- SSO mock adapter
+- README_REPLIT_PROTOTYPE.md
+- 구현상 한계 및 실제 구축 전 검토사항 문서
