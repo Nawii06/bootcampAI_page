@@ -41,6 +41,12 @@ import AdminBudgetLog from "./pages/admin/budget-log";
 import AdminEvidence from "./pages/admin/evidence";
 import AdminEvaluation from "./pages/admin/evaluation";
 import AdminSettings from "./pages/admin/settings";
+import AdminPerformanceDashboard from "./pages/admin/performance-dashboard";
+import AdminPerformanceIndicators from "./pages/admin/performance-indicators";
+import AdminPerformanceResults from "./pages/admin/performance-results";
+import AdminPerformanceEvidence from "./pages/admin/performance-evidence";
+import AdminPerformanceSourceData from "./pages/admin/performance-source-data";
+import AdminPerformanceExport from "./pages/admin/performance-export";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +87,12 @@ function Router() {
       <Route path="/admin/evidence" component={AdminEvidence} />
       <Route path="/admin/evaluation" component={AdminEvaluation} />
       <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/performance" component={AdminPerformanceDashboard} />
+      <Route path="/admin/performance/indicators" component={AdminPerformanceIndicators} />
+      <Route path="/admin/performance/results" component={AdminPerformanceResults} />
+      <Route path="/admin/performance/evidence" component={AdminPerformanceEvidence} />
+      <Route path="/admin/performance/source-data" component={AdminPerformanceSourceData} />
+      <Route path="/admin/performance/export" component={AdminPerformanceExport} />
 
       <Route component={NotFound} />
     </Switch>

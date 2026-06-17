@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/empty";
 
 export interface ColumnDef<T> {
   key: string;
