@@ -6,7 +6,7 @@ import { storageService } from "../../services/storageService";
 import { KpiItem, Notice } from "../../types";
 import { StatCard } from "../../components/StatCard";
 import { ProgressBar } from "../../components/ProgressBar";
-import { Badge } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Performance() {
   const [kpis, setKpis] = useState<KpiItem[]>([]);
