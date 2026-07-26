@@ -1,103 +1,157 @@
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, RefreshCw } from "lucide-react";
+import { customFetch } from "@workspace/api-client-react";
 import { Layout } from "../../components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SectionHeader } from "../../components/SectionHeader";
 
+interface Course {
+  id: string;
+  courseCode: string;
+  name: string;
+  englishName?: string;
+  description?: string;
+  defaultCredits: number;
+  departmentCode?: string;
+}
+
+interface CourseListResponse {
+  data: Course[];
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
+}
+
+function useCourses() {
+  return useQuery({
+    queryKey: ["public", "courses"],
+    queryFn: () =>
+      customFetch<CourseListResponse>("/api/v1/courses?page=1&pageSize=100", {
+        responseType: "json",
+        credentials: "include",
+      }),
+    staleTime: 60_000,
+  });
+}
+
 export default function Curriculum() {
+  const courses = useCourses();
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <SectionHeader title="교육과정" description="수준별 맞춤형 AI 교육 로드맵" />
+      <div className="container mx-auto max-w-6xl px-4 py-8">
+        <SectionHeader
+          title="교육과정"
+          description="사업연도와 학기별로 운영되는 AI·모빌리티 교과목을 확인하세요."
+        />
 
-        {/* Progression Map */}
-        <div className="mb-12">
-          <h3 className="text-lg font-bold mb-4 text-foreground">성장 단계별 로드맵</h3>
-          <div className="flex flex-col md:flex-row gap-2">
-            {[
-              { level: "기초", desc: "AI 기본 수학/프로그래밍", color: "bg-slate-100 border-slate-300" },
-              { level: "초급", desc: "머신러닝/딥러닝 입문", color: "bg-blue-50 border-blue-200" },
-              { level: "중급", desc: "도메인별 AI 응용 (PBL)", color: "bg-indigo-50 border-indigo-200" },
-              { level: "고급", desc: "심화 모델링 및 최적화", color: "bg-violet-50 border-violet-200" },
-              { level: "현장실습", desc: "기업 연계 프로젝트", color: "bg-purple-50 border-purple-200" },
-              { level: "취업연계", desc: "포트폴리오/면접", color: "bg-fuchsia-50 border-fuchsia-200" }
-            ].map((step, i) => (
-              <div key={i} className={`flex-1 border p-4 rounded-lg flex flex-col items-center justify-center text-center ${step.color} relative`}>
-                <span className="font-bold text-sm mb-1">{step.level}</span>
-                <span className="text-[10px] text-muted-foreground">{step.desc}</span>
-                {i < 5 && (
-                  <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10 bg-white rounded-full">
-                    ▶
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="mb-8 grid gap-3 md:grid-cols-4">
+          {[
+            ["자율주행", "인지·판단·제어와 차량용 소프트웨어"],
+            ["항공 모빌리티", "UAM·드론 비행제어와 항로 최적화"],
+            ["철도 모빌리티", "신호제어·예지정비와 운영 지능화"],
+            ["스마트 인프라", "C-ITS·교통 데이터와 스마트시티"],
+          ].map(([title, description]) => (
+            <Card key={title}>
+              <CardContent className="p-5">
+                <p className="font-semibold text-primary">{title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="space-y-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/4 border-r pr-6">
-                  <h4 className="font-bold text-lg text-primary flex items-center gap-2 mb-2">🚗 자율주행</h4>
-                  <p className="text-xs text-muted-foreground">자율주행 인지, 판단, 제어 SW 특화</p>
-                </div>
-                <div className="flex-1 text-sm space-y-2">
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">주요교과</span><span>자율주행 AI 기초, 차량 영상처리 실무, V2X 통신 기반 강화학습</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">PBL예시</span><span>라이다/카메라 센서 퓨전 기반 객체 인식 모델 개발</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">인프라</span><span>자율주행 시뮬레이터(MORAI), 모형차 테스트트랙</span></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/4 border-r pr-6">
-                  <h4 className="font-bold text-lg text-primary flex items-center gap-2 mb-2">✈️ 항공</h4>
-                  <p className="text-xs text-muted-foreground">UAM 및 무인기 제어/관제 AI</p>
-                </div>
-                <div className="flex-1 text-sm space-y-2">
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">주요교과</span><span>항공 모빌리티 입문, 무인기 항법 제어, 비행체 상태 진단 AI</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">PBL예시</span><span>군집 드론 경로 최적화 및 충돌 회피 알고리즘 구현</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">인프라</span><span>비행 제어 시뮬레이터, 드론 실내 비행장</span></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">개설 교과목</h2>
+            <p className="text-sm text-muted-foreground">
+              교과목 마스터 DB에 등록된 공개 목록입니다.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => courses.refetch()}
+            disabled={courses.isFetching}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${courses.isFetching ? "animate-spin" : ""}`}
+            />
+            새로고침
+          </Button>
+        </div>
 
+        {courses.isLoading && (
           <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/4 border-r pr-6">
-                  <h4 className="font-bold text-lg text-primary flex items-center gap-2 mb-2">🚄 철도</h4>
-                  <p className="text-xs text-muted-foreground">철도 시스템 효율화 및 안전 AI</p>
-                </div>
-                <div className="flex-1 text-sm space-y-2">
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">주요교과</span><span>철도 신호 시스템, 열차운행 다이어그램 최적화, 예지정비 AI</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">PBL예시</span><span>전동차 주요 부품 고장 예측 머신러닝 모델 구축</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">인프라</span><span>철도운전 시뮬레이터, 스마트관제 시스템 랩</span></div>
-                </div>
-              </div>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              교육과정을 불러오는 중입니다.
             </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/4 border-r pr-6">
-                  <h4 className="font-bold text-lg text-primary flex items-center gap-2 mb-2">🏢 인프라</h4>
-                  <p className="text-xs text-muted-foreground">모빌리티 인프라 지능화</p>
-                </div>
-                <div className="flex-1 text-sm space-y-2">
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">주요교과</span><span>스마트 교통 인프라, C-ITS 데이터 분석, 교통망 시뮬레이션</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">PBL예시</span><span>도심 교차로 신호등 연동 강화를 위한 교통량 예측 모델</span></div>
-                  <div className="flex"><span className="w-20 font-bold text-muted-foreground">인프라</span><span>교통 데이터 분석 서버, 디지털 트윈 랩</span></div>
-                </div>
-              </div>
+        {courses.isError && (
+          <Card className="border-destructive/40">
+            <CardContent className="p-8 text-center">
+              <p className="font-semibold text-destructive">
+                교육과정 API에 연결할 수 없습니다.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                API 서버와 데이터베이스 연결 상태를 확인해 주세요.
+              </p>
             </CardContent>
           </Card>
+        )}
+
+        {courses.data && courses.data.data.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+              <p className="font-semibold">등록된 교과목이 없습니다.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                교육 담당자가 교과목을 등록하거나 가져오기를 완료하면 표시됩니다.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {courses.data?.data.map((course) => (
+            <Card key={course.id}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-primary">
+                      {course.courseCode}
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold">{course.name}</h3>
+                    {course.englishName && (
+                      <p className="text-sm text-muted-foreground">
+                        {course.englishName}
+                      </p>
+                    )}
+                  </div>
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                    {course.defaultCredits}학점
+                  </span>
+                </div>
+                {course.description && (
+                  <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                    {course.description}
+                  </p>
+                )}
+                {course.departmentCode && (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    개설 부서: {course.departmentCode}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </Layout>

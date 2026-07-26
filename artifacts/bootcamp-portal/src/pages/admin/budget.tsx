@@ -1,72 +1,52 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { exportService } from "../../services/exportService";
-import { BudgetItem } from "../../types";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+
+interface BusinessYear { id: string; year: number; name: string }
+interface BudgetSummary {
+  allocated: number;
+  planned: number;
+  executed: number;
+  balance: number;
+  executionRate: number;
+}
+
+const money = new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 });
 
 export default function AdminBudget() {
-  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
-
-  useEffect(() => {
-    setBudgetItems(storageService.get<BudgetItem>("budgetItems"));
-  }, []);
-
-  const formatCurrency = (val: number) => {
-    return val.toLocaleString('ko-KR') + '원';
-  };
-
-  const handleExport = () => {
-    const cols = [
-      { key: "category", label: "예산구분" },
-      { key: "subItem", label: "세부항목" },
-      { key: "allocatedAmount", label: "편성액" },
-      { key: "executedAmount", label: "집행액" },
-      { key: "executionMonth", label: "집행월" },
-      { key: "executionPurpose", label: "집행목적" },
-      { key: "reviewStatus", label: "상태" }
-    ] as any;
-    exportService.downloadCsv("budget_export", budgetItems, cols);
-  };
-
-  const columns: ColumnDef<BudgetItem>[] = [
-    { key: "category", header: "구분", cell: (item) => <Badge variant="outline">{item.category}</Badge> },
-    { key: "subItem", header: "세부항목", cell: (item) => <span className="font-medium">{item.subItem}</span> },
-    { key: "allocatedAmount", header: "편성액", cell: (item) => formatCurrency(item.allocatedAmount) },
-    { key: "executedAmount", header: "집행액", cell: (item) => formatCurrency(item.executedAmount) },
-    { 
-      key: "rate", 
-      header: "집행률",
-      cell: (item) => {
-        const rate = item.allocatedAmount > 0 ? (item.executedAmount / item.allocatedAmount) * 100 : 0;
-        return <span className="font-bold">{rate.toFixed(1)}%</span>;
-      }
-    },
-    { key: "executionMonth", header: "집행월" },
-    { 
-      key: "reviewStatus", 
-      header: "상태",
-      cell: (item) => (
-        item.reviewStatus === 'approved' 
-          ? <Badge className="bg-green-600">승인/완료</Badge> 
-          : <Badge variant="secondary">집행 대기</Badge>
-      )
-    }
-  ];
-
+  const years = useQuery({
+    queryKey: ["reference", "business-years", "active"],
+    queryFn: () => customFetch<{ data: BusinessYear[] }>("/api/v1/reference/business-years?active=true", { responseType: "json" }),
+  });
+  const yearId = years.data?.data[0]?.id;
+  const summary = useQuery({
+    queryKey: ["admin", "budget-summary", yearId],
+    enabled: Boolean(yearId),
+    queryFn: () => customFetch<BudgetSummary>(`/api/v1/budget/summary?businessYearId=${yearId}`, {
+      responseType: "json",
+      credentials: "include",
+    }),
+  });
+  const cards = summary.data
+    ? [
+        ["배정액", money.format(summary.data.allocated)],
+        ["편성액", money.format(summary.data.planned)],
+        ["집행액", money.format(summary.data.executed)],
+        ["잔액", money.format(summary.data.balance)],
+        ["집행률", `${summary.data.executionRate}%`],
+      ]
+    : [];
   return (
     <PortalLayout>
-      <SectionHeader title="예산 집행현황" description="사업비 편성 및 실 집행 내역 관리">
-        <Button onClick={handleExport} variant="outline" size="sm">CSV 다운로드</Button>
-      </SectionHeader>
-
-      <DataTable 
-        data={budgetItems} 
-        columns={columns} 
-      />
+      <SectionHeader title="예산 집행현황" description={years.data?.data[0]?.name ?? "활성 사업연도"} />
+      <div className="grid gap-4 md:grid-cols-5">
+        {cards.map(([label, value]) => (
+          <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-xl font-bold">{value}</p></CardContent></Card>
+        ))}
+      </div>
+      {(years.isError || summary.isError) && <p className="mt-4 text-destructive">예산 API에 연결할 수 없습니다.</p>}
     </PortalLayout>
   );
 }

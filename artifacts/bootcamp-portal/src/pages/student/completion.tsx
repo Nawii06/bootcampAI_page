@@ -1,73 +1,62 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, CircleAlert } from "lucide-react";
+import { customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { storageService } from "../../services/storageService";
-import { CompletionRecord, Program } from "../../types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "../../contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+interface Requirement {
+  id: string;
+  name: string;
+  required: number | string;
+  actual: number | boolean;
+  shortage: number;
+}
+interface Assessment {
+  id: string;
+  completed: boolean;
+  progressRate: string;
+  satisfied: Requirement[];
+  missing: Requirement[];
+  calculatedAt: string;
+}
 
 export default function StudentCompletion() {
   const { user } = useAuth();
-  const [completions, setCompletions] = useState<CompletionRecord[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-    setPrograms(storageService.get<Program>("programs"));
-    setCompletions(storageService.get<CompletionRecord>("completions").filter(c => c.studentId === user.id));
-  }, [user]);
-
-  const CheckItem = ({ label, isDone }: { label: string, isDone: boolean }) => (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <span className="text-sm">{label}</span>
-      {isDone ? (
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">완료</Badge>
-      ) : (
-        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">미완료</Badge>
-      )}
-    </div>
-  );
-
+  const assessments = useQuery({
+    queryKey: ["completion-assessments", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: () =>
+      customFetch<{ data: Assessment[] }>(
+        `/api/v1/completion-assessments?studentId=${encodeURIComponent(user!.id)}`,
+        { responseType: "json", credentials: "include" },
+      ),
+  });
+  const latest = assessments.data?.data[0];
   return (
     <PortalLayout>
-      <SectionHeader title="이수현황" description="프로그램별 이수 요건 달성 현황" />
-
-      {completions.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            참여 중인 프로그램의 이수 데이터가 없습니다.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {completions.map(comp => {
-            const prog = programs.find(p => p.id === comp.programId);
-            return (
-              <Card key={comp.id} className={comp.finalCompleted ? "border-green-200" : ""}>
-                <CardHeader className="bg-muted/30 pb-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant={comp.finalCompleted ? "default" : "secondary"}>
-                      {comp.finalCompleted ? "최종 수료" : "이수 중"}
-                    </Badge>
-                    {comp.performanceRecognized && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">성과인정</Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-lg">{prog?.name || "알 수 없는 프로그램"}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <CheckItem label="교과/이론 과정" isDone={comp.courseCompleted} />
-                  <CheckItem label="비교과/특강" isDone={comp.extracurricularCompleted} />
-                  <CheckItem label="PBL 프로젝트 참여" isDone={comp.pblParticipated} />
-                  <CheckItem label="현장실습" isDone={comp.fieldPracticeParticipated} />
-                  <CheckItem label="인턴십" isDone={comp.internshipParticipated} />
-                </CardContent>
-              </Card>
-            );
-          })}
+      <SectionHeader title="이수현황" description="교육과정 요건을 기준으로 계산된 최신 결과입니다." />
+      {!latest && !assessments.isLoading && <p className="text-muted-foreground">아직 계산된 이수평가가 없습니다.</p>}
+      {latest && (
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div><p className="text-sm text-muted-foreground">종합 진행률</p><p className="text-3xl font-bold">{Number(latest.progressRate)}%</p></div>
+                <span className={latest.completed ? "text-green-600" : "text-amber-600"}>{latest.completed ? "이수 완료" : "진행 중"}</span>
+              </div>
+              <Progress value={Number(latest.progressRate)} className="mt-4" />
+            </CardContent>
+          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card><CardContent className="p-6"><h2 className="mb-4 font-bold">충족사항</h2>{latest.satisfied.map((item) => <div key={item.id} className="mb-2 flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 text-green-600" />{item.name}</div>)}</CardContent></Card>
+            <Card><CardContent className="p-6"><h2 className="mb-4 font-bold">부족사항</h2>{latest.missing.map((item) => <div key={item.id} className="mb-2 flex gap-2 text-sm"><CircleAlert className="h-4 w-4 text-amber-600" /><span>{item.name} · 부족 {item.shortage}</span></div>)}</CardContent></Card>
+          </div>
         </div>
       )}
+      {assessments.isError && <p className="text-destructive">이수정보 API에 연결할 수 없습니다.</p>}
     </PortalLayout>
   );
 }

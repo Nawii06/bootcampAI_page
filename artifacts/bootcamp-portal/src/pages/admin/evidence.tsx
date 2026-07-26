@@ -1,49 +1,77 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
+import { Badge } from "@/components/ui/badge";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { EvidenceItem } from "../../types";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
+
+interface StoredFile {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  containsPersonalInfo: boolean;
+  isPublic: boolean;
+  uploadedByName: string;
+  createdAt: string;
+}
+
+function fileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export default function AdminEvidence() {
-  const [evidences, setEvidences] = useState<EvidenceItem[]>([]);
-
-  useEffect(() => {
-    setEvidences(storageService.get<EvidenceItem>("evidences"));
-  }, []);
-
-  const columns: ColumnDef<EvidenceItem>[] = [
-    { key: "year", header: "연차", cell: (item) => `${item.year}년차` },
-    { key: "area", header: "영역" },
-    { key: "indicatorName", header: "지표명" },
-    { key: "fileName", header: "파일명", cell: (item) => <span className="text-primary hover:underline cursor-pointer">{item.fileName}</span> },
-    { 
-      key: "containsPersonalInfo", 
-      header: "개인정보",
-      cell: (item) => item.containsPersonalInfo ? <Badge variant="destructive">포함</Badge> : <Badge variant="outline" className="text-gray-400">없음</Badge>
+  const files = useQuery({
+    queryKey: ["admin", "stored-files"],
+    queryFn: () =>
+      customFetch<{ data: StoredFile[] }>("/api/v1/files", {
+        responseType: "json",
+        credentials: "include",
+      }),
+  });
+  const columns: ColumnDef<StoredFile>[] = [
+    {
+      key: "originalName",
+      header: "파일명",
+      cell: (row) => <span className="font-medium">{row.originalName}</span>,
     },
-    { key: "responsibleDept", header: "담당부서" }
+    { key: "mimeType", header: "MIME 유형" },
+    { key: "sizeBytes", header: "크기", cell: (row) => fileSize(row.sizeBytes) },
+    {
+      key: "containsPersonalInfo",
+      header: "개인정보",
+      cell: (row) => (
+        <Badge variant={row.containsPersonalInfo ? "destructive" : "outline"}>
+          {row.containsPersonalInfo ? "포함" : "미포함"}
+        </Badge>
+      ),
+    },
+    {
+      key: "isPublic",
+      header: "공개",
+      cell: (row) => (row.isPublic ? "공개 승인" : "비공개"),
+    },
+    { key: "uploadedByName", header: "등록자" },
+    {
+      key: "createdAt",
+      header: "등록일시",
+      cell: (row) => new Date(row.createdAt).toLocaleString("ko-KR"),
+    },
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="증빙자료 관리" description="사업 실적 및 지표 달성에 대한 증빙 문서 아카이브">
-        <Button onClick={() => alert("증빙 추가 팝업 (Mock)")}>+ 증빙 추가</Button>
-      </SectionHeader>
-
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded text-sm text-blue-800">
-        <p><strong>안내:</strong> 원본 파일은 기관의 승인된 보안 저장소에 보관되며, 본 포털에서는 메타데이터 이력만 관리합니다. 개인정보가 포함된 증빙(예: 출석부)은 반드시 마스킹 처리 후 업로드 내역을 등록하세요.</p>
+      <SectionHeader
+        title="증빙자료 관리"
+        description="서버 검증을 거쳐 저장된 증빙파일의 메타데이터를 조회합니다."
+      />
+      <div className="mb-4 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+        개인정보 포함 파일은 비공개가 기본이며, 조회·수정·다운로드 작업은 감사로그 대상입니다.
       </div>
-
-      {evidences.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
-          등록된 증빙 자료가 없습니다.
-        </div>
-      ) : (
-        <DataTable data={evidences} columns={columns} />
+      {files.isError && (
+        <p className="mb-4 text-destructive">증빙자료 목록을 불러오지 못했습니다.</p>
       )}
+      <DataTable data={files.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );
 }

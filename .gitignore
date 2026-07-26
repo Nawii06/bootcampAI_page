@@ -10,6 +10,8 @@ out-tsc
 
 # dependencies
 node_modules
+.codex-preview.*.log
+.data/
 
 # IDEs and editors
 /.idea

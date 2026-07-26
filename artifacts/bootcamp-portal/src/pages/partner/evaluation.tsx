@@ -1,74 +1,113 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { storageService } from "../../services/storageService";
-import { Portfolio } from "../../types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
+interface BusinessYear { id: string }
+interface Portfolio {
+  id: string;
+  studentId: string;
+  title: string;
+  evidence: {
+    summary?: string;
+    techStack?: string[];
+    outputLinks?: string[];
+  };
+}
 
 export default function PartnerEvaluation() {
-  const [portfolios] = useState<Portfolio[]>(() => {
-    return storageService.get<Portfolio>("portfolios").filter(p => p.isPublicConsented);
+  const queryClient = useQueryClient();
+  const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const years = useQuery({
+    queryKey: ["reference", "business-years", "active"],
+    queryFn: () => customFetch<{ data: BusinessYear[] }>("/api/v1/reference/business-years?active=true", { responseType: "json" }),
   });
-
+  const yearId = years.data?.data[0]?.id;
+  const portfolios = useQuery({
+    queryKey: ["partner", "portfolio-candidates"],
+    queryFn: () => customFetch<{ data: Portfolio[] }>("/api/v1/company-portfolio-candidates", {
+      responseType: "json", credentials: "include",
+    }),
+  });
+  const submit = useMutation({
+    mutationFn: (portfolio: Portfolio) => customFetch("/api/v1/company-participations", {
+      method: "POST",
+      responseType: "json",
+      credentials: "include",
+      body: JSON.stringify({
+        businessYearId: yearId,
+        participationType: "PROJECT_EVALUATION",
+        title: `${portfolio.title} 기업 피드백`,
+        details: {
+          experientialRecordId: portfolio.id,
+          studentId: portfolio.studentId,
+          feedback: feedback[portfolio.id],
+          submittedAt: new Date().toISOString(),
+        },
+      }),
+    }),
+    onSuccess: (_data, portfolio) => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
+      setFeedback((current) => ({ ...current, [portfolio.id]: "" }));
+    },
+  });
   return (
     <PortalLayout>
-      <SectionHeader title="학생 산출물 평가" description="공개 동의된 우수 학생들의 포트폴리오를 열람하고 평가합니다." />
-
-      {portfolios.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            현재 공개된 학생 포트폴리오가 없습니다.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {portfolios.map(pf => (
-            <Card key={pf.id}>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-bold text-lg">학생 ID: {pf.studentId}</h3>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">채용검토 대상</Badge>
-                </div>
-                
-                <div className="space-y-4 text-sm">
-                  <div>
-                    <span className="font-medium text-muted-foreground block mb-1">프로젝트 요약</span>
-                    <p className="bg-muted/30 p-3 rounded">{pf.projectSummary}</p>
-                  </div>
-                  
-                  <div>
-                    <span className="font-medium text-muted-foreground block mb-1">사용 기술</span>
-                    <div className="flex flex-wrap gap-1">
-                      {pf.techStack.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="font-medium text-muted-foreground block mb-1">산출물 링크</span>
-                    <ul className="list-disc pl-5">
-                      {pf.outputLinks.map(l => (
-                        <li key={l}><a href="#" className="text-primary hover:underline">{l}</a></li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="pt-4 border-t">
-                    <span className="font-bold text-primary block mb-2">기업 멘토 피드백 입력</span>
-                    <textarea 
-                      className="w-full border rounded-md p-2 min-h-24 text-sm bg-background"
-                      placeholder="프로젝트 수행 결과에 대한 피드백을 입력해주세요. (Mock 데모에서는 저장되지 않습니다.)"
-                      defaultValue={pf.companyEvaluation}
-                    />
-                    <div className="mt-2 text-right">
-                      <button className="bg-primary text-primary-foreground px-4 py-1.5 rounded-md text-xs font-medium">피드백 전송</button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <SectionHeader
+        title="학생 프로젝트 평가"
+        description="공개에 동의한 학생 프로젝트만 열람하고 기업 피드백을 기록합니다."
+      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(portfolios.data?.data ?? []).map((portfolio) => (
+          <Card key={portfolio.id}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-semibold">{portfolio.title}</h2>
+                <Badge variant="outline">공개 동의</Badge>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                {portfolio.evidence.summary}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(portfolio.evidence.techStack ?? []).map((tech) => (
+                  <Badge key={tech} variant="secondary">{tech}</Badge>
+                ))}
+              </div>
+              <div className="mt-3 space-y-1 text-sm">
+                {(portfolio.evidence.outputLinks ?? []).map((link) => (
+                  <a key={link} href={link} target="_blank" rel="noreferrer" className="block text-primary hover:underline">{link}</a>
+                ))}
+              </div>
+              <Textarea
+                className="mt-5"
+                rows={4}
+                value={feedback[portfolio.id] ?? ""}
+                onChange={(event) => setFeedback((current) => ({ ...current, [portfolio.id]: event.target.value }))}
+                placeholder="프로젝트 수행 결과에 대한 기업 피드백"
+              />
+              <Button
+                className="mt-3 w-full"
+                disabled={!yearId || !(feedback[portfolio.id] ?? "").trim() || submit.isPending}
+                onClick={() => submit.mutate(portfolio)}
+              >
+                피드백 저장
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {!portfolios.isLoading && (portfolios.data?.data.length ?? 0) === 0 && (
+        <div className="rounded-md border p-10 text-center text-muted-foreground">
+          공개에 동의한 학생 프로젝트가 없습니다.
         </div>
+      )}
+      {(portfolios.isError || submit.isError) && (
+        <p className="mt-4 text-destructive">포트폴리오 조회 또는 피드백 저장에 실패했습니다.</p>
       )}
     </PortalLayout>
   );

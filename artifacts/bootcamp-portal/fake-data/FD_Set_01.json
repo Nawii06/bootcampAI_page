@@ -1,0 +1,203 @@
+{
+  "dataSetId": "FD_Set_01",
+  "description": "실제 DB 구성 전 공개 포털 preview용 가역적 개발 데이터",
+  "createdAt": "2026-07-24T00:00:00.000Z",
+  "businessYears": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000001",
+      "year": 2026,
+      "name": "2026학년도",
+      "isActive": true
+    }
+  ],
+  "courses": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000101",
+      "courseCode": "AI101",
+      "name": "인공지능 기초",
+      "englishName": "Introduction to Artificial Intelligence",
+      "description": "머신러닝과 딥러닝의 핵심 개념을 모빌리티 사례 중심으로 학습합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000102",
+      "courseCode": "CV201",
+      "name": "자율주행 컴퓨터비전",
+      "englishName": "Computer Vision for Autonomous Driving",
+      "description": "카메라 영상 기반 객체 탐지와 차선 인식 모델을 구현합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000103",
+      "courseCode": "ROS301",
+      "name": "ROS2 모빌리티 프로젝트",
+      "englishName": "ROS2 Mobility Project",
+      "description": "ROS2 기반 센서 융합과 주행 제어 프로젝트를 수행합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000104",
+      "courseCode": "DATA210",
+      "name": "교통 데이터 분석",
+      "englishName": "Transportation Data Analytics",
+      "description": "철도·도로·항공 운행 데이터를 활용한 분석 및 예측 기법을 학습합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    }
+  ],
+  "programs": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000201",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "PBL-AI-01",
+      "name": "AI 모빌리티 PBL 캠프",
+      "description": "참여기업의 실제 문제를 해결하는 8주 집중 프로젝트입니다.",
+      "programType": "PBL",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000211",
+          "name": "1기",
+          "capacity": 30,
+          "applicationStartsAt": "2026-07-01T00:00:00.000Z",
+          "applicationEndsAt": "2026-08-15T14:59:59.000Z",
+          "startsAt": "2026-09-01T00:00:00.000Z",
+          "endsAt": "2026-10-31T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000202",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "UAM-BOOT-01",
+      "name": "UAM 비행제어 실무 부트캠프",
+      "description": "도심항공모빌리티 비행제어와 경로 최적화를 실습합니다.",
+      "programType": "IMMERSIVE",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000212",
+          "name": "하계 집중과정",
+          "capacity": 24,
+          "applicationStartsAt": "2026-07-10T00:00:00.000Z",
+          "applicationEndsAt": "2026-08-20T14:59:59.000Z",
+          "startsAt": "2026-09-05T00:00:00.000Z",
+          "endsAt": "2026-10-10T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000203",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "RAIL-DATA-01",
+      "name": "철도 데이터 분석 해커톤",
+      "description": "철도 운행데이터로 안전성과 운영효율 개선 아이디어를 개발합니다.",
+      "programType": "EXTRACURRICULAR",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000213",
+          "name": "2026 해커톤",
+          "capacity": 40,
+          "applicationStartsAt": "2026-08-01T00:00:00.000Z",
+          "applicationEndsAt": "2026-09-10T14:59:59.000Z",
+          "startsAt": "2026-09-25T00:00:00.000Z",
+          "endsAt": "2026-09-26T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000301",
+      "name": "한국모빌리티테크",
+      "companyType": "중견기업",
+      "description": "자율주행 인지·제어 솔루션 개발 기업",
+      "website": "https://example.com/mobility"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000302",
+      "name": "스마트레일솔루션",
+      "companyType": "중소기업",
+      "description": "철도 운행 데이터 분석과 예지정비 플랫폼 기업",
+      "website": "https://example.com/rail"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000303",
+      "name": "에어모빌리티랩",
+      "companyType": "스타트업",
+      "description": "UAM 비행제어 및 시뮬레이션 전문기업",
+      "website": "https://example.com/uam"
+    }
+  ],
+  "performanceResults": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000401",
+      "indicatorCode": "KPI-01",
+      "indicatorName": "교육과정 참여학생",
+      "actualValue": "186",
+      "unit": "명",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000402",
+      "indicatorCode": "KPI-02",
+      "indicatorName": "참여기업",
+      "actualValue": "24",
+      "unit": "개사",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000403",
+      "indicatorCode": "KPI-03",
+      "indicatorName": "프로젝트 이수율",
+      "actualValue": "92.4",
+      "unit": "%",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    }
+  ],
+  "content": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000501",
+      "contentType": "NEWS",
+      "title": "2026 AI 모빌리티 PBL 참여기업 간담회 개최",
+      "summary": "교육과정 공동설계와 산업체 프로젝트 운영방안을 논의했습니다.",
+      "body": "참여기업과 대학 관계자가 모여 2026학년도 PBL 운영계획을 공유했습니다.",
+      "publishedAt": "2026-07-18T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000502",
+      "contentType": "NEWS",
+      "title": "자율주행 컴퓨터비전 집중교육 성료",
+      "summary": "학생 32명이 객체탐지와 차선인식 프로젝트를 수행했습니다.",
+      "body": "산업체 멘토와 함께 실제 주행영상 기반 모델 개발을 완료했습니다.",
+      "publishedAt": "2026-07-12T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000503",
+      "contentType": "RESOURCE",
+      "title": "2026학년도 부트캠프 프로그램 안내서",
+      "summary": "교육과정, 비교과 프로그램, 신청 및 이수기준 안내",
+      "body": "본 자료는 preview용 FD_Set_01 데이터입니다.",
+      "publishedAt": "2026-07-20T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000504",
+      "contentType": "RESOURCE",
+      "title": "산업체 프로젝트 제안서 양식",
+      "summary": "참여기업의 PBL 과제 제안을 위한 작성 항목",
+      "body": "문제정의, 제공 데이터, 기대 산출물, 멘토 역할을 작성합니다.",
+      "publishedAt": "2026-07-17T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    }
+  ]
+}

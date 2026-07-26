@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { fakeDataPreviewPlugin } from "./dev/fake-data-plugin";
 
 const rawPort = process.env.PORT;
 
@@ -28,10 +29,14 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    __FAKE_DATA_SET__: JSON.stringify(process.env.FAKE_DATA_SET ?? null),
+  },
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    fakeDataPreviewPlugin(process.env.FAKE_DATA_SET),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

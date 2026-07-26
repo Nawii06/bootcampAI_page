@@ -1,53 +1,63 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { StatusBadge } from "../../components/StatusBadge";
-import { storageService } from "../../services/storageService";
-import { Application, Program } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
+import type { ApplicationStatus } from "../../types";
+
+interface ApplicationRow {
+  id: string;
+  programName: string;
+  sessionName: string;
+  status: string;
+  submittedAt?: string;
+  reviewNote?: string;
+}
+
+function displayStatus(status: string): ApplicationStatus {
+  const mapped: Record<string, ApplicationStatus> = {
+    SUBMITTED: "submitted",
+    REVIEWING: "reviewing",
+    SUPPLEMENT_REQUESTED: "supplement",
+    SELECTED: "selected",
+    WAITLISTED: "waitlisted",
+    REJECTED: "rejected",
+  };
+  return mapped[status] ?? "reviewing";
+}
 
 export default function StudentStatus() {
   const { user } = useAuth();
-  const [apps, setApps] = useState<Application[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-    setPrograms(storageService.get<Program>("programs"));
-    setApps(storageService.get<Application>("applications").filter(a => a.studentId === user.id));
-  }, [user]);
-
-  const columns: ColumnDef<Application>[] = [
+  const applications = useQuery({
+    queryKey: ["program-applications", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: () =>
+      customFetch<{ data: ApplicationRow[] }>(
+        `/api/v1/program-applications?studentId=${encodeURIComponent(user!.id)}`,
+        { responseType: "json", credentials: "include" },
+      ),
+  });
+  const columns: ColumnDef<ApplicationRow>[] = [
+    { key: "programName", header: "프로그램", cell: (row) => <span className="font-medium">{row.programName}</span> },
+    { key: "sessionName", header: "회차" },
     {
-      key: "programId",
-      header: "프로그램명",
-      cell: (item) => {
-        const prog = programs.find(p => p.id === item.programId);
-        return <span className="font-medium">{prog?.name || item.programId}</span>;
-      }
+      key: "submittedAt",
+      header: "신청일",
+      cell: (row) => row.submittedAt ? new Intl.DateTimeFormat("ko-KR").format(new Date(row.submittedAt)) : "-",
     },
-    { key: "preferredTrack", header: "희망 트랙", cell: (item) => item.preferredTrack },
-    { key: "appliedAt", header: "신청일" },
-    { 
-      key: "status", 
-      header: "상태",
-      cell: (item) => <StatusBadge status={item.status} />
-    },
-    { 
-      key: "reviewNote", 
-      header: "비고(보완요청 등)",
-      cell: (item) => <span className="text-destructive text-sm">{item.reviewNote || "-"}</span>
-    }
+    { key: "status", header: "상태", cell: (row) => <StatusBadge status={displayStatus(row.status)} /> },
+    { key: "reviewNote", header: "검토 의견", cell: (row) => row.reviewNote || "-" },
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="신청현황" description="나의 프로그램 신청 내역 및 심사 상태" />
-      <DataTable 
-        data={apps} 
-        columns={columns} 
-      />
+      <SectionHeader title="신청현황" description="프로그램 신청과 검토 상태를 확인합니다." />
+      {applications.isError ? (
+        <p className="text-sm text-destructive">신청현황 API에 연결할 수 없습니다.</p>
+      ) : (
+        <DataTable data={applications.data?.data ?? []} columns={columns} />
+      )}
     </PortalLayout>
   );
 }

@@ -1,72 +1,102 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
-import { storageService } from "../../services/storageService";
-import { Application, BudgetItem, KpiItem, Program, CompletionRecord } from "../../types";
+
+interface BusinessYear { id: string; name: string }
+interface Program { id: string; status: string }
+interface Application { id: string; status: string }
+interface Assessment { id: string; completed: boolean }
+interface BudgetSummary {
+  allocated: number;
+  executed: number;
+  executionRate: number;
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalApps: 0,
-    selectedApps: 0,
-    completions: 0,
-    programs: 0,
-    budgetExecRate: 0,
-    kpiRisks: 0
+  const years = useQuery({
+    queryKey: ["reference", "business-years", "active"],
+    queryFn: () =>
+      customFetch<{ data: BusinessYear[] }>(
+        "/api/v1/reference/business-years?active=true",
+        { responseType: "json" },
+      ),
+  });
+  const yearId = years.data?.data[0]?.id;
+  const programs = useQuery({
+    queryKey: ["admin", "programs", yearId],
+    enabled: Boolean(yearId),
+    queryFn: () =>
+      customFetch<{ data: Program[] }>(
+        `/api/v1/programs?businessYearId=${yearId}`,
+        { responseType: "json" },
+      ),
+  });
+  const applications = useQuery({
+    queryKey: ["admin", "program-applications"],
+    queryFn: () =>
+      customFetch<{ data: Application[] }>("/api/v1/program-applications", {
+        responseType: "json",
+        credentials: "include",
+      }),
+  });
+  const assessments = useQuery({
+    queryKey: ["admin", "completion-assessments", yearId],
+    enabled: Boolean(yearId),
+    queryFn: () =>
+      customFetch<{ data: Assessment[] }>(
+        `/api/v1/completion-assessments?businessYearId=${yearId}`,
+        { responseType: "json", credentials: "include" },
+      ),
+  });
+  const budget = useQuery({
+    queryKey: ["admin", "budget-summary", yearId],
+    enabled: Boolean(yearId),
+    queryFn: () =>
+      customFetch<BudgetSummary>(
+        `/api/v1/budget/summary?businessYearId=${yearId}`,
+        { responseType: "json", credentials: "include" },
+      ),
   });
 
-  useEffect(() => {
-    const apps = storageService.get<Application>("applications");
-    const programs = storageService.get<Program>("programs");
-    const completions = storageService.get<CompletionRecord>("completions");
-    const budgets = storageService.get<BudgetItem>("budgetItems");
-    const kpis = storageService.get<KpiItem>("kpis");
-
-    const totalAlloc = budgets.reduce((sum, b) => sum + b.allocatedAmount, 0);
-    const totalExec = budgets.reduce((sum, b) => sum + b.executedAmount, 0);
-    const execRate = totalAlloc > 0 ? (totalExec / totalAlloc) * 100 : 0;
-
-    const riskKpis = kpis.filter(k => (k.actualValue / k.targetValue) < 0.7).length;
-
-    setStats({
-      totalApps: apps.length,
-      selectedApps: apps.filter(a => a.status === 'selected').length,
-      completions: completions.filter(c => c.finalCompleted).length,
-      programs: programs.length,
-      budgetExecRate: execRate,
-      kpiRisks: riskKpis
-    });
-  }, []);
+  const applicationRows = applications.data?.data ?? [];
+  const assessmentRows = assessments.data?.data ?? [];
+  const hasError =
+    years.isError ||
+    programs.isError ||
+    applications.isError ||
+    assessments.isError ||
+    budget.isError;
 
   return (
     <PortalLayout>
-      <SectionHeader title="관리자 대시보드" description="부트캠프 전체 운영 현황 요약" />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <StatCard label="총 신청자" value={`${stats.totalApps}명`} />
-        <StatCard label="선발자" value={`${stats.selectedApps}명`} />
-        <StatCard label="수료자" value={`${stats.completions}명`} />
-        <StatCard label="운영 프로그램" value={`${stats.programs}건`} />
-        <StatCard 
-          label="예산 집행률" 
-          value={`${stats.budgetExecRate.toFixed(1)}%`} 
-          color={stats.budgetExecRate < 50 ? "text-destructive" : ""} 
+      <SectionHeader
+        title="운영 대시보드"
+        description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 기준 운영 현황`}
+      />
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard label="운영 프로그램" value={`${programs.data?.data.length ?? 0}건`} />
+        <StatCard label="전체 신청" value={`${applicationRows.length}건`} />
+        <StatCard
+          label="선발"
+          value={`${applicationRows.filter((row) => row.status === "SELECTED").length}건`}
         />
-        <StatCard 
-          label="위험 성과지표" 
-          value={`${stats.kpiRisks}건`} 
-          color="text-destructive" 
-          sublabel="달성률 70% 미만" 
+        <StatCard
+          label="이수 판정"
+          value={`${assessmentRows.filter((row) => row.completed).length}명`}
+        />
+        <StatCard
+          label="예산 집행률"
+          value={`${budget.data?.executionRate ?? 0}%`}
+          color={(budget.data?.executionRate ?? 0) < 50 ? "text-destructive" : ""}
         />
       </div>
-
-      <div className="p-4 bg-red-50 border border-destructive/20 rounded-md">
-        <h3 className="font-bold text-destructive mb-2">⚠️ 지표 관리 경고</h3>
-        <p className="text-sm text-destructive/90">
-          달성률이 70% 미만인 KPI가 {stats.kpiRisks}건 존재합니다. 
-          [성과지표 관리] 메뉴에서 상세 내역 및 개선계획을 확인하세요.
-        </p>
-      </div>
+      {hasError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          일부 운영 지표를 불러오지 못했습니다. 권한과 API 연결 상태를 확인해 주세요.
+        </div>
+      )}
     </PortalLayout>
   );
 }

@@ -1,54 +1,84 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
+import { Badge } from "@/components/ui/badge";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { Partner } from "../../types";
-import { Badge } from "@/components/ui/badge";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
+
+interface Company {
+  id: string;
+  name: string;
+  registrationNumber?: string;
+  companyType: string;
+  website?: string;
+  isPublic: boolean;
+  isActive: boolean;
+  companyContacts: Array<{ id: string; name: string; email?: string; isPrimary: boolean }>;
+  companyExperts: Array<{ id: string }>;
+  companyParticipations: Array<{ id: string }>;
+}
 
 export default function AdminPartners() {
-  const [partners, setPartners] = useState<Partner[]>([]);
-
-  useEffect(() => {
-    setPartners(storageService.get<Partner>("partners"));
-  }, []);
-
-  const columns: ColumnDef<Partner>[] = [
-    { key: "name", header: "기관명", cell: (item) => <span className="font-bold">{item.name}</span> },
-    { key: "type", header: "구분", cell: (item) => item.type === 'company' ? '기업' : '연구기관' },
-    { 
-      key: "cooperationType", 
-      header: "협력 유형",
-      cell: (item) => (
-        <div className="flex flex-wrap gap-1">
-          {item.cooperationType.map(t => <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>)}
-        </div>
-      )
+  const companies = useQuery({
+    queryKey: ["admin", "companies"],
+    queryFn: () =>
+      customFetch<{ data: Company[] }>("/api/v1/companies", {
+        responseType: "json",
+        credentials: "include",
+      }),
+  });
+  const columns: ColumnDef<Company>[] = [
+    {
+      key: "name",
+      header: "기업명",
+      cell: (row) => <span className="font-medium">{row.name}</span>,
     },
-    { 
-      key: "tracks", 
-      header: "관련 트랙",
-      cell: (item) => (
-        <div className="flex flex-wrap gap-1">
-          {item.tracks.map(t => <span key={t} className="bg-slate-100 text-slate-800 text-xs px-1.5 rounded">{t}</span>)}
-        </div>
-      )
+    { key: "companyType", header: "기업유형" },
+    { key: "registrationNumber", header: "사업자등록번호" },
+    {
+      key: "companyContacts",
+      header: "대표 담당자",
+      cell: (row) => {
+        const contact =
+          row.companyContacts.find((item) => item.isPrimary) ??
+          row.companyContacts[0];
+        return contact ? `${contact.name}${contact.email ? ` · ${contact.email}` : ""}` : "-";
+      },
     },
-    { 
-      key: "isActive", 
+    {
+      key: "companyExperts",
+      header: "전문가",
+      cell: (row) => `${row.companyExperts.length}명`,
+    },
+    {
+      key: "companyParticipations",
+      header: "참여실적",
+      cell: (row) => `${row.companyParticipations.length}건`,
+    },
+    {
+      key: "isActive",
       header: "상태",
-      cell: (item) => item.isActive ? <Badge className="bg-green-600">활성</Badge> : <Badge variant="outline">비활성</Badge>
-    }
+      cell: (row) => (
+        <Badge variant={row.isActive ? "default" : "outline"}>
+          {row.isActive ? "활성" : "비활성"}
+        </Badge>
+      ),
+    },
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="참여기업 관리" description="산학협력 기업 및 기관 풀 관리" />
-      <DataTable 
-        data={partners} 
-        columns={columns} 
+      <SectionHeader
+        title="참여기업 관리"
+        description="승인된 기업의 담당자, 전문가, 프로그램 참여실적을 조회합니다."
+      />
+      {companies.isError && (
+        <p className="mb-4 text-destructive">참여기업 정보를 불러오지 못했습니다.</p>
+      )}
+      <DataTable
+        data={companies.data?.data ?? []}
+        columns={columns}
         filterKey="name"
-        filterPlaceholder="기관명 검색..."
+        filterPlaceholder="기업명 검색"
       />
     </PortalLayout>
   );
