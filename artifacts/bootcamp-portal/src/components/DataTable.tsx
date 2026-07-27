@@ -38,15 +38,23 @@ export function DataTable<T extends { id: string }>({
   const [filterValue, setFilterValue] = useState("");
   const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
   const hasScrolledRef = useRef(false);
+  // Local copy of the highlight so we can fade it out after the admin has seen it.
+  const [activeHighlightId, setActiveHighlightId] = useState<string | undefined>(highlightId);
 
-  // Scroll the highlighted row into view once, after data has loaded.
   useEffect(() => {
-    if (loading || !highlightId || hasScrolledRef.current) return;
+    setActiveHighlightId(highlightId);
+  }, [highlightId]);
+
+  // Scroll the highlighted row into view once, after data has loaded,
+  // then fade the highlight out after a few seconds.
+  useEffect(() => {
+    if (loading || !highlightId || hasScrolledRef.current) return undefined;
     const el = highlightedRowRef.current;
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      hasScrolledRef.current = true;
-    }
+    if (!el) return undefined;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    hasScrolledRef.current = true;
+    const timer = window.setTimeout(() => setActiveHighlightId(undefined), 3000);
+    return () => window.clearTimeout(timer);
   }, [loading, highlightId, data]);
 
   const filteredData = filterKey && filterValue
@@ -112,8 +120,9 @@ export function DataTable<T extends { id: string }>({
                   onClick={() => onRowClick && onRowClick(row)}
                   className={[
                     onRowClick ? "cursor-pointer hover:bg-muted/50" : "",
-                    row.id === highlightId
-                      ? "bg-primary/10 ring-1 ring-inset ring-primary/40 transition-colors"
+                    "transition-colors duration-1000",
+                    row.id === activeHighlightId
+                      ? "bg-primary/10 ring-1 ring-inset ring-primary/40"
                       : "",
                   ].join(" ").trim()}
                 >

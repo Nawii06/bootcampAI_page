@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, contractFetch, customFetch } from "@workspace/api-client-react";
 import {
@@ -25,7 +25,23 @@ import { useFormDraft } from "@/hooks/useFormDraft";
 export default function AdminPartners() {
   // Highlight a company row when navigated back from /admin/employment?highlight=...
   const search = useSearch();
-  const highlightId = new URLSearchParams(search).get("highlight") ?? undefined;
+  const [highlightId] = useState(
+    () => new URLSearchParams(search).get("highlight") ?? undefined,
+  );
+
+  // Strip ?highlight= from the URL so a refresh or shared link doesn't re-highlight.
+  useEffect(() => {
+    if (!highlightId) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("highlight")) return;
+    params.delete("highlight");
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
+  }, [highlightId]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingCompanyId, setEditingCompanyId] = useState("");
