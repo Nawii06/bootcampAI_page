@@ -26,7 +26,6 @@ export interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-export { AuthContext };
 
 function portalRole(roles: string[]): Role {
   if (roles.includes("SYSTEM_ADMIN")) return "superAdmin";

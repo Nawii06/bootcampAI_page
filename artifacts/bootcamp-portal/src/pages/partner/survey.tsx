@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PartnerSurvey() {
   const queryClient = useQueryClient();
@@ -88,6 +89,15 @@ export default function PartnerSurvey() {
           </form>
         </CardContent></Card>
         <div className="space-y-3">
+          {(years.isLoading || surveys.isLoading) &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-5">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="mt-2 h-4 w-72" />
+                </CardContent>
+              </Card>
+            ))}
           {(surveys.data?.data ?? []).map((survey) => (
             <Card key={survey.id}><CardContent className="p-5"><h2 className="font-medium">{survey.title}</h2><p className="mt-2 text-sm text-muted-foreground">필요 기술: {survey.details.requiredSkills?.join(", ") || "-"}</p></CardContent></Card>
           ))}

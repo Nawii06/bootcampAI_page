@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorCard } from "@/components/ErrorCard";
-import { LoadingCard } from "@/components/LoadingCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Trash2, Building2, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -283,7 +283,41 @@ export default function AdminEmployment() {
       </div>
 
       {/* ── Status ── */}
-      {isLoading && <LoadingCard />}
+      {isLoading && (
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, groupIdx) => (
+            <Card key={groupIdx}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded shrink-0" />
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, rowIdx) => (
+                    <div
+                      key={rowIdx}
+                      className="flex items-start gap-3 rounded-md border px-4 py-3"
+                    >
+                      <Skeleton className="mt-0.5 h-5 w-14 shrink-0 rounded" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-64" />
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Skeleton className="h-7 w-7 rounded-md" />
+                        <Skeleton className="h-7 w-7 rounded-md" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
       {isError && <ErrorCard message={error instanceof Error ? error.message : undefined} />}
 
       {/* ── Empty state ── */}
