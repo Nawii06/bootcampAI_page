@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { contractFetch, customFetch } from "@workspace/api-client-react";
+import { ApiError, contractFetch, customFetch } from "@workspace/api-client-react";
 import {
   CompanyApplicationsResponseSchema,
   CompanyListResponseSchema,
@@ -15,6 +15,9 @@ import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -28,21 +31,37 @@ export default function AdminPartners() {
   const [editingCompanyId, setEditingCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState("");
+  const [companyDescription, setCompanyDescription] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [companyIsActive, setCompanyIsActive] = useState(true);
 
   const resetCompanyForm = () => {
     setEditingCompanyId("");
     setCompanyName("");
     setCompanyType("");
+    setCompanyDescription("");
+    setCompanyWebsite("");
+    setCompanyIsActive(true);
   };
 
   // Draft persistence: keeps the editing company ID alongside field values so
   // an expired session doesn't lose the admin's edit context.
   const { clearDraft: clearCompanyDraft } = useFormDraft(
     "admin/partners/company",
-    { companyName, companyType, editingCompanyId },
+    {
+      companyName,
+      companyType,
+      companyDescription,
+      companyWebsite,
+      companyIsActive,
+      editingCompanyId,
+    },
     (draft) => {
       if (draft.companyName) setCompanyName(draft.companyName);
       if (draft.companyType) setCompanyType(draft.companyType);
+      if (draft.companyDescription) setCompanyDescription(draft.companyDescription);
+      if (draft.companyWebsite) setCompanyWebsite(draft.companyWebsite);
+      if (typeof draft.companyIsActive === "boolean") setCompanyIsActive(draft.companyIsActive);
       if (draft.editingCompanyId) setEditingCompanyId(draft.editingCompanyId);
     },
     (clear) => {
@@ -96,13 +115,27 @@ export default function AdminPartners() {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "companies"] }),
   });
+  // Inline validation errors from the API (e.g. invalid website URL),
+  // keyed by field name from the VALIDATION_ERROR envelope.
+  const companyFieldErrors: Record<string, string> = {};
+  if (companyMutation.error instanceof ApiError && companyMutation.error.fieldErrors) {
+    for (const fe of companyMutation.error.fieldErrors) {
+      if (!(fe.field in companyFieldErrors)) companyFieldErrors[fe.field] = fe.message;
+    }
+  }
   const saveCompanyEdit = () => {
     if (!editingCompanyId || !companyName.trim() || !companyType.trim()) return;
     companyMutation.mutate(
       {
         url: `/api/v1/companies/${editingCompanyId}`,
         method: "PATCH",
-        body: { name: companyName.trim(), companyType: companyType.trim() },
+        body: {
+          name: companyName.trim(),
+          companyType: companyType.trim(),
+          description: companyDescription.trim() || null,
+          website: companyWebsite.trim() || null,
+          isActive: companyIsActive,
+        },
       },
       {
         onSuccess: () => {
@@ -169,6 +202,9 @@ export default function AdminPartners() {
               setEditingCompanyId(row.id);
               setCompanyName(row.name);
               setCompanyType(row.companyType ?? "");
+              setCompanyDescription(row.description ?? "");
+              setCompanyWebsite(row.website ?? "");
+              setCompanyIsActive(row.isActive);
             }}
           >
             수정
@@ -302,17 +338,60 @@ export default function AdminPartners() {
       {editingCompanyId && (
         <section className="mb-8 rounded-lg border bg-card p-4">
           <h2 className="mb-3 font-semibold">기업정보 수정</h2>
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
-            <Input
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="기업명"
-            />
-            <Input
-              value={companyType}
-              onChange={(e) => setCompanyType(e.target.value)}
-              placeholder="기업유형"
-            />
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="기업명"
+              />
+              {companyFieldErrors["name"] && (
+                <p className="text-sm text-destructive">{companyFieldErrors["name"]}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Input
+                value={companyType}
+                onChange={(e) => setCompanyType(e.target.value)}
+                placeholder="기업유형"
+              />
+              {companyFieldErrors["companyType"] && (
+                <p className="text-sm text-destructive">{companyFieldErrors["companyType"]}</p>
+              )}
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <Textarea
+                value={companyDescription}
+                onChange={(e) => setCompanyDescription(e.target.value)}
+                placeholder="기업 소개"
+                rows={3}
+              />
+              {companyFieldErrors["description"] && (
+                <p className="text-sm text-destructive">{companyFieldErrors["description"]}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Input
+                value={companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+                placeholder="웹사이트 (https://...)"
+              />
+              {companyFieldErrors["website"] && (
+                <p className="text-sm text-destructive">{companyFieldErrors["website"]}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="company-is-active"
+                checked={companyIsActive}
+                onCheckedChange={setCompanyIsActive}
+              />
+              <Label htmlFor="company-is-active">
+                {companyIsActive ? "활성" : "비활성"}
+              </Label>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
             <Button
               disabled={companyMutation.isPending || !companyName.trim() || !companyType.trim()}
               onClick={saveCompanyEdit}
@@ -343,7 +422,8 @@ export default function AdminPartners() {
           isRetrying={companies.isFetching}
         />
       )}
-      {(applications.isError || decision.isError || companyMutation.isError) && (
+      {(applications.isError || decision.isError ||
+        (companyMutation.isError && Object.keys(companyFieldErrors).length === 0)) && (
         <p className="mb-4 text-destructive">{(applications.error ?? decision.error ?? companyMutation.error)?.message}</p>
       )}
       <DataTable

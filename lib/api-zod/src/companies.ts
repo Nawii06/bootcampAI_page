@@ -111,6 +111,7 @@ export const CompanyResponseSchema = z.object({
   name: z.string(),
   registrationNumber: z.string().nullable().optional(),
   companyType: z.string(),
+  description: z.string().nullable().optional(),
   website: z.string().nullable().optional(),
   isPublic: z.boolean(),
   isActive: z.boolean(),
