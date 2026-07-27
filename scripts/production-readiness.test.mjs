@@ -9,7 +9,7 @@ const valid = {
   NODE_ENV: "production",
   ENABLE_MOCK_AUTH: "false",
   CORS_ALLOWED_ORIGINS: "https://bootcamp.ac.kr",
-  DATABASE_URL: "postgresql://service:secret@db/bootcamp",
+  DATABASE_URL: "postgresql://service:secret@db/bootcamp", // secret-scan:allow — fake test fixture
   FILE_STORAGE_DRIVER: "s3",
   S3_BUCKET: "bootcamp-production",
   S3_REGION: "ap-northeast-2",

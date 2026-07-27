@@ -11,7 +11,7 @@ test("builds a custom-format backup without placing credentials in arguments", (
   const plan = createBackupPlan(
     {
       BACKUP_DATABASE_URL:
-        "postgresql://backup_user:p%40ssword@db.internal:5432/bootcamp?sslmode=require",
+        "postgresql://backup_user:p%40ssword@db.internal:5432/bootcamp?sslmode=require", // secret-scan:allow — fake test fixture
       BACKUP_DIR: ".data/test-backups",
     },
     new Date("2026-07-27T00:00:00.000Z"),
@@ -25,16 +25,16 @@ test("builds a custom-format backup without placing credentials in arguments", (
 test("requires a separate expected migration identity", () => {
   const environment = migrationEnvironment({
     MIGRATION_DATABASE_URL:
-      "postgresql://bootcamp_migrator:secret@db/bootcamp",
+      "postgresql://bootcamp_migrator:secret@db/bootcamp", // secret-scan:allow — fake test fixture
     MIGRATION_EXPECTED_USER: "bootcamp_migrator",
-    DATABASE_URL: "postgresql://bootcamp_app:other@db/bootcamp",
+    DATABASE_URL: "postgresql://bootcamp_app:other@db/bootcamp", // secret-scan:allow — fake test fixture
   });
   assert.match(environment.DATABASE_URL, /bootcamp_migrator/);
   assert.throws(
     () =>
       migrationEnvironment({
         MIGRATION_DATABASE_URL:
-          "postgresql://bootcamp_app:secret@db/bootcamp",
+          "postgresql://bootcamp_app:secret@db/bootcamp", // secret-scan:allow — fake test fixture
         MIGRATION_EXPECTED_USER: "bootcamp_migrator",
       }),
     /does not match/,

@@ -4,6 +4,7 @@
  *
  * Usage:
  *   node scripts/secret-scan.mjs --staged     # scan all staged files (used by .git/hooks/pre-commit)
+ *   node scripts/secret-scan.mjs --tracked    # scan all git-tracked files (used by verify/release checks)
  *   node scripts/secret-scan.mjs <file...>    # scan specific files
  *
  * Allowlisting:
@@ -54,6 +55,14 @@ function stagedFiles() {
   return out.split("\n").filter(Boolean);
 }
 
+function trackedFiles() {
+  const out = execFileSync("git", ["ls-files"], {
+    encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  return out.split("\n").filter(Boolean);
+}
+
 function stagedContent(file) {
   try {
     return execFileSync("git", ["show", `:${file}`], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
@@ -68,8 +77,13 @@ function isBinary(content) {
 
 const args = process.argv.slice(2);
 const useStaged = args.includes("--staged");
+const useTracked = args.includes("--tracked");
 const ignores = loadIgnorePatterns();
-const files = useStaged ? stagedFiles() : args.filter((a) => a !== "--staged");
+const files = useStaged
+  ? stagedFiles()
+  : useTracked
+    ? trackedFiles()
+    : args.filter((a) => a !== "--staged" && a !== "--tracked");
 
 const findings = [];
 for (const file of files) {
@@ -90,7 +104,11 @@ for (const file of files) {
 }
 
 if (findings.length) {
-  console.error("\n✖ Potential secrets detected — commit blocked:\n");
+  console.error(
+    useTracked
+      ? "\n✖ Potential secrets detected in tracked files — verify blocked:\n"
+      : "\n✖ Potential secrets detected — commit blocked:\n",
+  );
   for (const f of findings) {
     console.error(`  ${f.file}:${f.line}  [${f.rule}]  ${f.match}`);
   }
