@@ -273,6 +273,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, [refreshSession]);
 
+  // ─── Device-wake / tab-restore recovery ─────────────────────────────────
+  // When a laptop lid closes (or the OS suspends the process), the page stays
+  // in memory without a BFCache event.  Browser timer throttling can pause or
+  // slow setTimeout callbacks.  On wake, the logout timer may fire immediately
+  // even though the server session is still valid — a phantom logout.
+  //
+  // Listening to `visibilitychange` covers this gap: whenever the tab becomes
+  // visible again after being hidden, we re-fetch the session so all timers
+  // are rescheduled from the current server-side expiry.  If the session has
+  // actually expired the fetch returns null and the existing arm/disarm effect
+  // clears the timers cleanly — no extra handling needed here.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible" && userRef.current) {
+        refreshSession();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [refreshSession]);
+
   async function loginWithFakeIdentity(identityId: string) {
     await customFetch("/api/v1/fake-auth/login", {
       method: "POST",
