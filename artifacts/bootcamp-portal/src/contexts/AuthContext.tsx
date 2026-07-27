@@ -312,6 +312,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handlePageShow(event: PageTransitionEvent) {
       if (event.persisted) {
+        // Reuse the same guards as visibilitychange: BFCache restore and
+        // visibility events can fire within milliseconds of each other,
+        // which would otherwise trigger two concurrent refreshes.
+        if (isRefreshingRef.current) return;
+        if (Date.now() - lastRefreshAtRef.current < VISIBILITY_DEBOUNCE_MS) return;
         refreshSession();
       }
     }
