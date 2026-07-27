@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function StudentApply() {
   const { user } = useAuth();
@@ -19,6 +20,15 @@ export default function StudentApply() {
   const [, setLocation] = useLocation();
   const [sessionId, setSessionId] = useState("");
   const [reason, setReason] = useState("");
+
+  const { clearDraft } = useFormDraft(
+    "/student/apply",
+    { sessionId, reason },
+    (draft) => {
+      if (draft.sessionId) setSessionId(draft.sessionId);
+      if (draft.reason) setReason(draft.reason);
+    },
+  );
 
   const programs = useQuery({
     queryKey: ["programs", "open"],
@@ -41,6 +51,7 @@ export default function StudentApply() {
         }),
       }),
     onSuccess: () => {
+      clearDraft();
       toast({ title: "신청 완료", description: "프로그램 신청서가 제출되었습니다." });
       setLocation("/student/status");
     },

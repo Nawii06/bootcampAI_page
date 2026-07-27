@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -47,6 +48,20 @@ export default function PartnerEmployment() {
   const [employmentCount, setEmploymentCount] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+
+  const { clearDraft } = useFormDraft(
+    "/partner/employment",
+    { participationType, title, skills, participantCount, employmentCount, startsAt, endsAt },
+    (draft) => {
+      if (draft.participationType) setParticipationType(draft.participationType);
+      if (draft.title) setTitle(draft.title);
+      if (draft.skills) setSkills(draft.skills);
+      if (draft.participantCount) setParticipantCount(draft.participantCount);
+      if (draft.employmentCount) setEmploymentCount(draft.employmentCount);
+      if (draft.startsAt) setStartsAt(draft.startsAt);
+      if (draft.endsAt) setEndsAt(draft.endsAt);
+    },
+  );
 
   const years = useQuery({
     queryKey: ["reference", "business-years", "active"],
@@ -114,6 +129,7 @@ export default function PartnerEmployment() {
         }),
       }),
     onSuccess: () => {
+      clearDraft();
       queryClient.invalidateQueries({
         queryKey: ["partner", "company-participations"],
       });

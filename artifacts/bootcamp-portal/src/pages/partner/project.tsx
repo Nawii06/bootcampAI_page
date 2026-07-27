@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function PartnerProject() {
   const queryClient = useQueryClient();
@@ -22,6 +23,19 @@ export default function PartnerProject() {
   const [dataTypes, setDataTypes] = useState("");
   const [outputs, setOutputs] = useState("");
   const [mentorRole, setMentorRole] = useState("");
+
+  const { clearDraft } = useFormDraft(
+    "/partner/project",
+    { title, track, problem, dataTypes, outputs, mentorRole },
+    (draft) => {
+      if (draft.title) setTitle(draft.title);
+      if (draft.track) setTrack(draft.track);
+      if (draft.problem) setProblem(draft.problem);
+      if (draft.dataTypes) setDataTypes(draft.dataTypes);
+      if (draft.outputs) setOutputs(draft.outputs);
+      if (draft.mentorRole) setMentorRole(draft.mentorRole);
+    },
+  );
   const years = useQuery({
     queryKey: ["reference", "business-years", "active"],
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
@@ -54,6 +68,7 @@ export default function PartnerProject() {
       }),
     }),
     onSuccess: () => {
+      clearDraft();
       queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
       setTitle(""); setProblem(""); setDataTypes(""); setOutputs(""); setMentorRole("");
     },
