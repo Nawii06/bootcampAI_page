@@ -246,6 +246,32 @@ export const CompanyParticipationStudentLinkSchema = z.object({
 });
 export type CompanyParticipationStudentLink = z.infer<typeof CompanyParticipationStudentLinkSchema>;
 
+// ─── Admin: cross-company participation list ───────────────────────────────
+
+/**
+ * A single participation record enriched with company information.
+ * Returned by GET /api/v1/company-participations when the caller has an
+ * admin role (COMPANY_STAFF / REVIEWER / SYSTEM_ADMIN).
+ */
+export const AdminCompanyParticipationItemSchema =
+  CompanyParticipationResponseSchema.extend({
+    companyId: z.string().uuid(),
+    companyName: z.string(),
+    companyType: z.string(),
+    businessYearId: z.string().uuid().optional(),
+  });
+
+export const AdminCompanyParticipationListResponseSchema = z.object({
+  data: z.array(AdminCompanyParticipationItemSchema),
+});
+
+export type AdminCompanyParticipationItem = z.infer<
+  typeof AdminCompanyParticipationItemSchema
+>;
+export type AdminCompanyParticipationListResponse = z.infer<
+  typeof AdminCompanyParticipationListResponseSchema
+>;
+
 export const StudentEmploymentLinkResponseSchema = z.object({
   id: z.string().uuid(),
   companyName: z.string(),

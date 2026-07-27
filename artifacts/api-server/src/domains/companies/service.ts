@@ -271,7 +271,9 @@ export function decideCompanyApplication(
 
 export function updateCompanyParticipation(
   id: string,
-  companyId: string,
+  /** Owning company's id.  Pass `null` for admin callers to bypass the
+   *  ownership check (COMPANY_STAFF / REVIEWER). */
+  companyId: string | null,
   input: CompanyParticipationUpdate,
   actorId: string,
   requestId: string,
@@ -281,7 +283,7 @@ export function updateCompanyParticipation(
       .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
       .for("update");
     if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
-    if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 수정할 수 있습니다.");
+    if (companyId !== null && current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 수정할 수 있습니다.");
     const [updated] = await tx.update(companyParticipations).set({
       ...(input.participationType !== undefined ? { participationType: input.participationType } : {}),
       ...(input.title !== undefined ? { title: input.title } : {}),
@@ -306,7 +308,9 @@ export function updateCompanyParticipation(
 
 export function deleteCompanyParticipation(
   id: string,
-  companyId: string,
+  /** Owning company's id.  Pass `null` for admin callers to bypass the
+   *  ownership check (COMPANY_STAFF / REVIEWER). */
+  companyId: string | null,
   actorId: string,
   requestId: string,
 ) {
@@ -315,7 +319,7 @@ export function deleteCompanyParticipation(
       .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
       .for("update");
     if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
-    if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 삭제할 수 있습니다.");
+    if (companyId !== null && current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 삭제할 수 있습니다.");
     await tx.update(companyParticipations)
       .set({ deletedAt: new Date() })
       .where(eq(companyParticipations.id, id));

@@ -57,6 +57,7 @@ import AdminProgramOperations from "./pages/admin/program-operations";
 import AdminBenefits from "./pages/admin/benefits";
 import AdminContent from "./pages/admin/content";
 import AdminAuditLogs from "./pages/admin/audit-logs";
+import AdminEmployment from "./pages/admin/employment";
 
 const queryClient = new QueryClient();
 const studentRoles = ["STUDENT"];
@@ -123,6 +124,7 @@ function Router() {
       <Route path="/admin/performance/export" component={withRoleGuard(AdminPerformanceExport, performanceRoles)} />
       <Route path="/admin/preview-operations" component={withRoleGuard(AdminPreviewOperations, adminOverviewRoles)} />
       <Route path="/admin/audit-logs" component={withRoleGuard(AdminAuditLogs, ["AUDITOR"])} />
+      <Route path="/admin/employment" component={withRoleGuard(AdminEmployment, companyStaffRoles)} />
 
       <Route component={NotFound} />
     </Switch>

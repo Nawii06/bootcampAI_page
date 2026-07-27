@@ -123,6 +123,55 @@ export function listCompanyParticipations(
     .orderBy(asc(companyParticipations.createdAt));
 }
 
+/**
+ * List all company participations across every company (admin view).
+ * Joined with the companies table so each row includes company name and type.
+ * Supports optional filters; no companyId ownership restriction.
+ */
+export function listAllCompanyParticipations(filters: {
+  companyId?: string;
+  businessYearId?: string;
+  participationType?: string;
+}) {
+  return db
+    .select({
+      id: companyParticipations.id,
+      companyId: companyParticipations.companyId,
+      companyName: companies.name,
+      companyType: companies.companyType,
+      businessYearId: companyParticipations.businessYearId,
+      participationType: companyParticipations.participationType,
+      title: companyParticipations.title,
+      details: companyParticipations.details,
+      participantCount: companyParticipations.participantCount,
+      employmentCount: companyParticipations.employmentCount,
+      startsAt: companyParticipations.startsAt,
+      endsAt: companyParticipations.endsAt,
+      createdAt: companyParticipations.createdAt,
+    })
+    .from(companyParticipations)
+    .innerJoin(companies, eq(companies.id, companyParticipations.companyId))
+    .where(
+      and(
+        filters.companyId
+          ? eq(companyParticipations.companyId, filters.companyId)
+          : undefined,
+        filters.businessYearId
+          ? eq(companyParticipations.businessYearId, filters.businessYearId)
+          : undefined,
+        filters.participationType
+          ? eq(
+              companyParticipations.participationType,
+              filters.participationType,
+            )
+          : undefined,
+        isNull(companyParticipations.deletedAt),
+        isNull(companies.deletedAt),
+      ),
+    )
+    .orderBy(asc(companies.name), asc(companyParticipations.createdAt));
+}
+
 /** All PROJECT-type experiential records for a given student (not soft-deleted). */
 export function listStudentPortfolios(studentId: string) {
   return db

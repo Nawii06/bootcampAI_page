@@ -35,6 +35,7 @@ import {
   findCompanyForUser,
   listCompanies,
   listCompanyParticipations,
+  listAllCompanyParticipations,
   listParticipationsForPortfolio,
   listStudentPortfolios,
   listConsentedProjectPortfolios,
@@ -185,15 +186,35 @@ router.get(
 router.get(
   "/v1/company-participations",
   requireAuth,
-  requireRoles("COMPANY_MANAGER"),
   async (req, res, next) => {
     try {
+      const isAdmin = req.auth!.roles.some((r) =>
+        ["COMPANY_STAFF", "REVIEWER", "SYSTEM_ADMIN"].includes(r),
+      );
+      const isManager = req.auth!.roles.includes("COMPANY_MANAGER");
+      if (!isAdmin && !isManager) {
+        throw new ApiError(403, "FORBIDDEN", "권한이 없습니다.");
+      }
+
       const query = CompanyParticipationQuerySchema.parse(req.query);
+
+      if (isAdmin) {
+        // Admin path: return all participations across all companies, enriched
+        // with company name/type.  An optional ?companyId= query param scopes
+        // the result to a single company.
+        const companyId = typeof req.query.companyId === "string"
+          ? req.query.companyId
+          : undefined;
+        const data = await listAllCompanyParticipations({ ...query, companyId });
+        return res.json({ data });
+      }
+
+      // Manager path: scoped to their own approved company.
       const company = await findCompanyForUser(req.auth!.id);
       if (!company) {
         throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
       }
-      res.json({
+      return res.json({
         company,
         data: await listCompanyParticipations(company.id, query),
       });
@@ -246,14 +267,25 @@ router.put(
 router.patch(
   "/v1/company-participations/:id",
   requireAuth,
-  requireRoles("COMPANY_MANAGER"),
   async (req, res, next) => {
     try {
+      const isAdmin = req.auth!.roles.some((r) =>
+        ["COMPANY_STAFF", "REVIEWER", "SYSTEM_ADMIN"].includes(r),
+      );
+      const isManager = req.auth!.roles.includes("COMPANY_MANAGER");
+      if (!isAdmin && !isManager) {
+        throw new ApiError(403, "FORBIDDEN", "권한이 없습니다.");
+      }
       const { id } = CompanyIdParamsSchema.parse(req.params);
       const input = CompanyParticipationUpdateSchema.parse(req.body);
-      const company = await findCompanyForUser(req.auth!.id);
-      if (!company) throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
-      res.json(await updateCompanyParticipation(id, company.id, input, req.auth!.id, String(req.id)));
+      // Admin callers pass null to bypass the ownership check inside the service.
+      const companyId = isAdmin
+        ? null
+        : (await findCompanyForUser(req.auth!.id))?.id ?? null;
+      if (!isAdmin && companyId === null) {
+        throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
+      }
+      res.json(await updateCompanyParticipation(id, companyId, input, req.auth!.id, String(req.id)));
     } catch (error) { next(error); }
   },
 );
@@ -261,13 +293,24 @@ router.patch(
 router.delete(
   "/v1/company-participations/:id",
   requireAuth,
-  requireRoles("COMPANY_MANAGER"),
   async (req, res, next) => {
     try {
+      const isAdmin = req.auth!.roles.some((r) =>
+        ["COMPANY_STAFF", "REVIEWER", "SYSTEM_ADMIN"].includes(r),
+      );
+      const isManager = req.auth!.roles.includes("COMPANY_MANAGER");
+      if (!isAdmin && !isManager) {
+        throw new ApiError(403, "FORBIDDEN", "권한이 없습니다.");
+      }
       const { id } = CompanyIdParamsSchema.parse(req.params);
-      const company = await findCompanyForUser(req.auth!.id);
-      if (!company) throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
-      res.json(await deleteCompanyParticipation(id, company.id, req.auth!.id, String(req.id)));
+      // Admin callers pass null to bypass the ownership check inside the service.
+      const companyId = isAdmin
+        ? null
+        : (await findCompanyForUser(req.auth!.id))?.id ?? null;
+      if (!isAdmin && companyId === null) {
+        throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
+      }
+      res.json(await deleteCompanyParticipation(id, companyId, req.auth!.id, String(req.id)));
     } catch (error) { next(error); }
   },
 );
