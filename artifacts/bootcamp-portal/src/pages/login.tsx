@@ -19,7 +19,7 @@ export default function Login() {
   const [error, setError] = useState<string>();
   const [, setLocation] = useLocation();
   const search = useSearch();
-  const { loginWithFakeIdentity } = useAuth();
+  const { loginWithFakeIdentity, user, isLoading } = useAuth();
 
   // Decode the redirect path set by RoleGuard / PortalLayout when the session
   // was missing. After login we navigate there instead of defaultRoute.
@@ -32,6 +32,13 @@ export default function Login() {
     }
   })();
 
+  // If the user is already authenticated, redirect immediately.
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation(redirectAfterLogin ?? user.defaultRoute ?? "/public/home");
+    }
+  }, [isLoading, user, redirectAfterLogin, setLocation]);
+
   useEffect(() => {
     if (__FAKE_DATA_SET__ !== "FD_Set_01") return;
     contractFetch(FakeIdentityListResponseSchema, "/api/v1/fake-auth/identities", {
@@ -40,6 +47,14 @@ export default function Login() {
       .then((response) => setIdentities(response.data))
       .catch(() => setError("가상 계정 목록을 불러오지 못했습니다."));
   }, []);
+
+  // While the session check is in flight, show nothing to avoid a flash of
+  // the login form for authenticated users.
+  if (isLoading) return null;
+
+  // If user is set, the redirect effect above will fire — render nothing in the
+  // meantime so the login form never flashes.
+  if (user) return null;
 
   async function login(identity: FakeIdentitySummary) {
     setPendingId(identity.identityId);
