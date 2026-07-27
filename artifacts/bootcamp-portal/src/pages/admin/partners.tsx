@@ -6,7 +6,7 @@ import {
   CompanyListResponseSchema,
   type CompanyResponse as Company,
 } from "@workspace/api-zod";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PortalLayout } from "../../components/PortalLayout";
@@ -20,6 +20,9 @@ import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function AdminPartners() {
+  // Highlight a company row when navigated back from /admin/employment?highlight=...
+  const search = useSearch();
+  const highlightId = new URLSearchParams(search).get("highlight") ?? undefined;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingCompanyId, setEditingCompanyId] = useState("");
@@ -349,6 +352,7 @@ export default function AdminPartners() {
         filterKey="name"
         filterPlaceholder="기업명 검색"
         loading={companies.isLoading}
+        highlightId={highlightId}
       />
     </PortalLayout>
   );

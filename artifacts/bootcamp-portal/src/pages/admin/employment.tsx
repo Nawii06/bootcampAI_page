@@ -6,7 +6,7 @@
  * to correct data entered by partner managers.
  */
 import { useState, useMemo } from "react";
-import { useSearch } from "wouter";
+import { Link, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AdminCompanyParticipationListResponseSchema,
@@ -341,13 +341,13 @@ export default function AdminEmployment() {
                 <Badge variant="outline" className="text-xs">
                   {group.companyType}
                 </Badge>
-                <a
-                  href="/admin/partners"
+                <Link
+                  href={`/admin/partners?highlight=${companyId}`}
                   className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   기업 관리
                   <ChevronRight className="h-3 w-3" />
-                </a>
+                </Link>
               </div>
             </CardHeader>
 

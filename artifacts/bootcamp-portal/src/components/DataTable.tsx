@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,8 @@ interface DataTableProps<T> {
   loading?: boolean;
   /** Number of skeleton rows to display. Defaults to 5. */
   loadingRows?: number;
+  /** Row id to scroll to and visually highlight on load (e.g. from a ?highlight= deep link). */
+  highlightId?: string;
 }
 
 export function DataTable<T extends { id: string }>({ 
@@ -31,8 +33,21 @@ export function DataTable<T extends { id: string }>({
   actions,
   loading = false,
   loadingRows = 5,
+  highlightId,
 }: DataTableProps<T>) {
   const [filterValue, setFilterValue] = useState("");
+  const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
+  const hasScrolledRef = useRef(false);
+
+  // Scroll the highlighted row into view once, after data has loaded.
+  useEffect(() => {
+    if (loading || !highlightId || hasScrolledRef.current) return;
+    const el = highlightedRowRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      hasScrolledRef.current = true;
+    }
+  }, [loading, highlightId, data]);
 
   const filteredData = filterKey && filterValue
     ? data.filter(item => {
@@ -93,8 +108,14 @@ export function DataTable<T extends { id: string }>({
               filteredData.map((row) => (
                 <TableRow 
                   key={row.id} 
+                  ref={row.id === highlightId ? highlightedRowRef : undefined}
                   onClick={() => onRowClick && onRowClick(row)}
-                  className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                  className={[
+                    onRowClick ? "cursor-pointer hover:bg-muted/50" : "",
+                    row.id === highlightId
+                      ? "bg-primary/10 ring-1 ring-inset ring-primary/40 transition-colors"
+                      : "",
+                  ].join(" ").trim()}
                 >
                   {columns.map((col) => (
                     <TableCell key={col.key}>
