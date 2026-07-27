@@ -215,6 +215,7 @@ export default function AdminPartners() {
             variant="outline"
             disabled={companyMutation.isPending}
             onClick={() => {
+              companyMutation.reset();
               setEditingCompanyId(row.id);
               setCompanyName(row.name);
               setCompanyType(row.companyType ?? "");
@@ -418,6 +419,7 @@ export default function AdminPartners() {
               variant="outline"
               disabled={companyMutation.isPending}
               onClick={() => {
+                companyMutation.reset();
                 clearCompanyDraft();
                 resetCompanyForm();
               }}
