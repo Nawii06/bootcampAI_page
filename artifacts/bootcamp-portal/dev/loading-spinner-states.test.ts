@@ -10,6 +10,11 @@
  *   - Partner pages: Employment
  *   - Admin pages:  Benefits, Content
  *
+ * ## ⚠️ Adding a new page? This file must be extended.
+ *
+ * Every new portal page needs a loading-state + loaded-state test here.
+ * See `dev/TESTING.md` for the checklist and a copy-paste template.
+ *
  * ## Strategy
  *
  * `mock.module()` is not available in this runtime. Instead we use three

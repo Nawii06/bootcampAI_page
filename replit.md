@@ -38,7 +38,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Every new bootcamp-portal page must get loading-state tests in `artifacts/bootcamp-portal/dev/loading-spinner-states.test.ts` — see `artifacts/bootcamp-portal/dev/TESTING.md` for the checklist and template.
 
 ## Pointers
 
