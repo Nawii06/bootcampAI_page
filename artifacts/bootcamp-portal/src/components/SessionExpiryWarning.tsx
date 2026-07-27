@@ -29,12 +29,26 @@ export function SessionExpiryWarning({
     setCountdown(secondsRemaining);
   }, [secondsRemaining]);
 
-  // Count down locally for a live display
+  // Count down locally for a live display.
+  // Dependency is `secondsRemaining` (the prop), NOT `countdown` (the state).
+  // This means the interval is created once per prop-reset, not once per
+  // second — avoiding ~300 wasted setInterval/clearInterval cycles per
+  // 5-minute warning window.
+  // The interval clears itself when the counter reaches zero; the cleanup
+  // function handles unmount and prop-reset.
   useEffect(() => {
-    if (countdown <= 0) return;
-    const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    if (secondsRemaining <= 0) return;
+    const id = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
     return () => clearInterval(id);
-  }, [countdown]);
+  }, [secondsRemaining]);
 
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
