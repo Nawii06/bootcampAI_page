@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function PartnerSurvey() {
   const queryClient = useQueryClient();
@@ -98,7 +99,26 @@ export default function PartnerSurvey() {
                 </CardContent>
               </Card>
             ))}
-          {(surveys.data?.data ?? []).map((survey) => (
+          {(years.isError || surveys.isError) && (
+            <ErrorCard
+              message="수요조사 목록을 불러오지 못했습니다."
+              error={years.error ?? surveys.error}
+              onRetry={() => {
+                if (years.isError) years.refetch();
+                if (surveys.isError) surveys.refetch();
+              }}
+              isRetrying={years.isRefetching || surveys.isRefetching}
+            />
+          )}
+          {!years.isLoading && !surveys.isLoading && !years.isError && !surveys.isError &&
+            (yearId === undefined || (surveys.data?.data ?? []).length === 0) && (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  등록된 수요조사가 없습니다.
+                </CardContent>
+              </Card>
+            )}
+          {!years.isError && !surveys.isError && (surveys.data?.data ?? []).map((survey) => (
             <Card key={survey.id}><CardContent className="p-5"><h2 className="font-medium">{survey.title}</h2><p className="mt-2 text-sm text-muted-foreground">필요 기술: {survey.details.requiredSkills?.join(", ") || "-"}</p></CardContent></Card>
           ))}
         </div>
