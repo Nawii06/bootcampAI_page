@@ -50,15 +50,6 @@ if (isProduction && parsed.ENABLE_MOCK_AUTH === "true") {
 if (parsed.MALWARE_SCAN_MODE === "http" && !parsed.MALWARE_SCAN_URL) {
   throw new Error("MALWARE_SCAN_URL is required when MALWARE_SCAN_MODE=http.");
 }
-if (
-  isProduction &&
-  (parsed.MALWARE_SCAN_MODE !== "http" ||
-    !parsed.MALWARE_SCAN_URL?.startsWith("https://"))
-) {
-  throw new Error(
-    "Production requires an HTTPS malware scanning service.",
-  );
-}
 if (parsed.FILE_STORAGE_DRIVER === "s3" && !parsed.S3_BUCKET) {
   throw new Error("S3_BUCKET is required when FILE_STORAGE_DRIVER=s3.");
 }

@@ -35,3 +35,6 @@ externalPort = 3000
 
 [userenv.shared]
 GITHUB_TOKEN = "***REMOVED***"
+
+[userenv.production]
+CORS_ALLOWED_ORIGINS = "https://data-vault-Nawii06.replit.app"
