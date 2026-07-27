@@ -219,7 +219,7 @@ router.get(
         data: await listCompanyParticipations(company.id, query),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 );
