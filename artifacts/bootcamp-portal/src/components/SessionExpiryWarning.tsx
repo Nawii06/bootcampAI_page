@@ -34,18 +34,21 @@ export function SessionExpiryWarning({
   // This means the interval is created once per prop-reset, not once per
   // second — avoiding ~300 wasted setInterval/clearInterval cycles per
   // 5-minute warning window.
-  // The interval clears itself when the counter reaches zero; the cleanup
+  //
+  // The displayed value is computed from a fixed `deadline` wall-clock
+  // timestamp rather than decrementing a counter by 1 each tick.  When
+  // the browser throttles background-tab timers (e.g. fires the callback
+  // 2 s late), the counter-based approach would under-count; anchoring to
+  // `Date.now()` keeps the display accurate regardless of tick timing.
+  // The interval clears itself when the countdown reaches zero; the cleanup
   // function handles unmount and prop-reset.
   useEffect(() => {
     if (secondsRemaining <= 0) return;
+    const deadline = Date.now() + secondsRemaining * 1000;
     const id = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(id);
-          return 0;
-        }
-        return c - 1;
-      });
+      const remaining = Math.round((deadline - Date.now()) / 1000);
+      setCountdown(Math.max(0, remaining));
+      if (remaining <= 0) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
   }, [secondsRemaining]);
