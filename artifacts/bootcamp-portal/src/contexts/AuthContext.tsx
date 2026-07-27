@@ -86,6 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Ignored (stays 0) when clocks are within ~1 s of each other.
    */
   const clockOffsetMsRef = useRef<number>(0);
+  /**
+   * Guards the clock-skew toast so it fires at most once per page load.
+   * Reset to false on explicit logout so a fresh login can re-trigger it.
+   */
+  const skewWarnedRef = useRef<boolean>(false);
 
   const forceLogout = useCallback(() => {
     if (!userRef.current) return; // already logged out
@@ -163,8 +168,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Calibrate the clock offset from the server's timestamp.
       if (session.serverNow) {
-        clockOffsetMsRef.current =
+        const offset =
           new Date(session.serverNow).getTime() - clientNowBeforeRequest;
+        clockOffsetMsRef.current = offset;
+
+        // Warn once per page load when skew exceeds 1 minute so users
+        // understand why session timers may feel off.
+        const SKEW_WARN_THRESHOLD_MS = 60_000;
+        if (!skewWarnedRef.current && Math.abs(offset) > SKEW_WARN_THRESHOLD_MS) {
+          skewWarnedRef.current = true;
+          const minutes = Math.round(Math.abs(offset) / 60_000);
+          // offset > 0 → server is ahead → client clock is slow/late
+          // offset < 0 → server is behind → client clock is fast/early
+          const direction = offset > 0 ? "늦습니다" : "앞서 있습니다";
+          toast({
+            title: "기기 시계 동기화 문제",
+            description: `귀하의 기기 시계가 서버 시계보다 약 ${minutes}분 ${direction}. 기기 시계를 동기화하면 세션 오류를 방지할 수 있습니다.`,
+            variant: "destructive",
+            duration: 12_000,
+          });
+        }
       }
 
       // Store expiresAt BEFORE setUser so it is ready when the arm-on-login
