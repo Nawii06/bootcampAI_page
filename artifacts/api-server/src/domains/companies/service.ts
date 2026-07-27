@@ -329,6 +329,37 @@ export function deleteCompanyParticipation(
   });
 }
 
+export function setLinkedStudents(
+  id: string,
+  companyId: string,
+  portfolioIds: string[],
+  actorId: string,
+  requestId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(companyParticipations)
+      .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
+      .for("update");
+    if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
+    if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 수정할 수 있습니다.");
+    const prevDetails = (current.details ?? {}) as Record<string, unknown>;
+    const updatedDetails = { ...prevDetails, linkedPortfolioIds: portfolioIds };
+    const [updated] = await tx.update(companyParticipations)
+      .set({ details: updatedDetails, updatedAt: new Date() })
+      .where(eq(companyParticipations.id, id))
+      .returning();
+    await tx.insert(auditLogs).values({
+      actorUserId: actorId, action: "LINK_STUDENTS",
+      resourceType: "COMPANY_PARTICIPATION", resourceId: id,
+      businessYearId: current.businessYearId, requestId,
+      before: { linkedPortfolioIds: prevDetails.linkedPortfolioIds ?? [] },
+      after: { linkedPortfolioIds: portfolioIds },
+      changedFields: ["linkedPortfolioIds"],
+    });
+    return updated;
+  });
+}
+
 export function createCompanyParticipation(
   input: CompanyParticipationInput,
   companyId: string,

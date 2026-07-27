@@ -4,6 +4,7 @@ import { contractFetch, customFetch } from "@workspace/api-client-react";
 import {
   BusinessYearListResponseSchema,
   CompanyParticipationListResponseSchema,
+  CompanyPortfolioCandidateListResponseSchema,
 } from "@workspace/api-zod";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -12,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorCard } from "@/components/ErrorCard";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -60,11 +62,15 @@ export default function PartnerEmployment() {
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
 
-  // ─── Edit / delete mode ─────────────────────────────────────────────────
+  // ─── Panel mode ─────────────────────────────────────────────────────────
   /** ID of the record currently open for editing (null = create mode) */
   const [editingId, setEditingId] = useState<string | null>(null);
   /** ID of the record awaiting delete confirmation */
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  /** ID of the record whose students are being linked */
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  /** Portfolio IDs selected in the student-linking panel */
+  const [selectedPortfolioIds, setSelectedPortfolioIds] = useState<Set<string>>(new Set());
 
   const { clearDraft } = useFormDraft(
     "/partner/employment",
@@ -120,6 +126,18 @@ export default function PartnerEmployment() {
       contractFetch(
         CompanyParticipationListResponseSchema,
         `/api/v1/company-participations?businessYearId=${yearId}&participationType=FIELD_PRACTICE`,
+        { credentials: "include" },
+      ),
+  });
+
+  /** Lazy — only fetched when the student-linking panel is open */
+  const candidates = useQuery({
+    queryKey: ["partner", "company-portfolio-candidates"],
+    enabled: linkingId !== null,
+    queryFn: () =>
+      contractFetch(
+        CompanyPortfolioCandidateListResponseSchema,
+        "/api/v1/company-portfolio-candidates",
         { credentials: "include" },
       ),
   });
@@ -199,6 +217,20 @@ export default function PartnerEmployment() {
     },
   });
 
+  const saveLinkedStudents = useMutation({
+    mutationFn: ({ id, portfolioIds }: { id: string; portfolioIds: string[] }) =>
+      customFetch(`/api/v1/company-participations/${id}/linked-students`, {
+        method: "PUT",
+        responseType: "json",
+        credentials: "include",
+        body: JSON.stringify({ portfolioIds }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
+      handleCancelLinking();
+    },
+  });
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function handleCancelEdit() {
     setEditingId(null);
@@ -212,8 +244,15 @@ export default function PartnerEmployment() {
     clearDraft();
   }
 
+  function handleCancelLinking() {
+    setLinkingId(null);
+    setSelectedPortfolioIds(new Set());
+  }
+
   function handleEditClick(record: typeof allRecords[number]) {
     setDeletingId(null);
+    setLinkingId(null);
+    setSelectedPortfolioIds(new Set());
     setEditingId(record.id);
     setParticipationType(record._type as ParticipationType);
     setTitle(record.title);
@@ -222,6 +261,26 @@ export default function PartnerEmployment() {
     setEmploymentCount(record.employmentCount ?? 0);
     setStartsAt(toDateInput(record.startsAt));
     setEndsAt(toDateInput(record.endsAt));
+  }
+
+  function handleLinkStudentsClick(record: typeof allRecords[number]) {
+    setEditingId(null);
+    setDeletingId(null);
+    handleCancelEdit();
+    setLinkingId(record.id);
+    setSelectedPortfolioIds(new Set(record.details.linkedPortfolioIds ?? []));
+  }
+
+  function togglePortfolio(portfolioId: string) {
+    setSelectedPortfolioIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(portfolioId)) {
+        next.delete(portfolioId);
+      } else {
+        next.add(portfolioId);
+      }
+      return next;
+    });
   }
 
   function handleSubmit(event: FormEvent) {
@@ -267,6 +326,8 @@ export default function PartnerEmployment() {
   const canSubmit = Boolean(yearId) && title.trim().length > 0 && !isMutating;
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  const linkingRecord = linkingId ? allRecords.find((r) => r.id === linkingId) : null;
+
   return (
     <PortalLayout>
       <SectionHeader
@@ -275,122 +336,214 @@ export default function PartnerEmployment() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
-        {/* Registration / edit form */}
+        {/* Left panel — create / edit / link-students */}
         <Card>
           <CardContent className="pt-6">
-            <h2 className="mb-5 text-sm font-semibold">
-              {editingId ? "고용 건 수정" : "신규 고용 건 등록"}
-            </h2>
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <FormField label="유형" required>
-                <Select
-                  value={participationType}
-                  onValueChange={(v) =>
-                    setParticipationType(v as ParticipationType)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARTICIPATION_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {PARTICIPATION_LABELS[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+            {/* ── Student-linking panel ── */}
+            {linkingId ? (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold">학생 연결</h2>
+                  {linkingRecord && (
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                      {linkingRecord.title}
+                    </p>
+                  )}
+                </div>
 
-              <FormField label="제목" required>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="예: 2024년 하반기 채용 연계"
-                />
-              </FormField>
+                {candidates.isLoading && (
+                  <p className="text-sm text-muted-foreground">
+                    포트폴리오 목록 불러오는 중…
+                  </p>
+                )}
+                {candidates.isError && (
+                  <p className="text-sm text-destructive">
+                    포트폴리오 목록을 불러오지 못했습니다.
+                  </p>
+                )}
+                {candidates.data && candidates.data.data.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    연결 가능한 학생 포트폴리오가 없습니다.
+                  </p>
+                )}
 
-              <FormField label="필요 기술 (쉼표 구분)">
-                <Input
-                  value={skills}
-                  onChange={(e) => setSkills(e.target.value)}
-                  placeholder="Python, ML, 컴퓨터비전"
-                />
-              </FormField>
+                {candidates.data && candidates.data.data.length > 0 && (
+                  <div className="max-h-[calc(100vh-22rem)] overflow-y-auto space-y-2 pr-1">
+                    {candidates.data.data.map((candidate) => {
+                      const checked = selectedPortfolioIds.has(candidate.id);
+                      return (
+                        <label
+                          key={candidate.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/50"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => togglePortfolio(candidate.id)}
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-tight">
+                              {candidate.title}
+                            </p>
+                            {candidate.evidence.techStack &&
+                              candidate.evidence.techStack.length > 0 && (
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {candidate.evidence.techStack.slice(0, 4).join(", ")}
+                                </p>
+                              )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="참여 인원">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={participantCount}
-                    onChange={(e) =>
-                      setParticipantCount(Number(e.target.value))
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1"
+                    disabled={saveLinkedStudents.isPending || candidates.isLoading}
+                    onClick={() =>
+                      saveLinkedStudents.mutate({
+                        id: linkingId,
+                        portfolioIds: [...selectedPortfolioIds],
+                      })
                     }
-                  />
-                </FormField>
-                <FormField label="채용 인원">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={employmentCount}
-                    onChange={(e) =>
-                      setEmploymentCount(Number(e.target.value))
-                    }
-                  />
-                </FormField>
+                  >
+                    {saveLinkedStudents.isPending
+                      ? "저장 중…"
+                      : `저장 (${selectedPortfolioIds.size}명 선택)`}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelLinking}>
+                    취소
+                  </Button>
+                </div>
+
+                {saveLinkedStudents.isError && (
+                  <p className="text-sm text-destructive">
+                    {saveLinkedStudents.error instanceof Error
+                      ? saveLinkedStudents.error.message
+                      : "저장 중 오류가 발생했습니다."}
+                  </p>
+                )}
               </div>
+            ) : (
+              /* ── Create / edit form ── */
+              <>
+                <h2 className="mb-5 text-sm font-semibold">
+                  {editingId ? "고용 건 수정" : "신규 고용 건 등록"}
+                </h2>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                  <FormField label="유형" required>
+                    <Select
+                      value={participationType}
+                      onValueChange={(v) =>
+                        setParticipationType(v as ParticipationType)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PARTICIPATION_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {PARTICIPATION_LABELS[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="시작일">
-                  <Input
-                    type="date"
-                    value={startsAt}
-                    onChange={(e) => setStartsAt(e.target.value)}
-                  />
-                </FormField>
-                <FormField label="종료일">
-                  <Input
-                    type="date"
-                    value={endsAt}
-                    onChange={(e) => setEndsAt(e.target.value)}
-                  />
-                </FormField>
-              </div>
+                  <FormField label="제목" required>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="예: 2024년 하반기 채용 연계"
+                    />
+                  </FormField>
 
-              <Button className="w-full" disabled={!canSubmit}>
-                {updateParticipation.isPending
-                  ? "수정 중…"
-                  : createParticipation.isPending
-                    ? "등록 중…"
-                    : editingId
-                      ? "수정 완료"
-                      : "등록"}
-              </Button>
+                  <FormField label="필요 기술 (쉼표 구분)">
+                    <Input
+                      value={skills}
+                      onChange={(e) => setSkills(e.target.value)}
+                      placeholder="Python, ML, 컴퓨터비전"
+                    />
+                  </FormField>
 
-              {editingId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleCancelEdit}
-                >
-                  취소
-                </Button>
-              )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="참여 인원">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={participantCount}
+                        onChange={(e) =>
+                          setParticipantCount(Number(e.target.value))
+                        }
+                      />
+                    </FormField>
+                    <FormField label="채용 인원">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={employmentCount}
+                        onChange={(e) =>
+                          setEmploymentCount(Number(e.target.value))
+                        }
+                      />
+                    </FormField>
+                  </div>
 
-              {(createParticipation.isError || updateParticipation.isError) && (
-                <p className="text-sm text-destructive">
-                  {(updateParticipation.error ?? createParticipation.error) instanceof Error
-                    ? (updateParticipation.error ?? createParticipation.error)!.message
-                    : "처리 중 오류가 발생했습니다."}
-                </p>
-              )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="시작일">
+                      <Input
+                        type="date"
+                        value={startsAt}
+                        onChange={(e) => setStartsAt(e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="종료일">
+                      <Input
+                        type="date"
+                        value={endsAt}
+                        onChange={(e) => setEndsAt(e.target.value)}
+                      />
+                    </FormField>
+                  </div>
 
-              {createParticipation.isSuccess && !editingId && (
-                <p className="text-sm text-green-600">등록되었습니다.</p>
-              )}
-            </form>
+                  <Button className="w-full" disabled={!canSubmit}>
+                    {updateParticipation.isPending
+                      ? "수정 중…"
+                      : createParticipation.isPending
+                        ? "등록 중…"
+                        : editingId
+                          ? "수정 완료"
+                          : "등록"}
+                  </Button>
+
+                  {editingId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleCancelEdit}
+                    >
+                      취소
+                    </Button>
+                  )}
+
+                  {(createParticipation.isError || updateParticipation.isError) && (
+                    <p className="text-sm text-destructive">
+                      {(updateParticipation.error ?? createParticipation.error) instanceof Error
+                        ? (updateParticipation.error ?? createParticipation.error)!.message
+                        : "처리 중 오류가 발생했습니다."}
+                    </p>
+                  )}
+
+                  {createParticipation.isSuccess && !editingId && (
+                    <p className="text-sm text-green-600">등록되었습니다.</p>
+                  )}
+                </form>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -449,10 +602,20 @@ export default function PartnerEmployment() {
               {allRecords.map((record) => {
                 const isDeleting = deletingId === record.id;
                 const isEditing = editingId === record.id;
+                const isLinking = linkingId === record.id;
+                const linkedCount =
+                  record.details.linkedPortfolioIds?.length ?? 0;
+
                 return (
                   <Card
                     key={`${record._type}-${record.id}`}
-                    className={isEditing ? "ring-2 ring-primary" : undefined}
+                    className={
+                      isEditing
+                        ? "ring-2 ring-primary"
+                        : isLinking
+                          ? "ring-2 ring-blue-500"
+                          : undefined
+                    }
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-4">
@@ -465,18 +628,34 @@ export default function PartnerEmployment() {
                                 {record.details.requiredSkills.join(", ")}
                               </p>
                             )}
-                          {(record.participantCount > 0 ||
-                            record.employmentCount > 0) && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              참여 {record.participantCount}명 · 채용{" "}
-                              {record.employmentCount}명
-                            </p>
-                          )}
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {(record.participantCount > 0 ||
+                              record.employmentCount > 0) && (
+                              <span>
+                                참여 {record.participantCount}명 · 채용{" "}
+                                {record.employmentCount}명
+                              </span>
+                            )}
+                            {linkedCount > 0 && (
+                              <span className="text-blue-600">
+                                연결된 학생 {linkedCount}명
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Badge variant="secondary">
                             {PARTICIPATION_LABELS[record._type] ?? record._type}
                           </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-blue-600 hover:text-blue-700"
+                            title="학생 연결"
+                            onClick={() => handleLinkStudentsClick(record)}
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -515,7 +694,9 @@ export default function PartnerEmployment() {
                               size="sm"
                               variant="destructive"
                               disabled={deleteParticipation.isPending}
-                              onClick={() => deleteParticipation.mutate(record.id)}
+                              onClick={() =>
+                                deleteParticipation.mutate(record.id)
+                              }
                             >
                               {deleteParticipation.isPending
                                 ? "삭제 중…"

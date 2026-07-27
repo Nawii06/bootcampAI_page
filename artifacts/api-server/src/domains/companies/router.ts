@@ -6,6 +6,7 @@ import {
   CompanyParticipationInputSchema,
   CompanyParticipationQuerySchema,
   CompanyParticipationUpdateSchema,
+  CompanyParticipationStudentLinkSchema,
   CompanyApplicationsQuerySchema,
   CompanyCommitmentInputSchema,
   CompanyContactInputSchema,
@@ -20,6 +21,7 @@ import {
   createCompanyParticipation,
   updateCompanyParticipation,
   deleteCompanyParticipation,
+  setLinkedStudents,
   submitCompanyApplication,
   resubmitCompanyApplication,
   upsertCompanyCommitment,
@@ -208,6 +210,21 @@ router.post(
     } catch (error) {
       next(error);
     }
+  },
+);
+
+router.put(
+  "/v1/company-participations/:id/linked-students",
+  requireAuth,
+  requireRoles("COMPANY_MANAGER"),
+  async (req, res, next) => {
+    try {
+      const { id } = CompanyIdParamsSchema.parse(req.params);
+      const { portfolioIds } = CompanyParticipationStudentLinkSchema.parse(req.body);
+      const company = await findCompanyForUser(req.auth!.id);
+      if (!company) throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
+      res.json(await setLinkedStudents(id, company.id, portfolioIds, req.auth!.id, String(req.id)));
+    } catch (error) { next(error); }
   },
 );
 

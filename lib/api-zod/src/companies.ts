@@ -189,6 +189,7 @@ export const CompanyParticipationResponseSchema = z.object({
     expectedOutputs: z.array(z.string()).optional(),
     requiredSkills: z.array(z.string()).optional(),
     projectTopics: z.array(z.string()).optional(),
+    linkedPortfolioIds: z.array(z.string()).optional(),
   }).passthrough().default({}),
   participantCount: z.number().default(0),
   employmentCount: z.number().default(0),
@@ -239,6 +240,11 @@ export type CompanyParticipationInput = z.infer<
 >;
 export type CompanyMasterUpdate = z.infer<typeof CompanyMasterUpdateSchema>;
 export type CompanyParticipationUpdate = z.infer<typeof CompanyParticipationUpdateSchema>;
+
+export const CompanyParticipationStudentLinkSchema = z.object({
+  portfolioIds: z.array(z.string().uuid()),
+});
+export type CompanyParticipationStudentLink = z.infer<typeof CompanyParticipationStudentLinkSchema>;
 export type CompanyContactInput = z.infer<typeof CompanyContactInputSchema>;
 export type CompanyExpertInput = z.infer<typeof CompanyExpertInputSchema>;
 export type CompanyCommitmentInput = z.infer<
