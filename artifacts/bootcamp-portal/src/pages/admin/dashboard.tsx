@@ -11,6 +11,8 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
 import { ErrorCard } from "@/components/ErrorCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function AdminDashboard() {
   const years = useQuery({
@@ -61,6 +63,12 @@ export default function AdminDashboard() {
 
   const applicationRows = applications.data?.data ?? [];
   const assessmentRows = assessments.data?.data ?? [];
+  const isLoading =
+    years.isLoading ||
+    programs.isLoading ||
+    applications.isLoading ||
+    assessments.isLoading ||
+    budget.isLoading;
   const hasError =
     years.isError ||
     programs.isError ||
@@ -74,23 +82,42 @@ export default function AdminDashboard() {
         title="운영 대시보드"
         description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 기준 운영 현황`}
       />
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="운영 프로그램" value={`${programs.data?.data.length ?? 0}건`} />
-        <StatCard label="전체 신청" value={`${applicationRows.length}건`} />
-        <StatCard
-          label="선발"
-          value={`${applicationRows.filter((row) => row.status === "SELECTED").length}건`}
-        />
-        <StatCard
-          label="이수 판정"
-          value={`${assessmentRows.filter((row) => row.completed).length}명`}
-        />
-        <StatCard
-          label="예산 집행률"
-          value={`${budget.data?.executionRate ?? 0}%`}
-          color={(budget.data?.executionRate ?? 0) < 50 ? "text-destructive" : ""}
-        />
-      </div>
+
+      {/* ── Skeleton stat cards ── */}
+      {isLoading && (
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="mb-2 h-3.5 w-20" />
+                <Skeleton className="h-7 w-14" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* ── Real stat cards ── */}
+      {!isLoading && (
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <StatCard label="운영 프로그램" value={`${programs.data?.data.length ?? 0}건`} />
+          <StatCard label="전체 신청" value={`${applicationRows.length}건`} />
+          <StatCard
+            label="선발"
+            value={`${applicationRows.filter((row) => row.status === "SELECTED").length}건`}
+          />
+          <StatCard
+            label="이수 판정"
+            value={`${assessmentRows.filter((row) => row.completed).length}명`}
+          />
+          <StatCard
+            label="예산 집행률"
+            value={`${budget.data?.executionRate ?? 0}%`}
+            color={(budget.data?.executionRate ?? 0) < 50 ? "text-destructive" : ""}
+          />
+        </div>
+      )}
+
       {hasError && (
         <ErrorCard
           message="일부 운영 지표를 불러오지 못했습니다. 권한과 API 연결 상태를 확인해 주세요."

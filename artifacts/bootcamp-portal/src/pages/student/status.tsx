@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "../../contexts/AuthContext";
 import type { ApplicationStatus } from "../../types";
 import { ErrorCard } from "@/components/ErrorCard";
-import { LoadingCard } from "@/components/LoadingCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -115,7 +115,25 @@ export default function StudentStatus() {
           isRetrying={applications.isFetching}
         />
       )}
-      {!applications.isError && (
+      {applications.isLoading && (
+        <div className="rounded-md border">
+          {/* Header row */}
+          <div className="flex gap-4 border-b bg-muted/40 px-4 py-3">
+            {[44, 20, 24, 20, 32].map((w, i) => (
+              <Skeleton key={i} className={`h-3.5 w-${w}`} />
+            ))}
+          </div>
+          {/* Data rows */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-4 border-b px-4 py-3">
+              {[44, 20, 24, 20, 32].map((w, j) => (
+                <Skeleton key={j} className={`h-4 w-${w}`} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {!applications.isLoading && !applications.isError && (
         <DataTable
           data={applications.data?.data ?? []}
           columns={columns}
@@ -130,7 +148,20 @@ export default function StudentStatus() {
         />
 
         {employmentLinks.isLoading && (
-          <LoadingCard message="채용·연계 이력을 불러오는 중입니다." />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="flex items-start justify-between gap-4 p-5">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3.5 w-48" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {employmentLinks.isError && (
