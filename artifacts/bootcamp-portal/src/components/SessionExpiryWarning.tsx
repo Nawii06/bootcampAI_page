@@ -53,6 +53,24 @@ export function SessionExpiryWarning({
     return () => clearInterval(id);
   }, [secondsRemaining]);
 
+  // Flash the browser tab title while the warning is mounted so users in
+  // other tabs get a visual cue in the tab strip. The original title is
+  // captured on mount and restored on unmount (extend, dismiss, or expiry).
+  useEffect(() => {
+    const originalTitle = document.title;
+    const warningTitle = `⚠️ 세션 만료 임박 — ${originalTitle}`;
+    let showWarning = true;
+    document.title = warningTitle;
+    const id = setInterval(() => {
+      showWarning = !showWarning;
+      document.title = showWarning ? warningTitle : originalTitle;
+    }, 2000);
+    return () => {
+      clearInterval(id);
+      document.title = originalTitle;
+    };
+  }, []);
+
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
   const timeLabel =
