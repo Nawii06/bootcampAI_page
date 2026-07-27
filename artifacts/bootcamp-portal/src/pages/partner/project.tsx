@@ -13,10 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function PartnerProject() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [track, setTrack] = useState("autonomous");
   const [problem, setProblem] = useState("");
@@ -34,6 +37,27 @@ export default function PartnerProject() {
       if (draft.dataTypes) setDataTypes(draft.dataTypes);
       if (draft.outputs) setOutputs(draft.outputs);
       if (draft.mentorRole) setMentorRole(draft.mentorRole);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setTitle("");
+              setTrack("autonomous");
+              setProblem("");
+              setDataTypes("");
+              setOutputs("");
+              setMentorRole("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
     },
   );
   const years = useQuery({

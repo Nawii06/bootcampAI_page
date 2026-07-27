@@ -8,9 +8,21 @@
  *   });
  *   // call clearDraft() on successful submission
  *
+ * Optional `onRestored` callback fires when a draft is actually found and
+ * applied on mount. Receives the same `clearDraft` function so the caller
+ * can offer a "reset" action without a circular reference:
+ *
+ *   useFormDraft("key", state, restore, (clear) => {
+ *     toast({
+ *       title: "이전에 작성 중이던 내용을 불러왔습니다",
+ *       action: <ToastAction onClick={() => { clear(); resetForm(); }}>초기화</ToastAction>,
+ *     });
+ *   });
+ *
  * The hook:
  *  1. On mount: reads sessionStorage[key] and calls `restore` with the parsed
  *     object if a draft exists, then removes it so it is only replayed once.
+ *     If a draft was found, also calls `onRestored` with `clearDraft`.
  *  2. Whenever `state` changes: debounces a write to sessionStorage[key].
  *  3. Returns `clearDraft` to remove the draft (call on successful submit).
  */
@@ -23,9 +35,18 @@ export function useFormDraft<T extends object>(
   key: string,
   state: T,
   restore: (draft: T) => void,
+  onRestored?: (clearDraft: () => void) => void,
 ): { clearDraft: () => void } {
   const storageKey = `form-draft:${key}`;
   const restoredRef = useRef(false);
+
+  const clearDraft = useCallback(() => {
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {
+      // ignore
+    }
+  }, [storageKey]);
 
   // Restore once on mount
   useEffect(() => {
@@ -39,6 +60,8 @@ export function useFormDraft<T extends object>(
       restore(draft);
       // Remove immediately so a page refresh or back-nav doesn't re-apply
       sessionStorage.removeItem(storageKey);
+      // Notify the caller that a draft was restored
+      onRestored?.(clearDraft);
     } catch {
       // Malformed JSON or SecurityError — silently ignore
     }
@@ -64,14 +87,6 @@ export function useFormDraft<T extends object>(
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [state, storageKey]);
-
-  const clearDraft = useCallback(() => {
-    try {
-      sessionStorage.removeItem(storageKey);
-    } catch {
-      // ignore
-    }
-  }, [storageKey]);
 
   return { clearDraft };
 }

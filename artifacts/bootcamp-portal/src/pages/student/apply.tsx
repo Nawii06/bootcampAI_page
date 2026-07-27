@@ -8,6 +8,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { FormField, PrivacyWarningNotice } from "../../components/FormField";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,23 @@ export default function StudentApply() {
     (draft) => {
       if (draft.sessionId) setSessionId(draft.sessionId);
       if (draft.reason) setReason(draft.reason);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setSessionId("");
+              setReason("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
     },
   );
 

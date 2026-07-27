@@ -17,6 +17,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -52,6 +54,7 @@ function toDateInput(iso: string | null | undefined): string {
 
 export default function PartnerEmployment() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // ─── Form state (shared between create and edit modes) ──────────────────
   const [participationType, setParticipationType] =
@@ -84,6 +87,28 @@ export default function PartnerEmployment() {
       if (draft.employmentCount) setEmploymentCount(draft.employmentCount);
       if (draft.startsAt) setStartsAt(draft.startsAt);
       if (draft.endsAt) setEndsAt(draft.endsAt);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setParticipationType("EMPLOYMENT");
+              setTitle("");
+              setSkills("");
+              setParticipantCount(0);
+              setEmploymentCount(0);
+              setStartsAt("");
+              setEndsAt("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
     },
   );
 
