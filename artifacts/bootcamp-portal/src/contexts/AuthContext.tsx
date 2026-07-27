@@ -92,11 +92,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const skewWarnedRef = useRef<boolean>(false);
   /**
-   * Timestamp (Date.now()) of the last *successful* refreshSession() call.
+   * Timestamp (Date.now()) set at the *start* of each refreshSession() call.
    * Used to debounce rapid `visibilitychange` events (e.g. fast alt-tab)
    * so at most one refresh fires per VISIBILITY_DEBOUNCE_MS window.
+   * Stamped at request-start (not completion) so bursts during an in-flight
+   * request are suppressed immediately.
    */
   const lastRefreshAtRef = useRef<number>(0);
+  /**
+   * True while a refreshSession() call is in flight.
+   * Prevents concurrent visibility events from issuing a second request
+   * before the first one completes, even within the debounce window.
+   */
+  const isRefreshingRef = useRef<boolean>(false);
 
   /** Minimum gap (ms) between visibility-triggered refreshes. */
   const VISIBILITY_DEBOUNCE_MS = 2_000;
@@ -165,6 +173,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshSession = useCallback(async () => {
+    // Stamp at request start so the debounce window begins immediately,
+    // suppressing bursts that arrive while this request is still in flight.
+    lastRefreshAtRef.current = Date.now();
+    isRefreshingRef.current = true;
     try {
       // Capture client time BEFORE the request so that serverNow (captured by
       // the server just before it sends the response) is comparable to it.
@@ -205,11 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         expiresAtRef.current = session.expiresAt;
       }
       setUser(nextUser);
-      lastRefreshAtRef.current = Date.now();
       return nextUser;
     } catch {
       setUser(null);
       return null;
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, []);
 
@@ -320,9 +333,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState !== "visible" || !userRef.current) return;
-      // Skip if a refresh completed within the debounce window — rapid
-      // alt-tab sequences or extension-triggered events would otherwise
-      // fire multiple overlapping requests against /api/v1/session.
+      // Skip if a refresh is already in flight — concurrent visibility events
+      // (fast alt-tab, extension triggers) must not issue a second request.
+      if (isRefreshingRef.current) return;
+      // Skip if a refresh started within the debounce window — bursts of
+      // hide/show events that land after the previous request completed are
+      // suppressed here.
       if (Date.now() - lastRefreshAtRef.current < VISIBILITY_DEBOUNCE_MS) return;
       refreshSession();
     }
