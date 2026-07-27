@@ -1,8 +1,10 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -10,6 +12,7 @@ import { useLocation } from "wouter";
 import { contractFetch, customFetch, setUnauthorizedHandler } from "@workspace/api-client-react";
 import { SessionResponseSchema, type SessionResponse } from "@workspace/api-zod";
 import { toast } from "@/hooks/use-toast";
+import { SessionExpiryWarning } from "@/components/SessionExpiryWarning";
 import type { Role, User } from "../types";
 
 interface AuthContextType {
@@ -51,10 +54,27 @@ function toPortalUser(session: SessionResponse["user"]): User {
   };
 }
 
+// Total idle time before auto-logout (30 minutes)
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+// Show warning this many ms before the timeout fires (5 minutes)
+const WARN_BEFORE_MS = 5 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
+
+  // Session-expiry warning state
+  const [warningVisible, setWarningVisible] = useState(false);
+  const [warningSecondsLeft, setWarningSecondsLeft] = useState(
+    Math.round(WARN_BEFORE_MS / 1000),
+  );
+
+  // Refs so timer callbacks always see the latest values without re-registering
+  const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
 
   async function refreshSession() {
     try {
@@ -75,10 +95,107 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  // ─── Inactivity timer ──────────────────────────────────────────────────────
+
+  const forceLogout = useCallback(() => {
+    if (!userRef.current) return; // already logged out
+    const currentPath =
+      window.location.pathname + window.location.search + window.location.hash;
+    setUser(null);
+    setWarningVisible(false);
+    toast({
+      title: "세션이 만료되었습니다",
+      description: "다시 로그인해 주세요.",
+      variant: "destructive",
+    });
+    setTimeout(() => {
+      setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    }, 1500);
+  }, [setLocation]);
+
+  const resetIdleTimer = useCallback(() => {
+    // Clear any pending timers
+    if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+
+    // Don't arm timers when there is no active session
+    if (!userRef.current) return;
+
+    setWarningVisible(false);
+
+    // Schedule the warning WARN_BEFORE_MS before the logout
+    warnTimerRef.current = setTimeout(() => {
+      if (!userRef.current) return;
+      setWarningSecondsLeft(Math.round(WARN_BEFORE_MS / 1000));
+      setWarningVisible(true);
+    }, IDLE_TIMEOUT_MS - WARN_BEFORE_MS);
+
+    // Schedule the actual logout
+    logoutTimerRef.current = setTimeout(() => {
+      forceLogout();
+    }, IDLE_TIMEOUT_MS);
+  }, [forceLogout]);
+
+  // Arm timers when the user logs in; disarm when they log out
+  useEffect(() => {
+    if (user) {
+      resetIdleTimer();
+    } else {
+      if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      setWarningVisible(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!user]); // only re-run when logged-in status flips
+
+  // Reset the timer on user activity
+  useEffect(() => {
+    if (!user) return;
+
+    const EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
+    let ticking = false;
+
+    function onActivity() {
+      if (ticking) return;
+      ticking = true;
+      // Throttle to once per second to avoid hammering
+      setTimeout(() => {
+        ticking = false;
+        resetIdleTimer();
+      }, 1000);
+    }
+
+    EVENTS.forEach((ev) => window.addEventListener(ev, onActivity, { passive: true }));
+    return () => EVENTS.forEach((ev) => window.removeEventListener(ev, onActivity));
+  }, [user, resetIdleTimer]);
+
+  // ─── Session-expiry warning handlers ──────────────────────────────────────
+
+  async function handleExtendSession() {
+    try {
+      await customFetch("/api/v1/session/extend", {
+        method: "POST",
+        responseType: "json",
+        credentials: "include",
+      });
+    } catch {
+      // If extending fails the session has already expired; forceLogout will fire
+    }
+    setWarningVisible(false);
+    resetIdleTimer();
+  }
+
+  function handleDismissWarning() {
+    // Let the existing timers run; just hide the dialog
+    setWarningVisible(false);
+  }
+
+  // ─── 401 redirect handler ─────────────────────────────────────────────────
+
   // Redirect to /login with ?redirect= when any API call receives 401,
   // so the user returns to the exact page they were on after re-logging in.
   useEffect(() => {
-    setUnauthorizedHandler((url) => {
+    setUnauthorizedHandler((url: string) => {
       // The session-check endpoint returns 401 when no session exists — that
       // is handled by refreshSession() itself, so skip it here to avoid a
       // redirect loop on initial load.
@@ -143,7 +260,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [isLoading, setLocation, user],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {warningVisible && (
+        <SessionExpiryWarning
+          secondsRemaining={warningSecondsLeft}
+          onExtend={handleExtendSession}
+          onDismiss={handleDismissWarning}
+        />
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
