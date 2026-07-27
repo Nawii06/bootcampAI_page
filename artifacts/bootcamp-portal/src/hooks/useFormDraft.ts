@@ -1,5 +1,9 @@
 /**
- * useFormDraft — sessionStorage-backed draft persistence for forms.
+ * useFormDraft — localStorage-backed draft persistence for forms.
+ *
+ * Drafts survive tab closes and browser restarts. A configurable TTL
+ * (default 7 days) silently discards stale entries so users are not
+ * surprised by very old drafts.
  *
  * Usage:
  *   const { clearDraft } = useFormDraft("my-form-key", state, (draft) => {
@@ -8,9 +12,9 @@
  *   });
  *   // call clearDraft() on successful submission
  *
- * Optional `onRestored` callback fires when a draft is actually found AND
- * differs from the initial state (i.e., contains meaningful user input).
- * Receives `clearDraft` so the caller can offer a "reset" action:
+ * Optional `onRestored` callback fires when a non-stale draft is found AND
+ * differs from the initial state. Receives `clearDraft` so the caller can
+ * offer a "reset" action:
  *
  *   useFormDraft("key", state, restore, (clear) => {
  *     toast({
@@ -20,29 +24,34 @@
  *   });
  *
  * The hook:
- *  1. On mount: reads sessionStorage[key]; if a draft exists AND differs from
- *     the initial state, calls `restore` then `onRestored`. Removes the entry
- *     so it is only replayed once.
+ *  1. On mount: reads localStorage[key]; discards if older than TTL or
+ *     identical to the initial state; otherwise calls `restore` then
+ *     `onRestored`. Removes the entry so it is only replayed once.
  *  2. Whenever `state` changes: if state has changed from its initial value,
- *     debounces a write to sessionStorage[key]. If state has returned to the
- *     initial value (e.g. after a reset), removes any stale entry.
+ *     debounces a write to localStorage[key] (wrapped with a `savedAt`
+ *     timestamp). If state has returned to the initial value, removes any
+ *     stale entry.
  *  3. Returns `clearDraft` to remove the draft (call on successful submit).
- *
- * These two rules together prevent false restore notifications:
- *  - A pristine/empty form is never saved, so there is nothing to restore.
- *  - After clearDraft() + state reset the next save cycle cleans up storage
- *    rather than writing empty defaults back.
  */
 
 import { useEffect, useRef, useCallback } from "react";
 
 const DEBOUNCE_MS = 400;
+/** Drafts older than this are silently discarded on restore. */
+const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+interface StoredDraft<T> {
+  data: T;
+  savedAt: number; // Date.now() at write time
+}
 
 export function useFormDraft<T extends object>(
   key: string,
   state: T,
   restore: (draft: T) => void,
   onRestored?: (clearDraft: () => void) => void,
+  /** Maximum age (ms) before a stored draft is silently discarded. Default: 7 days. */
+  ttlMs: number = DEFAULT_TTL_MS,
 ): { clearDraft: () => void } {
   const storageKey = `form-draft:${key}`;
   const restoredRef = useRef(false);
@@ -53,7 +62,7 @@ export function useFormDraft<T extends object>(
 
   const clearDraft = useCallback(() => {
     try {
-      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
     } catch {
       // ignore
     }
@@ -65,22 +74,31 @@ export function useFormDraft<T extends object>(
     restoredRef.current = true;
 
     try {
-      const raw = sessionStorage.getItem(storageKey);
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return;
-      const draft = JSON.parse(raw) as T;
+
+      const stored = JSON.parse(raw) as StoredDraft<T>;
+
+      // Discard drafts that are missing a timestamp (old format) or too old.
+      if (!stored.savedAt || Date.now() - stored.savedAt > ttlMs) {
+        localStorage.removeItem(storageKey);
+        return;
+      }
+
+      const draft = stored.data;
 
       // Only restore if the draft carries meaningful content — i.e., it is
       // not identical to the initial (blank) state. This prevents false
       // "restored draft" notifications when the storage key exists but only
       // holds default/empty values from a previous pristine visit.
       if (JSON.stringify(draft) === JSON.stringify(initialStateRef.current)) {
-        sessionStorage.removeItem(storageKey);
+        localStorage.removeItem(storageKey);
         return;
       }
 
       restore(draft);
       // Remove immediately so back-nav or refresh doesn't re-apply
-      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
       onRestored?.(clearDraft);
     } catch {
       // Malformed JSON or SecurityError — silently ignore
@@ -105,14 +123,18 @@ export function useFormDraft<T extends object>(
         JSON.stringify(initialStateRef.current)
       ) {
         try {
-          sessionStorage.removeItem(storageKey);
+          localStorage.removeItem(storageKey);
         } catch {
           // ignore
         }
         return;
       }
       try {
-        sessionStorage.setItem(storageKey, JSON.stringify(stateRef.current));
+        const stored: StoredDraft<T> = {
+          data: stateRef.current,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(stored));
       } catch {
         // Quota exceeded or private-mode restriction — silently ignore
       }
