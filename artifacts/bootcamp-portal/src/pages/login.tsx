@@ -1,5 +1,5 @@
 import { LogIn, ShieldCheck } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useEffect, useState } from "react";
 import { contractFetch } from "@workspace/api-client-react";
 import {
@@ -18,7 +18,19 @@ export default function Login() {
   const [pendingId, setPendingId] = useState<string>();
   const [error, setError] = useState<string>();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { loginWithFakeIdentity } = useAuth();
+
+  // Decode the redirect path set by RoleGuard / PortalLayout when the session
+  // was missing. After login we navigate there instead of defaultRoute.
+  const redirectAfterLogin = (() => {
+    try {
+      const raw = new URLSearchParams(search).get("redirect");
+      return raw ? decodeURIComponent(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
 
   useEffect(() => {
     if (__FAKE_DATA_SET__ !== "FD_Set_01") return;
@@ -34,7 +46,7 @@ export default function Login() {
     setError(undefined);
     try {
       const user = await loginWithFakeIdentity(identity.identityId);
-      setLocation(user.defaultRoute ?? identity.defaultRoute);
+      setLocation(redirectAfterLogin ?? user.defaultRoute ?? identity.defaultRoute);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "가상 로그인에 실패했습니다.");
     } finally {
