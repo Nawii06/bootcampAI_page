@@ -6,6 +6,7 @@
  * to correct data entered by partner managers.
  */
 import { useState, useMemo } from "react";
+import { useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AdminCompanyParticipationListResponseSchema,
@@ -87,7 +88,12 @@ function itemToEditState(item: AdminCompanyParticipationItem): EditState {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminEmployment() {
+  // Pre-filter by company when navigated from /admin/partners?companyId=...
+  const search = useSearch();
+  const initialCompanyId = new URLSearchParams(search).get("companyId") ?? "";
+
   const [companySearch, setCompanySearch] = useState("");
+  const [companyIdFilter, setCompanyIdFilter] = useState(initialCompanyId);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -116,11 +122,13 @@ export default function AdminEmployment() {
       const q = companySearch.trim().toLowerCase();
       const matchesCompany =
         !q || item.companyName.toLowerCase().includes(q);
+      const matchesCompanyId =
+        !companyIdFilter || item.companyId === companyIdFilter;
       const matchesType =
         typeFilter === "ALL" || item.participationType === typeFilter;
-      return matchesCompany && matchesType;
+      return matchesCompany && matchesCompanyId && matchesType;
     });
-  }, [data, companySearch, typeFilter]);
+  }, [data, companySearch, companyIdFilter, typeFilter]);
 
   /** Records grouped by companyId, sorted by company name */
   const groups = useMemo(() => {
@@ -255,6 +263,20 @@ export default function AdminEmployment() {
             ))}
           </SelectContent>
         </Select>
+        {/* Company ID pre-filter chip — set when navigated from /admin/partners */}
+        {companyIdFilter && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1 text-xs font-medium self-center">
+            {groups[0]?.[1]?.companyName ?? "기업 필터 적용 중"}
+            <button
+              type="button"
+              aria-label="기업 필터 해제"
+              className="ml-0.5 rounded-full opacity-60 hover:opacity-100"
+              onClick={() => setCompanyIdFilter("")}
+            >
+              ✕
+            </button>
+          </span>
+        )}
         <span className="text-sm text-muted-foreground self-center">
           {filteredCount} / {totalCount}건
         </span>

@@ -5,6 +5,7 @@ import {
   CompanyListResponseSchema,
   type CompanyResponse as Company,
 } from "@workspace/api-zod";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -73,8 +74,15 @@ export default function AdminPartners() {
     },
     {
       key: "companyParticipations",
-      header: "참여실적",
-      cell: (row) => `${row.companyParticipations.length}건`,
+      header: "채용연계",
+      cell: (row) => (
+        <Link
+          href={`/admin/employment?companyId=${row.id}`}
+          className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium transition-colors hover:bg-muted"
+        >
+          {row.companyParticipations.length}건
+        </Link>
+      ),
     },
     {
       key: "isActive",
