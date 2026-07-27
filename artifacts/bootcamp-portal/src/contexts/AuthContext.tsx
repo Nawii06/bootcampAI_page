@@ -237,6 +237,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, [setLocation]);
 
+  // ─── BFCache restore ────────────────────────────────────────────────────
+  // When the browser restores the page from the back-forward cache,
+  // setTimeout timers resume from where they were paused, but the cached
+  // `expiresAt` value may already be in the past — causing an immediate
+  // phantom logout even though the server session is still valid.
+  // Re-fetching the session on BFCache restore re-anchors all timers to the
+  // fresh server-side expiry via the existing arm/disarm effect.
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        refreshSession();
+      }
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [refreshSession]);
+
   async function loginWithFakeIdentity(identityId: string) {
     await customFetch("/api/v1/fake-auth/login", {
       method: "POST",
