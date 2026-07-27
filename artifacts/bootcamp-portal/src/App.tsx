@@ -14,6 +14,7 @@ import Recruitment from "./pages/public/recruitment";
 import Partners from "./pages/public/partners";
 import Performance from "./pages/public/performance";
 import Resources from "./pages/public/resources";
+import PublicPortfolio from "./pages/public/portfolio";
 import Login from "./pages/login";
 
 // Student Pages
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/public/partners" component={Partners} />
       <Route path="/public/performance" component={Performance} />
       <Route path="/public/resources" component={Resources} />
+      <Route path="/public/portfolio/:token" component={PublicPortfolio} />
       
       <Route path="/login" component={Login} />
 

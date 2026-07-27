@@ -116,9 +116,28 @@ export const ExperientialRecordResponseSchema = z.object({
     techStack: z.array(z.string()).default([]),
     outputLinks: z.array(z.string()).default([]),
     publicConsent: z.boolean().default(false),
+    /** Opaque URL-safe share token. Present once the student has enabled
+     *  publicConsent and requested a shareable link. */
+    shareToken: z.string().optional(),
   }),
   createdAt: z.string(),
 }).passthrough();
+
+// ─── Public portfolio share ────────────────────────────────────────────────────
+
+export const PublicPortfolioResponseSchema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  techStack: z.array(z.string()),
+  outputLinks: z.array(z.string()),
+  createdAt: z.string(),
+});
+export type PublicPortfolioResponse = z.infer<typeof PublicPortfolioResponseSchema>;
+
+export const ShareTokenResponseSchema = z.object({
+  shareToken: z.string(),
+});
+export type ShareTokenResponse = z.infer<typeof ShareTokenResponseSchema>;
 
 export const ExperientialRecordListResponseSchema = z.object({
   data: z.array(ExperientialRecordResponseSchema),

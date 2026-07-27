@@ -14,7 +14,8 @@ import {
 } from "@workspace/api-zod";
 import { ApiError } from "../../lib/api-error";
 import { calculateCompletion } from "./calculator";
-import { and, desc, eq } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { loadCompletionCalculation } from "./repository";
 
 type CalculationRequest = z.infer<typeof CompletionCalculationRequestSchema>;
@@ -156,12 +157,78 @@ export function listExperientialRecords(filters: {
     .orderBy(desc(experientialRecords.createdAt));
 }
 
+/** Look up a portfolio record by its public share token.
+ *  Only returns records with publicConsent = true and no soft-delete. */
+export function getExperientialRecordByToken(token: string) {
+  return db
+    .select({
+      id: experientialRecords.id,
+      title: experientialRecords.title,
+      evidence: experientialRecords.evidence,
+      createdAt: experientialRecords.createdAt,
+    })
+    .from(experientialRecords)
+    .where(
+      and(
+        sql`${experientialRecords.evidence}->>'shareToken' = ${token}`,
+        sql`${experientialRecords.evidence}->>'publicConsent' = 'true'`,
+        isNull(experientialRecords.deletedAt),
+      ),
+    )
+    .limit(1);
+}
+
+/** Returns the share token for a record, generating one if it doesn't exist yet.
+ *  Enforces ownership (studentId) and publicConsent before issuing a token. */
+export async function generateShareToken(recordId: string, studentId: string) {
+  const [record] = await db
+    .select({ id: experientialRecords.id, evidence: experientialRecords.evidence })
+    .from(experientialRecords)
+    .where(
+      and(
+        eq(experientialRecords.id, recordId),
+        eq(experientialRecords.studentId, studentId),
+        isNull(experientialRecords.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!record) {
+    throw new ApiError(404, "EXPERIENTIAL_RECORD_NOT_FOUND", "포트폴리오를 찾을 수 없습니다.");
+  }
+  const evidence = record.evidence as Record<string, unknown>;
+  if (!evidence.publicConsent) {
+    throw new ApiError(
+      422,
+      "PUBLIC_CONSENT_REQUIRED",
+      "공개 동의한 포트폴리오만 링크를 생성할 수 있습니다.",
+    );
+  }
+  if (evidence.shareToken) {
+    return { shareToken: evidence.shareToken as string };
+  }
+  const shareToken = randomBytes(24).toString("base64url");
+  await db
+    .update(experientialRecords)
+    .set({ evidence: { ...evidence, shareToken }, updatedAt: new Date() })
+    .where(eq(experientialRecords.id, recordId));
+  return { shareToken };
+}
+
 export function createExperientialRecord(
   input: ExperientialRecordInput,
   studentId: string,
   actorId: string,
   requestId: string,
 ) {
+  // Pre-generate a share token so the student can copy a link immediately
+  // after creating a consented portfolio entry.
+  const shareToken = input.evidence.publicConsent
+    ? randomBytes(24).toString("base64url")
+    : undefined;
+  const evidenceWithToken = shareToken
+    ? { ...input.evidence, shareToken }
+    : input.evidence;
+
   return db.transaction(async (tx) => {
     const [record] = await tx
       .insert(experientialRecords)
@@ -175,7 +242,7 @@ export function createExperientialRecord(
         endsAt: input.endsAt ? new Date(input.endsAt) : undefined,
         hours: input.hours === undefined ? undefined : String(input.hours),
         status: input.status,
-        evidence: input.evidence,
+        evidence: evidenceWithToken,
       })
       .returning();
     if (!record) {
@@ -194,6 +261,7 @@ export function createExperientialRecord(
         title: input.title,
         status: input.status,
         publicConsent: input.evidence.publicConsent,
+        hasShareToken: Boolean(shareToken),
       },
     });
     return record;

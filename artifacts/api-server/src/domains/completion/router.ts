@@ -11,6 +11,8 @@ import {
   calculateAndStoreAssessment,
   calculateAndStoreDerivedAssessment,
   createExperientialRecord,
+  generateShareToken,
+  getExperientialRecordByToken,
   listCompletionAssessments,
   listExperientialRecords,
 } from "./service";
@@ -159,5 +161,60 @@ router.post(
     }
   },
 );
+
+// ─── Share token (authenticated, STUDENT only) ────────────────────────────────
+
+router.post(
+  "/v1/experiential-records/:id/share-token",
+  requireAuth,
+  requireRoles("STUDENT"),
+  async (req, res, next) => {
+    try {
+      const studentId = await currentStudentId(req.auth!.id);
+      if (!studentId) {
+        throw new ApiError(
+          409,
+          "STUDENT_PROFILE_REQUIRED",
+          "연결된 학생 프로필이 없습니다.",
+        );
+      }
+      res.json(await generateShareToken(String(req.params.id), studentId));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ─── Public portfolio view (no auth) ─────────────────────────────────────────
+
+router.get("/v1/public/portfolio/:token", async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    if (!token || token.length > 150) {
+      throw new ApiError(400, "INVALID_TOKEN", "유효하지 않은 토큰입니다.");
+    }
+    const [record] = await getExperientialRecordByToken(token);
+    if (!record) {
+      throw new ApiError(
+        404,
+        "PORTFOLIO_NOT_FOUND",
+        "포트폴리오를 찾을 수 없거나 비공개 상태입니다.",
+      );
+    }
+    const ev = record.evidence as Record<string, unknown>;
+    res.json({
+      title: record.title,
+      summary: typeof ev.summary === "string" ? ev.summary : "",
+      techStack: Array.isArray(ev.techStack) ? ev.techStack : [],
+      outputLinks: Array.isArray(ev.outputLinks) ? ev.outputLinks : [],
+      createdAt:
+        record.createdAt instanceof Date
+          ? record.createdAt.toISOString()
+          : String(record.createdAt),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

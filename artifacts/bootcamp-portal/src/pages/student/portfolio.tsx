@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   BusinessYearListResponseSchema,
   ExperientialRecordListResponseSchema,
@@ -18,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { Link2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
@@ -43,6 +45,37 @@ function formatDateRange(
 export default function StudentPortfolio() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [copyingId, setCopyingId] = useState<string | null>(null);
+
+  async function handleCopyLink(record: PortfolioRecord) {
+    setCopyingId(record.id);
+    try {
+      let token = record.evidence.shareToken;
+      if (!token) {
+        const result = await customFetch(
+          `/api/v1/experiential-records/${record.id}/share-token`,
+          { method: "POST", responseType: "json", credentials: "include" },
+        ) as { shareToken: string };
+        token = result.shareToken;
+        // Refresh list so the token shows up in subsequent renders
+        queryClient.invalidateQueries({
+          queryKey: ["student", "experiential-records"],
+        });
+      }
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/public/portfolio/${token}`,
+      );
+      toast({
+        title: "링크 복사됨",
+        description: "포트폴리오 공유 링크가 클립보드에 복사되었습니다.",
+      });
+    } catch {
+      toast({ title: "복사 실패", variant: "destructive" });
+    } finally {
+      setCopyingId(null);
+    }
+  }
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [techStack, setTechStack] = useState("");
@@ -171,15 +204,28 @@ export default function StudentPortfolio() {
             <Card key={record.id}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h2 className="font-semibold">{record.title}</h2>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
                       {record.evidence.summary}
                     </p>
                   </div>
-                  <Badge variant={record.status === "VERIFIED" ? "default" : "secondary"}>
-                    {record.status}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {record.evidence.publicConsent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={copyingId === record.id}
+                        onClick={() => handleCopyLink(record)}
+                      >
+                        <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                        {copyingId === record.id ? "복사 중…" : "링크 복사"}
+                      </Button>
+                    )}
+                    <Badge variant={record.status === "VERIFIED" ? "default" : "secondary"}>
+                      {record.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {record.evidence.techStack.map((tech) => (
