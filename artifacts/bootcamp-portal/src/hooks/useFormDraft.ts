@@ -8,9 +8,9 @@
  *   });
  *   // call clearDraft() on successful submission
  *
- * Optional `onRestored` callback fires when a draft is actually found and
- * applied on mount. Receives the same `clearDraft` function so the caller
- * can offer a "reset" action without a circular reference:
+ * Optional `onRestored` callback fires when a draft is actually found AND
+ * differs from the initial state (i.e., contains meaningful user input).
+ * Receives `clearDraft` so the caller can offer a "reset" action:
  *
  *   useFormDraft("key", state, restore, (clear) => {
  *     toast({
@@ -20,11 +20,18 @@
  *   });
  *
  * The hook:
- *  1. On mount: reads sessionStorage[key] and calls `restore` with the parsed
- *     object if a draft exists, then removes it so it is only replayed once.
- *     If a draft was found, also calls `onRestored` with `clearDraft`.
- *  2. Whenever `state` changes: debounces a write to sessionStorage[key].
+ *  1. On mount: reads sessionStorage[key]; if a draft exists AND differs from
+ *     the initial state, calls `restore` then `onRestored`. Removes the entry
+ *     so it is only replayed once.
+ *  2. Whenever `state` changes: if state has changed from its initial value,
+ *     debounces a write to sessionStorage[key]. If state has returned to the
+ *     initial value (e.g. after a reset), removes any stale entry.
  *  3. Returns `clearDraft` to remove the draft (call on successful submit).
+ *
+ * These two rules together prevent false restore notifications:
+ *  - A pristine/empty form is never saved, so there is nothing to restore.
+ *  - After clearDraft() + state reset the next save cycle cleans up storage
+ *    rather than writing empty defaults back.
  */
 
 import { useEffect, useRef, useCallback } from "react";
@@ -39,6 +46,10 @@ export function useFormDraft<T extends object>(
 ): { clearDraft: () => void } {
   const storageKey = `form-draft:${key}`;
   const restoredRef = useRef(false);
+
+  // Capture the form's initial state once (never updated after mount).
+  // Used to gate saves and restores to meaningful/non-default content.
+  const initialStateRef = useRef(state);
 
   const clearDraft = useCallback(() => {
     try {
@@ -57,10 +68,19 @@ export function useFormDraft<T extends object>(
       const raw = sessionStorage.getItem(storageKey);
       if (!raw) return;
       const draft = JSON.parse(raw) as T;
+
+      // Only restore if the draft carries meaningful content — i.e., it is
+      // not identical to the initial (blank) state. This prevents false
+      // "restored draft" notifications when the storage key exists but only
+      // holds default/empty values from a previous pristine visit.
+      if (JSON.stringify(draft) === JSON.stringify(initialStateRef.current)) {
+        sessionStorage.removeItem(storageKey);
+        return;
+      }
+
       restore(draft);
-      // Remove immediately so a page refresh or back-nav doesn't re-apply
+      // Remove immediately so back-nav or refresh doesn't re-apply
       sessionStorage.removeItem(storageKey);
-      // Notify the caller that a draft was restored
       onRestored?.(clearDraft);
     } catch {
       // Malformed JSON or SecurityError — silently ignore
@@ -76,6 +96,21 @@ export function useFormDraft<T extends object>(
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
+      // Only persist when state has changed from its initial value.
+      // If the form is blank or has been reset, remove any stale entry instead
+      // of writing empty defaults — this prevents the next visit from seeing a
+      // "draft" that was just the initial/reset state.
+      if (
+        JSON.stringify(stateRef.current) ===
+        JSON.stringify(initialStateRef.current)
+      ) {
+        try {
+          sessionStorage.removeItem(storageKey);
+        } catch {
+          // ignore
+        }
+        return;
+      }
       try {
         sessionStorage.setItem(storageKey, JSON.stringify(stateRef.current));
       } catch {
