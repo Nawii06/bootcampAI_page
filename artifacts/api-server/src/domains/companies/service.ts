@@ -20,7 +20,7 @@ import type {
   CompanyMasterUpdate,
 } from "@workspace/api-zod";
 import { ApiError } from "../../lib/api-error";
-import { lockCompanyApplication } from "./repository";
+import { lockCompanyApplication, listConsentedProjectPortfolios } from "./repository";
 
 export function updateCompanyMaster(id: string, input: CompanyMasterUpdate, actorId: string, requestId: string) {
   return db.transaction(async (tx) => {
@@ -329,13 +329,33 @@ export function deleteCompanyParticipation(
   });
 }
 
-export function setLinkedStudents(
+export async function setLinkedStudents(
   id: string,
   companyId: string,
   portfolioIds: string[],
   actorId: string,
   requestId: string,
 ) {
+  // Deduplicate before any DB work
+  const uniqueIds = [...new Set(portfolioIds)];
+
+  // Validate every submitted ID against the server-authorised candidate set
+  // (consented project portfolios, not soft-deleted). This enforces the same
+  // constraint as the picker UI, preventing crafted requests from bypassing
+  // student consent expectations.
+  if (uniqueIds.length > 0) {
+    const validCandidates = await listConsentedProjectPortfolios();
+    const validIdSet = new Set(validCandidates.map((c) => c.id));
+    const invalid = uniqueIds.filter((pid) => !validIdSet.has(pid));
+    if (invalid.length > 0) {
+      throw new ApiError(
+        400,
+        "INVALID_PORTFOLIO_IDS",
+        "유효하지 않거나 공개 동의되지 않은 포트폴리오 ID가 포함되어 있습니다.",
+      );
+    }
+  }
+
   return db.transaction(async (tx) => {
     const [current] = await tx.select().from(companyParticipations)
       .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
@@ -343,7 +363,7 @@ export function setLinkedStudents(
     if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
     if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 수정할 수 있습니다.");
     const prevDetails = (current.details ?? {}) as Record<string, unknown>;
-    const updatedDetails = { ...prevDetails, linkedPortfolioIds: portfolioIds };
+    const updatedDetails = { ...prevDetails, linkedPortfolioIds: uniqueIds };
     const [updated] = await tx.update(companyParticipations)
       .set({ details: updatedDetails, updatedAt: new Date() })
       .where(eq(companyParticipations.id, id))
@@ -353,7 +373,7 @@ export function setLinkedStudents(
       resourceType: "COMPANY_PARTICIPATION", resourceId: id,
       businessYearId: current.businessYearId, requestId,
       before: { linkedPortfolioIds: prevDetails.linkedPortfolioIds ?? [] },
-      after: { linkedPortfolioIds: portfolioIds },
+      after: { linkedPortfolioIds: uniqueIds },
       changedFields: ["linkedPortfolioIds"],
     });
     return updated;
