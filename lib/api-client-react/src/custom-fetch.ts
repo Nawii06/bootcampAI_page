@@ -156,9 +156,16 @@ function buildErrorMessage(response: Response, data: unknown): string {
     return text ? `${prefix}: ${truncate(text)}` : prefix;
   }
 
+  const nestedError = data && typeof data === "object"
+    ? (data as Record<string, unknown>).error
+    : undefined;
+  const contractError = nestedError && typeof nestedError === "object"
+    ? nestedError as Record<string, unknown>
+    : undefined;
   const title = getStringField(data, "title");
   const detail = getStringField(data, "detail");
   const message =
+    getStringField(contractError, "message") ??
     getStringField(data, "message") ??
     getStringField(data, "error_description") ??
     getStringField(data, "error");
@@ -180,6 +187,9 @@ export class ApiError<T = unknown> extends Error {
   readonly response: Response;
   readonly method: string;
   readonly url: string;
+  readonly code?: string;
+  readonly requestId?: string;
+  readonly fieldErrors?: Array<{ field: string; code: string; message: string }>;
 
   constructor(
     response: Response,
@@ -196,6 +206,21 @@ export class ApiError<T = unknown> extends Error {
     this.response = response;
     this.method = requestInfo.method;
     this.url = response.url || requestInfo.url;
+    const envelope = data && typeof data === "object"
+      ? (data as Record<string, unknown>).error
+      : undefined;
+    if (envelope && typeof envelope === "object") {
+      const value = envelope as Record<string, unknown>;
+      this.code = typeof value.code === "string" ? value.code : undefined;
+      this.requestId = typeof value.requestId === "string" ? value.requestId : undefined;
+      this.fieldErrors = Array.isArray(value.fieldErrors)
+        ? value.fieldErrors.filter((item): item is { field: string; code: string; message: string } =>
+            Boolean(item) && typeof item === "object" &&
+            typeof (item as Record<string, unknown>).field === "string" &&
+            typeof (item as Record<string, unknown>).code === "string" &&
+            typeof (item as Record<string, unknown>).message === "string")
+        : undefined;
+    }
   }
 }
 

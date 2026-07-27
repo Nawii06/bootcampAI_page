@@ -8,8 +8,13 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "verify": "tsx ./src/verify.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "seed": "tsx ./src/seed.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -20,6 +25,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "tsx": "catalog:"
   }
 }

@@ -1,101 +1,54 @@
-import React, { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { contractFetch, customFetch } from "@workspace/api-client-react";
+import {
+  ProgramApplicationsResponseSchema,
+  type ProgramApplicationResponse as Application,
+} from "@workspace/api-zod";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { exportService } from "../../services/exportService";
-import { Application, Program } from "../../types";
-import { Badge } from "@/components/ui/badge";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "../../components/StatusBadge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 
 export default function AdminApplications() {
-  const { toast } = useToast();
-  const [apps, setApps] = useState<Application[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-
-  useEffect(() => {
-    setApps(storageService.get<Application>("applications"));
-    setPrograms(storageService.get<Program>("programs"));
-  }, []);
-
-  const handleStatusChange = (id: string, newStatus: string) => {
-    const updated = apps.map(app => 
-      app.id === id ? { ...app, status: newStatus as any, updatedAt: new Date().toISOString().split('T')[0] } : app
-    );
-    setApps(updated);
-    storageService.set("applications", updated);
-    toast({ title: "상태 변경", description: "지원서 상태가 업데이트 되었습니다." });
-  };
-
-  const handleExport = () => {
-    const cols = [
-      { key: "id", label: "신청ID" },
-      { key: "studentName", label: "이름" },
-      { key: "dept", label: "소속학과" },
-      { key: "preferredTrack", label: "희망트랙" },
-      { key: "status", label: "상태" },
-      { key: "appliedAt", label: "신청일" }
-    ] as any;
-    exportService.downloadCsv("applications_export", apps, cols);
-  };
-
+  const queryClient = useQueryClient();
+  const applications = useQuery({
+    queryKey: ["admin", "program-applications"],
+    queryFn: () =>
+      contractFetch(ProgramApplicationsResponseSchema, "/api/v1/program-applications", {
+        credentials: "include",
+      }),
+  });
+  const decision = useMutation({
+    mutationFn: (input: { applicationId: string; status: "SELECTED" | "REJECTED" }) =>
+      customFetch("/api/v1/program-applications/decision", {
+        method: "POST",
+        responseType: "json",
+        credentials: "include",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "program-applications"] }),
+  });
   const columns: ColumnDef<Application>[] = [
-    { key: "studentName", header: "지원자" },
-    { key: "dept", header: "소속학과" },
-    { 
-      key: "programId", 
-      header: "신청 프로그램",
-      cell: (item) => {
-        const prog = programs.find(p => p.id === item.programId);
-        return <span className="text-sm">{prog?.name || item.programId}</span>;
-      }
+    { key: "programName", header: "프로그램" },
+    { key: "sessionName", header: "회차" },
+    { key: "studentId", header: "학생 ID" },
+    { key: "status", header: "상태" },
+    {
+      key: "id",
+      header: "처리",
+      cell: (row) => (
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => decision.mutate({ applicationId: row.id, status: "SELECTED" })}>선발</Button>
+          <Button size="sm" variant="outline" onClick={() => decision.mutate({ applicationId: row.id, status: "REJECTED" })}>반려</Button>
+        </div>
+      ),
     },
-    { 
-      key: "preferredTrack", 
-      header: "희망트랙",
-      cell: (item) => <Badge variant="outline">{item.preferredTrack}</Badge>
-    },
-    { 
-      key: "status", 
-      header: "현재상태",
-      cell: (item) => <StatusBadge status={item.status} />
-    },
-    { 
-      key: "action", 
-      header: "상태변경",
-      cell: (item) => (
-        <Select value={item.status} onValueChange={(v) => handleStatusChange(item.id, v)}>
-          <SelectTrigger className="h-8 w-28 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="submitted">접수</SelectItem>
-            <SelectItem value="reviewing">검토중</SelectItem>
-            <SelectItem value="supplement">보완요청</SelectItem>
-            <SelectItem value="selected">선발</SelectItem>
-            <SelectItem value="rejected">미선발</SelectItem>
-            <SelectItem value="waitlisted">대기</SelectItem>
-          </SelectContent>
-        </Select>
-      )
-    }
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="신청·선발 관리" description="부트캠프 신청자 내역 확인 및 선발 처리">
-        <Button onClick={handleExport} variant="outline" size="sm">CSV 다운로드</Button>
-      </SectionHeader>
-
-      <DataTable 
-        data={apps} 
-        columns={columns} 
-        filterKey="studentName"
-        filterPlaceholder="지원자 이름 검색..."
-      />
+      <SectionHeader title="신청·선발 관리" description="신청서를 검토하고 선발 상태를 변경합니다." />
+      {decision.isError && <p className="mb-3 text-destructive">{decision.error.message}</p>}
+      <DataTable data={applications.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );
 }

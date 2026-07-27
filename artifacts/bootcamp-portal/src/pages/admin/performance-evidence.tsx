@@ -1,40 +1,75 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { contractFetch } from "@workspace/api-client-react";
+import {
+  StoredFileListResponseSchema,
+  type StoredFileResponse as StoredFile,
+} from "@workspace/api-zod";
 import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
-import { EvidenceStatusBadge } from "@/performance/components/EvidenceStatusBadge";
-import { EvidenceUploadPanel } from "@/performance/components/EvidenceUploadPanel";
-import type { EvidenceFile } from "@/performance/types";
-import { getEvidenceFiles, getIndicators, updateEvidenceStatus } from "@/performance/performanceService";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminPerformanceEvidence() {
-  const [refresh, setRefresh] = useState(0);
-  const indicators = getIndicators();
-  const evidences = getEvidenceFiles();
-  const columns: ColumnDef<EvidenceFile>[] = [
-    { key: "evidence_type", header: "증빙 유형" },
-    { key: "file_name", header: "파일명" },
-    { key: "version", header: "버전" },
-    { key: "uploaded_by", header: "업로드자" },
-    { key: "uploaded_at", header: "업로드일" },
-    { key: "status", header: "상태", cell: (row) => <EvidenceStatusBadge status={row.status} /> },
-    { key: "action", header: "상태 변경", cell: (row) => (
-      <select className="h-8 rounded-md border bg-background px-2" value={row.status} onChange={(event) => {
-        updateEvidenceStatus(row.id, event.target.value as EvidenceFile["status"]);
-        setRefresh((value) => value + 1);
-      }}>
-        {["uploaded", "reviewing", "revision_requested", "approved"].map((status) => <option key={status} value={status}>{status}</option>)}
-      </select>
-    ) }
+  const queryClient = useQueryClient();
+  const [file, setFile] = useState<File>();
+  const [containsPersonalInfo, setContainsPersonalInfo] = useState(false);
+  const files = useQuery({
+    queryKey: ["admin", "stored-files"],
+    queryFn: () => contractFetch(StoredFileListResponseSchema, "/api/v1/files", { credentials: "include" }),
+  });
+  const upload = useMutation({
+    mutationFn: async () => {
+      const form = new FormData();
+      form.append("file", file!);
+      form.append("containsPersonalInfo", String(containsPersonalInfo));
+      const response = await fetch("/api/v1/files", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => undefined);
+        throw new Error(error?.error?.message ?? "파일 업로드에 실패했습니다.");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "stored-files"] });
+      setFile(undefined);
+      setContainsPersonalInfo(false);
+    },
+  });
+  const columns: ColumnDef<StoredFile>[] = [
+    { key: "originalName", header: "파일명" },
+    { key: "mimeType", header: "파일유형" },
+    { key: "sizeBytes", header: "크기", cell: (row) => `${Math.ceil(row.sizeBytes / 1024)} KB` },
+    {
+      key: "containsPersonalInfo",
+      header: "개인정보",
+      cell: (row) => <Badge variant={row.containsPersonalInfo ? "destructive" : "outline"}>{row.containsPersonalInfo ? "포함" : "미포함"}</Badge>,
+    },
+    { key: "uploadedByName", header: "등록자" },
+    { key: "createdAt", header: "등록일시", cell: (row) => new Date(row.createdAt).toLocaleString("ko-KR") },
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="증빙자료 관리" description="증빙자료 metadata 등록, 지표 매핑, 상태 및 버전관리를 수행합니다." />
-      <EvidenceUploadPanel indicators={indicators} onSaved={() => setRefresh((value) => value + 1)} />
-      <div className="mt-6">
-        <DataTable key={refresh} data={evidences} columns={columns} />
+      <SectionHeader title="성과 증빙자료" description="확장자·용량·MIME·파일 시그니처 검증 후 비공개 저장합니다." />
+      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-md border bg-card p-5">
+        <input
+          type="file"
+          accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg"
+          onChange={(event) => setFile(event.target.files?.[0])}
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={containsPersonalInfo} onChange={(event) => setContainsPersonalInfo(event.target.checked)} />
+          개인정보 포함
+        </label>
+        <Button disabled={!file || upload.isPending} onClick={() => upload.mutate()}>증빙 업로드</Button>
+        {upload.isError && <span className="text-sm text-destructive">{upload.error.message}</span>}
       </div>
+      <DataTable data={files.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );
 }

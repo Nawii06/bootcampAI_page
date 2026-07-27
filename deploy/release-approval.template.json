@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "",
+  "environment": "production",
+  "commit": "",
+  "sourceDirty": false,
+  "manifestSha256": "",
+  "images": {
+    "api": "",
+    "portal": ""
+  },
+  "sboms": {
+    "apiSha256": "",
+    "portalSha256": ""
+  },
+  "migrationTarget": "",
+  "backup": {
+    "sha256": "",
+    "verifiedAt": ""
+  },
+  "rollback": {
+    "apiImage": "",
+    "portalImage": "",
+    "databaseStrategy": ""
+  },
+  "approvals": [
+    {
+      "role": "REQUESTER",
+      "actorId": "",
+      "approvedAt": "",
+      "reference": ""
+    },
+    {
+      "role": "TECHNICAL_REVIEWER",
+      "actorId": "",
+      "approvedAt": "",
+      "reference": ""
+    },
+    {
+      "role": "CHANGE_APPROVER",
+      "actorId": "",
+      "approvedAt": "",
+      "reference": ""
+    }
+  ],
+  "scheduledAt": ""
+}

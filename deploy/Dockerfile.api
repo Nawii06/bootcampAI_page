@@ -1,0 +1,18 @@
+FROM node:24-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+RUN addgroup -S app && adduser -S -G app -u 10001 app \
+  && mkdir -p /app/data/files \
+  && chown -R app:app /app
+
+COPY --chown=app:app artifacts/api-server/dist/ ./dist/
+
+USER app
+EXPOSE 4000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:4000/api/readyz || exit 1
+
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]

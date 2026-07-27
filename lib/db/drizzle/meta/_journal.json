@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784871839232,
+      "tag": "0000_flowery_lilandra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784871964202,
+      "tag": "0001_youthful_dormammu",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784872257205,
+      "tag": "0002_elite_gladiator",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784873457179,
+      "tag": "0003_marvelous_mephisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784903117406,
+      "tag": "0004_medical_plazm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785128778418,
+      "tag": "0005_freezing_hex",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785128907866,
+      "tag": "0006_pink_giant_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785140060989,
+      "tag": "0007_worried_professor_monster",
+      "breakpoints": true
+    }
+  ]
+}

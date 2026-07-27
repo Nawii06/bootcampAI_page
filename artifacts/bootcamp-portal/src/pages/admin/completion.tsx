@@ -1,79 +1,86 @@
-import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { contractFetch } from "@workspace/api-client-react";
+import {
+  CompletionAssessmentListResponseSchema,
+  type CompletionAssessmentResponse as CompletionAssessment,
+} from "@workspace/api-zod";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { CompletionRecord, Program } from "../../types";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
 
 export default function AdminCompletion() {
-  const { toast } = useToast();
-  const [completions, setCompletions] = useState<CompletionRecord[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-
-  useEffect(() => {
-    setCompletions(storageService.get<CompletionRecord>("completions"));
-    setPrograms(storageService.get<Program>("programs"));
-  }, []);
-
-  const handleToggle = (id: string, field: keyof CompletionRecord, value: boolean) => {
-    const updated = completions.map(c => 
-      c.id === id ? { ...c, [field]: value } : c
-    );
-    setCompletions(updated);
-    storageService.set("completions", updated);
-    toast({ title: "업데이트 됨", description: "이수 정보가 변경되었습니다." });
-  };
-
-  const columns: ColumnDef<CompletionRecord>[] = [
-    { key: "studentName", header: "학생명", cell: (item) => <span className="font-bold">{item.studentName}</span> },
-    { 
-      key: "programId", 
-      header: "프로그램",
-      cell: (item) => {
-        const prog = programs.find(p => p.id === item.programId);
-        return <span className="text-sm">{prog?.name || item.programId}</span>;
-      }
-    },
+  const assessments = useQuery({
+    queryKey: ["admin", "completion-assessments"],
+    queryFn: () =>
+      contractFetch(
+        CompletionAssessmentListResponseSchema,
+        "/api/v1/completion-assessments",
+        { credentials: "include" },
+      ),
+  });
+  const columns: ColumnDef<CompletionAssessment>[] = [
+    { key: "studentNumber", header: "학번" },
     {
-      key: "courseCompleted",
-      header: "교과 이수",
-      cell: (item) => <Switch checked={item.courseCompleted} onCheckedChange={(c) => handleToggle(item.id, "courseCompleted", c)} />
+      key: "studentName",
+      header: "학생",
+      cell: (row) => <span className="font-medium">{row.studentName}</span>,
     },
+    { key: "curriculumName", header: "교육과정" },
     {
-      key: "finalCompleted",
-      header: "최종 수료",
-      cell: (item) => (
-        <div className="flex items-center gap-2">
-          <Switch checked={item.finalCompleted} onCheckedChange={(c) => handleToggle(item.id, "finalCompleted", c)} />
-          {item.finalCompleted && <Badge className="bg-green-600">수료증 발급 대상</Badge>}
+      key: "progressRate",
+      header: "진행률",
+      cell: (row) => (
+        <div className="min-w-32">
+          <span className="text-sm">{Number(row.progressRate)}%</span>
+          <Progress value={Number(row.progressRate)} className="mt-1 h-2" />
         </div>
-      )
+      ),
     },
     {
-      key: "performanceRecognized",
-      header: "성과 인정",
-      cell: (item) => <Switch checked={item.performanceRecognized} onCheckedChange={(c) => handleToggle(item.id, "performanceRecognized", c)} />
-    }
+      key: "missing",
+      header: "부족요건",
+      cell: (row) =>
+        row.missing.length === 0
+          ? "-"
+          : row.missing
+              .slice(0, 2)
+              .map((item) => item.name ?? "미지정 요건")
+              .join(", "),
+    },
+    {
+      key: "completed",
+      header: "판정",
+      cell: (row) => (
+        <Badge variant={row.completed ? "default" : "secondary"}>
+          {row.completed ? "이수" : "진행 중"}
+        </Badge>
+      ),
+    },
+    {
+      key: "calculatedAt",
+      header: "계산일시",
+      cell: (row) => new Date(row.calculatedAt).toLocaleString("ko-KR"),
+    },
   ];
 
   return (
     <PortalLayout>
-      <SectionHeader title="이수·수료 관리" description="학생별 프로그램 이수 현황 체크 및 최종 수료 처리" />
-
-      <DataTable 
-        data={completions} 
-        columns={columns} 
+      <SectionHeader
+        title="학생 이수관리"
+        description="교육과정 요건으로 계산·저장된 최신 이수 snapshot을 조회합니다."
+      />
+      {assessments.isError && (
+        <p className="mb-4 text-destructive">
+          이수 평가 결과를 불러오지 못했습니다.
+        </p>
+      )}
+      <DataTable
+        data={assessments.data?.data ?? []}
+        columns={columns}
         filterKey="studentName"
-        filterPlaceholder="학생명 검색..."
-        actions={
-          <Button variant="outline" onClick={() => alert("수료증 일괄 생성 (Mock)")}>
-            수료증 일괄 생성
-          </Button>
-        }
+        filterPlaceholder="학생명 검색"
       />
     </PortalLayout>
   );

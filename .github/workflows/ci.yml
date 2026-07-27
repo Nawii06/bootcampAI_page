@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Test, typecheck, and build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NODE_ENV: test
+      ENABLE_MOCK_AUTH: "true"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate FD_Set_01
+        run: pnpm fake-data:validate FD_Set_01
+
+      - name: Run tests, typecheck, and production builds
+        run: pnpm verify
+
+      - name: Generate release integrity manifest
+        run: pnpm release:manifest
+
+      - name: Verify release integrity manifest
+        run: pnpm release:manifest:verify
+
+      - name: Upload portal build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootcamp-portal
+          path: artifacts/bootcamp-portal/dist/public
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload API build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-server
+          path: artifacts/api-server/dist
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release manifest
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: .release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  container-build:
+    name: Validate runtime containers
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download portal build
+        uses: actions/download-artifact@v4
+        with:
+          name: bootcamp-portal
+          path: artifacts/bootcamp-portal/dist/public
+
+      - name: Download API build
+        uses: actions/download-artifact@v4
+        with:
+          name: api-server
+          path: artifacts/api-server/dist
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          push: false
+          load: true
+          tags: bootcamp-api:ci
+
+      - name: Build portal runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.portal
+          push: false
+          load: true
+          tags: bootcamp-portal:ci
+
+      - name: Generate API image SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: bootcamp-api:ci
+          format: spdx-json
+          output-file: sbom-api.spdx.json
+          upload-artifact: false
+
+      - name: Generate portal image SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: bootcamp-portal:ci
+          format: spdx-json
+          output-file: sbom-portal.spdx.json
+          upload-artifact: false
+
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: bootcamp-api:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Scan portal image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: bootcamp-portal:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Upload image SBOMs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-sboms
+          path: |
+            sbom-api.spdx.json
+            sbom-portal.spdx.json
+          if-no-files-found: error
+          retention-days: 30

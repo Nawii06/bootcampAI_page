@@ -7,11 +7,16 @@ export type ReviewStatus = "pending" | "approved" | "rejected";
 
 export interface User {
   id: string;
+  accountId?: string;
   name: string;
   role: Role;
+  roles?: string[];
   dept?: string;
   year?: number;
   company?: string;
+  defaultRoute?: string;
+  isFakeSession?: boolean;
+  fakeDataSetId?: string;
 }
 
 export interface Program {

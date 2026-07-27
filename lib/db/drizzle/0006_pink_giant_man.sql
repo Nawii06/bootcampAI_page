@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "file_retention_policy_one_default_idx" ON "file_retention_policies" USING btree ("is_default") WHERE "file_retention_policies"."is_default" = true and "file_retention_policies"."deleted_at" is null;

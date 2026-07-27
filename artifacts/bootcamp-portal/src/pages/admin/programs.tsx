@@ -1,182 +1,160 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { contractFetch, customFetch } from "@workspace/api-client-react";
+import {
+  ProgramListResponseSchema,
+  type ProgramResponse as Program,
+} from "@workspace/api-zod";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
-import { DataTable, ColumnDef } from "../../components/DataTable";
-import { storageService } from "../../services/storageService";
-import { Program } from "../../types";
-import { Badge } from "@/components/ui/badge";
+import { DataTable, type ColumnDef } from "../../components/DataTable";
+import { StatusBadge } from "../../components/StatusBadge";
+import type { ApplicationStatus } from "../../types";
 import { Button } from "@/components/ui/button";
-import { Modal } from "../../components/Modal";
-import { FormField } from "../../components/FormField";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+
+function displayStatus(status: string): ApplicationStatus {
+  if (status === "APPROVED" || status === "OPEN") return "selected";
+  if (status === "REJECTED" || status === "CANCELLED") return "rejected";
+  return "reviewing";
+}
 
 export default function AdminPrograms() {
-  const { toast } = useToast();
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<Partial<Program>>({});
-
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Program>();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [programType, setProgramType] = useState("");
+  const [departmentCodes, setDepartmentCodes] = useState("");
+  const [minimumGrade, setMinimumGrade] = useState("");
+  const [maximumGrade, setMaximumGrade] = useState("");
+  const [attendanceRate, setAttendanceRate] = useState("");
+  const [assignmentScore, setAssignmentScore] = useState("");
+  const [surveyRequired, setSurveyRequired] = useState(false);
+  const [sessionId, setSessionId] = useState("");
+  const [sessionName, setSessionName] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [venue, setVenue] = useState("");
+  const [applicationStartsAt, setApplicationStartsAt] = useState("");
+  const [applicationEndsAt, setApplicationEndsAt] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const programs = useQuery({
+    queryKey: ["admin", "programs"],
+    queryFn: () =>
+      contractFetch(ProgramListResponseSchema, "/api/v1/programs", {
+        credentials: "include",
+      }),
+  });
   useEffect(() => {
-    setPrograms(storageService.get<Program>("programs"));
-  }, []);
-
-  const handleSave = () => {
-    if (!editingProgram.name || !editingProgram.year || !editingProgram.level || !editingProgram.track) {
-      toast({ title: "오류", description: "필수 항목을 모두 입력해주세요.", variant: "destructive" });
-      return;
+    if (!selected) return;
+    setName(selected.name);
+    setDescription(selected.description ?? "");
+    setProgramType(selected.programType);
+    setDepartmentCodes(selected.eligibilityRules.departmentCodes?.join(", ") ?? "");
+    setMinimumGrade(String(selected.eligibilityRules.minimumGrade ?? ""));
+    setMaximumGrade(String(selected.eligibilityRules.maximumGrade ?? ""));
+    setAttendanceRate(String(selected.completionRules.minimumAttendanceRate ?? ""));
+    setAssignmentScore(String(selected.completionRules.minimumAssignmentScore ?? ""));
+    setSurveyRequired(selected.completionRules.surveyRequired ?? false);
+    const session = selected.programSessions[0];
+    if (session) {
+      setSessionId(session.id); setSessionName(session.name); setCapacity(String(session.capacity));
+      setVenue(session.venue ?? "");
+      setApplicationStartsAt(toLocalDateTime(session.applicationStartsAt));
+      setApplicationEndsAt(toLocalDateTime(session.applicationEndsAt));
+      setStartsAt(toLocalDateTime(session.startsAt)); setEndsAt(toLocalDateTime(session.endsAt));
     }
-    
-    let updated: Program[];
-    if (editingProgram.id) {
-      updated = programs.map(p => p.id === editingProgram.id ? editingProgram as Program : p);
-    } else {
-      const newProgram: Program = {
-        ...(editingProgram as any),
-        id: `p-${Date.now()}`,
-        isActive: true,
-        linkedKpiIds: []
-      };
-      updated = [...programs, newProgram];
-    }
-    
-    setPrograms(updated);
-    storageService.set("programs", updated);
-    setIsModalOpen(false);
-    toast({ title: "저장 성공", description: "프로그램 정보가 저장되었습니다." });
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("정말 이 프로그램을 삭제하시겠습니까? (연결된 신청 내역이 있으면 오류가 발생할 수 있습니다.)")) {
-      const updated = programs.filter(p => p.id !== id);
-      setPrograms(updated);
-      storageService.set("programs", updated);
-      toast({ title: "삭제 성공", description: "프로그램이 삭제되었습니다." });
-    }
-  };
-
+  }, [selected]);
+  const update = useMutation({
+    mutationFn: ({ url, body }: { url: string; body: unknown }) => customFetch(url, {
+      method: "PATCH", responseType: "json", credentials: "include",
+      body: JSON.stringify(body),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "programs"] }),
+  });
   const columns: ColumnDef<Program>[] = [
-    { key: "name", header: "프로그램명", cell: (item) => <span className="font-bold">{item.name}</span> },
-    { key: "year", header: "연차", cell: (item) => `${item.year}년도 ${item.semester}학기` },
-    { key: "track", header: "트랙", cell: (item) => <Badge variant="outline">{item.track}</Badge> },
-    { key: "level", header: "수준", cell: (item) => <Badge variant="secondary">{item.level}</Badge> },
-    { key: "type", header: "운영방식" },
-    { key: "capacity", header: "정원", cell: (item) => `${item.capacity}명` },
-    { key: "responsibleDept", header: "담당부서" },
-    { 
-      key: "actions", 
-      header: "관리",
-      cell: (item) => (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setEditingProgram(item); setIsModalOpen(true); }}>수정</Button>
-          <Button variant="destructive" size="sm" onClick={() => handleDelete(item.id)}>삭제</Button>
-        </div>
-      )
-    }
+    { key: "code", header: "코드" },
+    { key: "name", header: "프로그램명", cell: (row) => <span className="font-medium">{row.name}</span> },
+    { key: "programType", header: "유형" },
+    { key: "programSessions", header: "회차", cell: (row) => `${row.programSessions?.length ?? 0}개` },
+    { key: "status", header: "상태", cell: (row) => <StatusBadge status={displayStatus(row.status)} /> },
   ];
-
   return (
     <PortalLayout>
-      <SectionHeader title="프로그램 관리" description="부트캠프 교육과정(교과/비교과/PBL/실습 등) 등록 및 관리">
-        <Button onClick={() => { setEditingProgram({}); setIsModalOpen(true); }}>+ 프로그램 추가</Button>
-      </SectionHeader>
-
-      <DataTable 
-        data={programs} 
-        columns={columns} 
-        filterKey="name"
-        filterPlaceholder="프로그램명 검색..."
-      />
-
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        title={editingProgram.id ? "프로그램 수정" : "새 프로그램 추가"}
-        className="max-w-2xl"
-      >
-        <div className="grid grid-cols-2 gap-4 py-4">
-          <FormField label="프로그램명" required className="col-span-2">
-            <Input 
-              value={editingProgram.name || ""} 
-              onChange={e => setEditingProgram({...editingProgram, name: e.target.value})} 
-            />
-          </FormField>
-          
-          <FormField label="운영 연차" required>
-            <Input 
-              type="number" 
-              value={editingProgram.year || ""} 
-              onChange={e => setEditingProgram({...editingProgram, year: parseInt(e.target.value)})} 
-            />
-          </FormField>
-          
-          <FormField label="학기" required>
-            <Input 
-              type="number" 
-              value={editingProgram.semester || ""} 
-              onChange={e => setEditingProgram({...editingProgram, semester: parseInt(e.target.value)})} 
-            />
-          </FormField>
-
-          <FormField label="트랙" required>
-            <Select value={editingProgram.track} onValueChange={v => setEditingProgram({...editingProgram, track: v as any})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="autonomous">자율주행</SelectItem>
-                <SelectItem value="aviation">항공</SelectItem>
-                <SelectItem value="railway">철도</SelectItem>
-                <SelectItem value="infra">스마트 인프라</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label="수준" required>
-            <Select value={editingProgram.level} onValueChange={v => setEditingProgram({...editingProgram, level: v as any})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basic">기초공통</SelectItem>
-                <SelectItem value="beginner">초급</SelectItem>
-                <SelectItem value="intermediate">중급</SelectItem>
-                <SelectItem value="advanced">고급</SelectItem>
-                <SelectItem value="field">현장실습</SelectItem>
-                <SelectItem value="employment">취업연계</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label="운영방식" required>
-            <Select value={editingProgram.type} onValueChange={v => setEditingProgram({...editingProgram, type: v as any})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="course">교과</SelectItem>
-                <SelectItem value="extracurricular">비교과</SelectItem>
-                <SelectItem value="pbl">PBL</SelectItem>
-                <SelectItem value="immersive">몰입형/실습</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label="모집정원" required>
-            <Input 
-              type="number" 
-              value={editingProgram.capacity || ""} 
-              onChange={e => setEditingProgram({...editingProgram, capacity: parseInt(e.target.value)})} 
-            />
-          </FormField>
-
-          <FormField label="담당부서">
-            <Input 
-              value={editingProgram.responsibleDept || ""} 
-              onChange={e => setEditingProgram({...editingProgram, responsibleDept: e.target.value})} 
-            />
-          </FormField>
-
-          <div className="col-span-2 flex justify-end mt-4">
-            <Button onClick={handleSave}>저장</Button>
-          </div>
-        </div>
-      </Modal>
+      <SectionHeader title="프로그램 관리" description="프로그램 신청자격·이수기준과 회차별 신청기간·정원을 관리합니다." />
+      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+        {programs.isError ? <p className="text-destructive">프로그램 API에 연결할 수 없습니다.</p> : (
+          <DataTable data={programs.data?.data ?? []} columns={columns} onRowClick={(row) => {
+            setSelected(programs.data?.data.find((item) => item.id === row.id));
+          }} />
+        )}
+        <aside className="space-y-5 rounded-lg border bg-card p-5">
+          <h2 className="font-semibold">프로그램 상세 편집</h2>
+          {!selected ? <p className="text-sm text-muted-foreground">왼쪽에서 프로그램을 선택하세요.</p> : <>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="프로그램명" />
+            <Input value={programType} onChange={(e) => setProgramType(e.target.value)} placeholder="프로그램 유형" />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="설명" />
+            <Input value={departmentCodes} onChange={(e) => setDepartmentCodes(e.target.value)} placeholder="신청 가능 학과코드(쉼표 구분)" />
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="number" value={minimumGrade} onChange={(e) => setMinimumGrade(e.target.value)} placeholder="최소 학년" />
+              <Input type="number" value={maximumGrade} onChange={(e) => setMaximumGrade(e.target.value)} placeholder="최대 학년" />
+              <Input type="number" value={attendanceRate} onChange={(e) => setAttendanceRate(e.target.value)} placeholder="최소 출석률" />
+              <Input type="number" value={assignmentScore} onChange={(e) => setAssignmentScore(e.target.value)} placeholder="최소 과제점수" />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={surveyRequired} onChange={(e) => setSurveyRequired(e.target.checked)} />
+              만족도조사 제출 필수
+            </label>
+            <Button className="w-full" disabled={selected.status !== "DRAFT" || update.isPending} onClick={() => update.mutate({
+              url: `/api/v1/programs/${selected.id}`,
+              body: {
+                name, description: description || undefined, programType,
+                eligibilityRules: {
+                  departmentCodes: departmentCodes.split(",").map((value) => value.trim()).filter(Boolean),
+                  minimumGrade: minimumGrade ? Number(minimumGrade) : undefined,
+                  maximumGrade: maximumGrade ? Number(maximumGrade) : undefined,
+                },
+                completionRules: {
+                  minimumAttendanceRate: attendanceRate ? Number(attendanceRate) : undefined,
+                  minimumAssignmentScore: assignmentScore ? Number(assignmentScore) : undefined,
+                  surveyRequired,
+                },
+              },
+            })}>프로그램 저장</Button>
+            <div className="border-t pt-4">
+              <h3 className="mb-3 font-medium">첫 회차 상세 편집</h3>
+              <div className="space-y-2">
+                <Input value={sessionName} onChange={(e) => setSessionName(e.target.value)} placeholder="회차명" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="정원" />
+                  <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="장소" />
+                </div>
+                <label className="block text-xs">신청 시작<Input type="datetime-local" value={applicationStartsAt} onChange={(e) => setApplicationStartsAt(e.target.value)} /></label>
+                <label className="block text-xs">신청 종료<Input type="datetime-local" value={applicationEndsAt} onChange={(e) => setApplicationEndsAt(e.target.value)} /></label>
+                <label className="block text-xs">운영 시작<Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /></label>
+                <label className="block text-xs">운영 종료<Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
+                <Button className="w-full" variant="outline" disabled={!sessionId || selected.programSessions[0]?.status !== "DRAFT" || update.isPending} onClick={() => update.mutate({
+                  url: `/api/v1/program-sessions/${sessionId}`,
+                  body: {
+                    name: sessionName, capacity: Number(capacity), venue: venue || undefined,
+                    applicationStartsAt: new Date(applicationStartsAt).toISOString(),
+                    applicationEndsAt: new Date(applicationEndsAt).toISOString(),
+                    startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
+                  },
+                })}>회차 저장</Button>
+              </div>
+            </div>
+          </>}
+          {update.isError && <p className="text-sm text-destructive">{update.error.message}</p>}
+        </aside>
+      </div>
     </PortalLayout>
   );
+}
+
+function toLocalDateTime(value: string) {
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
 }

@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bootcamp}
+      POSTGRES_USER: ${POSTGRES_USER:-bootcamp}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - bootcamp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL_FILE: /run/secrets/database_url
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+      ENABLE_MOCK_AUTH: "false"
+      TRUST_PROXY_HOPS: 1
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      METRICS_TOKEN_FILE: /run/secrets/metrics_token
+      FILE_STORAGE_DRIVER: ${FILE_STORAGE_DRIVER:-s3}
+      FILE_STORAGE_DIR: /app/data/files
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-ap-northeast-2}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      S3_KEY_PREFIX: ${S3_KEY_PREFIX:-bootcamp}
+      S3_SIGNED_URL_EXPIRES_SECONDS: ${S3_SIGNED_URL_EXPIRES_SECONDS:-120}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      IMPORT_API_ALLOWED_HOSTS: ${IMPORT_API_ALLOWED_HOSTS:-}
+      MALWARE_SCAN_MODE: http
+      MALWARE_SCAN_URL: ${MALWARE_SCAN_URL:?MALWARE_SCAN_URL is required}
+      MALWARE_SCAN_API_KEY_FILE: /run/secrets/malware_scan_api_key
+      MALWARE_SCAN_TIMEOUT_MS: ${MALWARE_SCAN_TIMEOUT_MS:-10000}
+    secrets:
+      - database_url
+      - metrics_token
+      - malware_scan_api_key
+    volumes:
+      - bootcamp_file_data:/app/data/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  portal:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.portal
+    restart: unless-stopped
+    ports:
+      - "${PORTAL_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  bootcamp_postgres_data:
+  bootcamp_file_data:
+
+secrets:
+  postgres_password:
+    external: true
+  database_url:
+    external: true
+  metrics_token:
+    external: true
+  malware_scan_api_key:
+    external: true

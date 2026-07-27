@@ -1,0 +1,320 @@
+{
+  "dataSetId": "FD_Set_01",
+  "description": "실제 DB 구성 전 공개 포털 preview용 가역적 개발 데이터",
+  "createdAt": "2026-07-24T00:00:00.000Z",
+  "businessYears": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000001",
+      "year": 2026,
+      "name": "2026학년도",
+      "isActive": true
+    }
+  ],
+  "courses": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000101",
+      "courseCode": "AI101",
+      "name": "인공지능 기초",
+      "englishName": "Introduction to Artificial Intelligence",
+      "description": "머신러닝과 딥러닝의 핵심 개념을 모빌리티 사례 중심으로 학습합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000102",
+      "courseCode": "CV201",
+      "name": "자율주행 컴퓨터비전",
+      "englishName": "Computer Vision for Autonomous Driving",
+      "description": "카메라 영상 기반 객체 탐지와 차선 인식 모델을 구현합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000103",
+      "courseCode": "ROS301",
+      "name": "ROS2 모빌리티 프로젝트",
+      "englishName": "ROS2 Mobility Project",
+      "description": "ROS2 기반 센서 융합과 주행 제어 프로젝트를 수행합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000104",
+      "courseCode": "DATA210",
+      "name": "교통 데이터 분석",
+      "englishName": "Transportation Data Analytics",
+      "description": "철도·도로·항공 운행 데이터를 활용한 분석 및 예측 기법을 학습합니다.",
+      "defaultCredits": 3,
+      "departmentCode": "AI_BOOTCAMP"
+    }
+  ],
+  "programs": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000201",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "PBL-AI-01",
+      "name": "AI 모빌리티 PBL 캠프",
+      "description": "참여기업의 실제 문제를 해결하는 8주 집중 프로젝트입니다.",
+      "programType": "PBL",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000211",
+          "name": "1기",
+          "capacity": 30,
+          "applicationStartsAt": "2026-07-01T00:00:00.000Z",
+          "applicationEndsAt": "2026-08-15T14:59:59.000Z",
+          "startsAt": "2026-09-01T00:00:00.000Z",
+          "endsAt": "2026-10-31T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000202",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "UAM-BOOT-01",
+      "name": "UAM 비행제어 실무 부트캠프",
+      "description": "도심항공모빌리티 비행제어와 경로 최적화를 실습합니다.",
+      "programType": "IMMERSIVE",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000212",
+          "name": "하계 집중과정",
+          "capacity": 24,
+          "applicationStartsAt": "2026-07-10T00:00:00.000Z",
+          "applicationEndsAt": "2026-08-20T14:59:59.000Z",
+          "startsAt": "2026-09-05T00:00:00.000Z",
+          "endsAt": "2026-10-10T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000203",
+      "businessYearId": "fd010000-0000-4000-8000-000000000001",
+      "code": "RAIL-DATA-01",
+      "name": "철도 데이터 분석 해커톤",
+      "description": "철도 운행데이터로 안전성과 운영효율 개선 아이디어를 개발합니다.",
+      "programType": "EXTRACURRICULAR",
+      "status": "OPEN",
+      "programSessions": [
+        {
+          "id": "fd010000-0000-4000-8000-000000000213",
+          "name": "2026 해커톤",
+          "capacity": 40,
+          "applicationStartsAt": "2026-08-01T00:00:00.000Z",
+          "applicationEndsAt": "2026-09-10T14:59:59.000Z",
+          "startsAt": "2026-09-25T00:00:00.000Z",
+          "endsAt": "2026-09-26T14:59:59.000Z",
+          "status": "OPEN"
+        }
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000301",
+      "name": "한국모빌리티테크",
+      "companyType": "중견기업",
+      "description": "자율주행 인지·제어 솔루션 개발 기업",
+      "website": "https://example.com/mobility"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000302",
+      "name": "스마트레일솔루션",
+      "companyType": "중소기업",
+      "description": "철도 운행 데이터 분석과 예지정비 플랫폼 기업",
+      "website": "https://example.com/rail"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000303",
+      "name": "에어모빌리티랩",
+      "companyType": "스타트업",
+      "description": "UAM 비행제어 및 시뮬레이션 전문기업",
+      "website": "https://example.com/uam"
+    }
+  ],
+  "performanceResults": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000401",
+      "indicatorCode": "KPI-01",
+      "indicatorName": "교육과정 참여학생",
+      "actualValue": "186",
+      "unit": "명",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000402",
+      "indicatorCode": "KPI-02",
+      "indicatorName": "참여기업",
+      "actualValue": "24",
+      "unit": "개사",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000403",
+      "indicatorCode": "KPI-03",
+      "indicatorName": "프로젝트 이수율",
+      "actualValue": "92.4",
+      "unit": "%",
+      "publishedAt": "2026-07-15T00:00:00.000Z"
+    }
+  ],
+  "content": [
+    {
+      "id": "fd010000-0000-4000-8000-000000000501",
+      "contentType": "NEWS",
+      "title": "2026 AI 모빌리티 PBL 참여기업 간담회 개최",
+      "summary": "교육과정 공동설계와 산업체 프로젝트 운영방안을 논의했습니다.",
+      "body": "참여기업과 대학 관계자가 모여 2026학년도 PBL 운영계획을 공유했습니다.",
+      "publishedAt": "2026-07-18T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000502",
+      "contentType": "NEWS",
+      "title": "자율주행 컴퓨터비전 집중교육 성료",
+      "summary": "학생 32명이 객체탐지와 차선인식 프로젝트를 수행했습니다.",
+      "body": "산업체 멘토와 함께 실제 주행영상 기반 모델 개발을 완료했습니다.",
+      "publishedAt": "2026-07-12T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000503",
+      "contentType": "RESOURCE",
+      "title": "2026학년도 부트캠프 프로그램 안내서",
+      "summary": "교육과정, 비교과 프로그램, 신청 및 이수기준 안내",
+      "body": "본 자료는 preview용 FD_Set_01 데이터입니다.",
+      "publishedAt": "2026-07-20T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    },
+    {
+      "id": "fd010000-0000-4000-8000-000000000504",
+      "contentType": "RESOURCE",
+      "title": "산업체 프로젝트 제안서 양식",
+      "summary": "참여기업의 PBL 과제 제안을 위한 작성 항목",
+      "body": "문제정의, 제공 데이터, 기대 산출물, 멘토 역할을 작성합니다.",
+      "publishedAt": "2026-07-17T00:00:00.000Z",
+      "metadata": { "dataSetId": "FD_Set_01" }
+    }
+  ],
+  "fakeAuth": {
+    "enabled": true,
+    "dataSetId": "FD_Set_01",
+    "sessionCookieName": "fd_preview_session",
+    "identities": [
+      {"id":"fd010000-0000-4000-8001-000000000001","userId":"fd010000-0000-4000-8100-000000000001","loginId":"fake.student01","displayName":"가상학생01 · 이수 진행 중","email":"student01@example.invalid","roles":["STUDENT"],"studentId":"fd010000-0000-4000-8200-000000000001","departmentCode":"AI_BOOTCAMP","grade":"3","scenarioCode":"STUDENT_IN_PROGRESS","scenarioLabel":"이수 진행 중","description":"부족요건과 신청 가능한 프로그램을 확인합니다.","defaultRoute":"/student/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000002","userId":"fd010000-0000-4000-8100-000000000002","loginId":"fake.student02","displayName":"가상학생02 · 이수완료","email":"student02@example.invalid","roles":["STUDENT"],"studentId":"fd010000-0000-4000-8200-000000000002","departmentCode":"AI_BOOTCAMP","grade":"4","scenarioCode":"STUDENT_COMPLETED","scenarioLabel":"이수완료·수혜대상","description":"이수완료, 포트폴리오와 장학금 지급완료 상태를 확인합니다.","defaultRoute":"/student/completion","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000003","userId":"fd010000-0000-4000-8100-000000000003","loginId":"fake.student03","displayName":"가상학생03 · 선수요건 부족","email":"student03@example.invalid","roles":["STUDENT"],"studentId":"fd010000-0000-4000-8200-000000000003","departmentCode":"AI_BOOTCAMP","grade":"2","scenarioCode":"STUDENT_PREREQUISITE_MISSING","scenarioLabel":"선수요건 부족","description":"신청 불가 사유와 대체 가능한 기초과정을 확인합니다.","defaultRoute":"/student/completion","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000004","userId":"fd010000-0000-4000-8100-000000000004","loginId":"fake.company.applicant","displayName":"가상기업신청자","email":"company.applicant@example.invalid","roles":["COMPANY_APPLICANT"],"scenarioCode":"COMPANY_SUPPLEMENT","scenarioLabel":"기업신청 보완요청","description":"참여신청 보완요청과 확약서 재제출 상태를 확인합니다.","defaultRoute":"/partner/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000005","userId":"fd010000-0000-4000-8100-000000000005","loginId":"fake.company.manager","displayName":"가상기업담당자","email":"company.manager@example.invalid","roles":["COMPANY_MANAGER"],"companyId":"fd010000-0000-4000-8000-000000000301","scenarioCode":"COMPANY_APPROVED","scenarioLabel":"승인 참여기업","description":"프로젝트, 학생평가와 채용연계 화면을 확인합니다.","defaultRoute":"/partner/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000006","userId":"fd010000-0000-4000-8100-000000000006","loginId":"fake.education.staff","displayName":"가상교육담당자","email":"education.staff@example.invalid","roles":["EDUCATION_STAFF"],"departmentCode":"EDUCATION","scenarioCode":"EDUCATION_OPERATIONS","scenarioLabel":"교육운영","description":"프로그램, 신청·선발과 이수확정 화면을 확인합니다.","defaultRoute":"/admin/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000007","userId":"fd010000-0000-4000-8100-000000000007","loginId":"fake.benefit.staff","displayName":"가상수혜관리담당자","email":"benefit.staff@example.invalid","roles":["BENEFIT_STAFF"],"departmentCode":"BENEFIT","scenarioCode":"BENEFIT_OPERATIONS","scenarioLabel":"수혜관리","description":"수혜 대상자 검토와 지급상태를 확인합니다.","defaultRoute":"/admin/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000008","userId":"fd010000-0000-4000-8100-000000000008","loginId":"fake.company.staff","displayName":"가상기업협력담당자","email":"company.staff@example.invalid","roles":["COMPANY_STAFF"],"departmentCode":"COMPANY","scenarioCode":"COMPANY_OPERATIONS","scenarioLabel":"기업협력","description":"기업신청, 참여기업과 프로젝트 관리 화면을 확인합니다.","defaultRoute":"/admin/partners","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000009","userId":"fd010000-0000-4000-8100-000000000009","loginId":"fake.budget.staff","displayName":"가상예산담당자","email":"budget.staff@example.invalid","roles":["BUDGET_STAFF"],"departmentCode":"BUDGET","scenarioCode":"BUDGET_OPERATIONS","scenarioLabel":"예산관리","description":"예산배정, 집행과 변경이력을 확인합니다.","defaultRoute":"/admin/budget","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000010","userId":"fd010000-0000-4000-8100-000000000010","loginId":"fake.performance.staff","displayName":"가상성과담당자","email":"performance.staff@example.invalid","roles":["PERFORMANCE_STAFF"],"departmentCode":"PERFORMANCE","scenarioCode":"PERFORMANCE_OPERATIONS","scenarioLabel":"성과관리","description":"성과지표, 실적과 증빙연결 화면을 확인합니다.","defaultRoute":"/admin/performance","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000011","userId":"fd010000-0000-4000-8100-000000000011","loginId":"fake.content.editor","displayName":"가상콘텐츠담당자","email":"content.editor@example.invalid","roles":["CONTENT_EDITOR"],"departmentCode":"CONTENT","scenarioCode":"CONTENT_OPERATIONS","scenarioLabel":"콘텐츠관리","description":"현재 구현된 관리자 대시보드와 공개 콘텐츠를 확인합니다.","defaultRoute":"/admin/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000012","userId":"fd010000-0000-4000-8100-000000000012","loginId":"fake.reviewer","displayName":"가상검토자","email":"reviewer@example.invalid","roles":["REVIEWER"],"departmentCode":"REVIEW","scenarioCode":"REVIEW_QUEUE","scenarioLabel":"통합 검토","description":"수혜·성과·예산 검토 대기 항목을 확인합니다.","defaultRoute":"/admin/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000013","userId":"fd010000-0000-4000-8100-000000000013","loginId":"fake.system.admin","displayName":"가상시스템관리자","email":"system.admin@example.invalid","roles":["SYSTEM_ADMIN"],"departmentCode":"SYSTEM","scenarioCode":"SYSTEM_ADMIN","scenarioLabel":"시스템관리","description":"전체 관리자 기능과 fake data 상태를 확인합니다.","defaultRoute":"/admin/dashboard","isActive":true},
+      {"id":"fd010000-0000-4000-8001-000000000014","userId":"fd010000-0000-4000-8100-000000000014","loginId":"fake.auditor","displayName":"가상감사자","email":"auditor@example.invalid","roles":["AUDITOR"],"departmentCode":"AUDIT","scenarioCode":"AUDIT_READ_ONLY","scenarioLabel":"감사 조회전용","description":"예산, 성과와 증빙자료를 조회 전용으로 확인합니다.","defaultRoute":"/admin/budget","isActive":true}
+    ]
+  },
+  "users": [
+    {"id":"fd010000-0000-4000-8100-000000000001","loginId":"fake.student01","displayName":"가상학생01 · 이수 진행 중","email":"student01@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000002","loginId":"fake.student02","displayName":"가상학생02 · 이수완료","email":"student02@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000003","loginId":"fake.student03","displayName":"가상학생03 · 선수요건 부족","email":"student03@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000004","loginId":"fake.company.applicant","displayName":"가상기업신청자","email":"company.applicant@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000005","loginId":"fake.company.manager","displayName":"가상기업담당자","email":"company.manager@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000006","loginId":"fake.education.staff","displayName":"가상교육담당자","email":"education.staff@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000007","loginId":"fake.benefit.staff","displayName":"가상수혜관리담당자","email":"benefit.staff@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000008","loginId":"fake.company.staff","displayName":"가상기업협력담당자","email":"company.staff@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000009","loginId":"fake.budget.staff","displayName":"가상예산담당자","email":"budget.staff@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000010","loginId":"fake.performance.staff","displayName":"가상성과담당자","email":"performance.staff@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000011","loginId":"fake.content.editor","displayName":"가상콘텐츠담당자","email":"content.editor@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000012","loginId":"fake.reviewer","displayName":"가상검토자","email":"reviewer@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000013","loginId":"fake.system.admin","displayName":"가상시스템관리자","email":"system.admin@example.invalid"},
+    {"id":"fd010000-0000-4000-8100-000000000014","loginId":"fake.auditor","displayName":"가상감사자","email":"auditor@example.invalid"}
+  ],
+  "students": [
+    {"id":"fd010000-0000-4000-8200-000000000001","userId":"fd010000-0000-4000-8100-000000000001","studentNumber":"FAKE-2026-001","name":"가상학생01","departmentCode":"AI_BOOTCAMP","grade":"3"},
+    {"id":"fd010000-0000-4000-8200-000000000002","userId":"fd010000-0000-4000-8100-000000000002","studentNumber":"FAKE-2026-002","name":"가상학생02","departmentCode":"AI_BOOTCAMP","grade":"4"},
+    {"id":"fd010000-0000-4000-8200-000000000003","userId":"fd010000-0000-4000-8100-000000000003","studentNumber":"FAKE-2026-003","name":"가상학생03","departmentCode":"AI_BOOTCAMP","grade":"2"}
+  ],
+  "studentProgress": [
+    {"studentId":"fd010000-0000-4000-8200-000000000001","progressRate":68,"completed":false,"satisfied":["AI101","비교과 20시간"],"missing":["필수 프로그램 1개","만족도조사 제출"],"eligibleProgramIds":["fd010000-0000-4000-8000-000000000201"]},
+    {"studentId":"fd010000-0000-4000-8200-000000000002","progressRate":100,"completed":true,"satisfied":["교과","비교과","프로젝트","만족도조사"],"missing":[],"eligibleProgramIds":[]},
+    {"studentId":"fd010000-0000-4000-8200-000000000003","progressRate":35,"completed":false,"satisfied":["기초 비교과 10시간"],"missing":["AI101","기초 필수 프로그램"],"eligibleProgramIds":["fd010000-0000-4000-8000-000000000203"]}
+  ],
+  "programApplications": [
+    {"id":"fd010000-0000-4000-8400-000000000001","studentId":"fd010000-0000-4000-8200-000000000001","sessionId":"fd010000-0000-4000-8000-000000000211","programName":"AI 모빌리티 PBL 캠프","sessionName":"1기","status":"SELECTED","submittedAt":"2026-07-11T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8400-000000000002","studentId":"fd010000-0000-4000-8200-000000000001","sessionId":"fd010000-0000-4000-8000-000000000212","programName":"UAM 비행제어 실무 부트캠프","sessionName":"하계 집중과정","status":"REVIEWING","submittedAt":"2026-07-18T03:00:00.000Z","reviewNote":"선수교과목 확인 중"},
+    {"id":"fd010000-0000-4000-8400-000000000003","studentId":"fd010000-0000-4000-8200-000000000001","sessionId":"fd010000-0000-4000-8000-000000000213","programName":"철도 데이터 분석 해커톤","sessionName":"2026 해커톤","status":"WAITLISTED","submittedAt":"2026-07-20T03:00:00.000Z","reviewNote":"정원 충원 시 선발"},
+    {"id":"fd010000-0000-4000-8400-000000000004","studentId":"fd010000-0000-4000-8200-000000000002","sessionId":"fd010000-0000-4000-8000-000000000211","programName":"AI 모빌리티 PBL 캠프","sessionName":"1기","status":"SELECTED","submittedAt":"2026-07-05T03:00:00.000Z"}
+  ],
+  "completionAssessments": [
+    {"id":"fd010000-0000-4000-8500-000000000001","studentId":"fd010000-0000-4000-8200-000000000001","completed":false,"progressRate":"68","satisfied":[{"id":"AI101","name":"인공지능 기초","required":1,"actual":true,"shortage":0},{"id":"EXTRA_20","name":"비교과 20시간","required":20,"actual":20,"shortage":0}],"missing":[{"id":"PROGRAM_REQUIRED","name":"필수 프로그램","required":1,"actual":0,"shortage":1},{"id":"SURVEY_REQUIRED","name":"만족도조사 제출","required":1,"actual":0,"shortage":1}],"eligiblePrograms":["fd010000-0000-4000-8000-000000000201"],"calculatedAt":"2026-07-25T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8500-000000000002","studentId":"fd010000-0000-4000-8200-000000000002","completed":true,"progressRate":"100","satisfied":[{"id":"ALL","name":"중급 교육과정 전체 요건","required":1,"actual":true,"shortage":0}],"missing":[],"eligiblePrograms":[],"calculatedAt":"2026-07-25T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8500-000000000003","studentId":"fd010000-0000-4000-8200-000000000003","completed":false,"progressRate":"35","satisfied":[{"id":"BASIC_HOURS","name":"기초 비교과 10시간","required":10,"actual":10,"shortage":0}],"missing":[{"id":"AI101","name":"인공지능 기초","required":1,"actual":0,"shortage":1},{"id":"BASIC_PROGRAM","name":"기초 필수 프로그램","required":1,"actual":0,"shortage":1}],"eligiblePrograms":["fd010000-0000-4000-8000-000000000203"],"calculatedAt":"2026-07-25T03:00:00.000Z"}
+  ],
+  "benefitAwards": [
+    {"id":"fd010000-0000-4000-8300-000000000001","studentId":"fd010000-0000-4000-8200-000000000001","policyName":"학업장려 수혜제도","eligibilityStatus":"REVIEW_REQUIRED","paymentStatus":"PENDING","approvedAmount":0},
+    {"id":"fd010000-0000-4000-8300-000000000002","studentId":"fd010000-0000-4000-8200-000000000002","policyName":"우수이수 수혜제도","eligibilityStatus":"ELIGIBLE","paymentStatus":"PAID","approvedAmount":1200000,"erpReference":"FAKE-ERP-2026-001"}
+  ],
+  "budgetSummary": {"allocated":450000000,"planned":420000000,"executed":268500000,"balance":181500000,"executionRate":59.7},
+  "budgetChangeHistory": [
+    {"id":"fd010000-0000-4000-8600-000000000001","budgetCode":"2026-PBL-01","category":"프로그램 운영비","fieldName":"allocatedAmount","previousAmount":"80000000","newAmount":"95000000","reason":"산학 프로젝트 회차 확대","changedByName":"가상예산담당자","changedAt":"2026-07-20T05:30:00.000Z"},
+    {"id":"fd010000-0000-4000-8600-000000000002","budgetCode":"2026-EDU-02","category":"교육과정 개발비","fieldName":"plannedAmount","previousAmount":"50000000","newAmount":"45000000","reason":"집행계획 조정","changedByName":"가상검토자","changedAt":"2026-07-22T02:10:00.000Z"}
+  ],
+  "performanceOverview": {
+    "indicators":[
+      {"id":"fd010000-0000-4000-8700-000000000001","code":"KPI-01","name":"교육과정 참여학생","category":"교육","unit":"명"},
+      {"id":"fd010000-0000-4000-8700-000000000002","code":"KPI-02","name":"참여기업","category":"산학협력","unit":"개사"},
+      {"id":"fd010000-0000-4000-8700-000000000003","code":"KPI-03","name":"프로젝트 이수율","category":"성과","unit":"%"}
+    ],
+    "targets":[
+      {"id":"fd010000-0000-4000-8710-000000000001","indicatorId":"fd010000-0000-4000-8700-000000000001","targetValue":"200","version":"1"},
+      {"id":"fd010000-0000-4000-8710-000000000002","indicatorId":"fd010000-0000-4000-8700-000000000002","targetValue":"30","version":"1"},
+      {"id":"fd010000-0000-4000-8710-000000000003","indicatorId":"fd010000-0000-4000-8700-000000000003","targetValue":"90","version":"1"}
+    ],
+    "results":[
+      {"id":"fd010000-0000-4000-8720-000000000001","indicatorId":"fd010000-0000-4000-8700-000000000001","actualValue":"186","status":"IN_REVIEW"},
+      {"id":"fd010000-0000-4000-8720-000000000002","indicatorId":"fd010000-0000-4000-8700-000000000002","actualValue":"24","status":"PUBLISHED"},
+      {"id":"fd010000-0000-4000-8720-000000000003","indicatorId":"fd010000-0000-4000-8700-000000000003","actualValue":"92.4","status":"PUBLISHED"}
+    ]
+  },
+  "storedFiles": [
+    {"id":"fd010000-0000-4000-8800-000000000001","originalName":"FAKE_PBL_성과증빙.pdf","mimeType":"application/pdf","sizeBytes":248000,"containsPersonalInfo":false,"isPublic":true,"uploadedByName":"가상성과담당자","createdAt":"2026-07-20T04:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8800-000000000002","originalName":"FAKE_학생평가_비공개.pdf","mimeType":"application/pdf","sizeBytes":182000,"containsPersonalInfo":true,"isPublic":false,"uploadedByName":"가상교육담당자","createdAt":"2026-07-21T04:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8800-000000000003","originalName":"FAKE_집행증빙_ERP001.pdf","mimeType":"application/pdf","sizeBytes":94000,"containsPersonalInfo":false,"isPublic":false,"uploadedByName":"가상예산담당자","createdAt":"2026-07-23T04:00:00.000Z"}
+  ],
+  "companyParticipations": [
+    {"id":"fd010000-0000-4000-8900-000000000001","companyId":"fd010000-0000-4000-8000-000000000301","participationType":"DEMAND_SURVEY","title":"2026 AI 인재수요 조사","createdAt":"2026-07-05T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8900-000000000002","companyId":"fd010000-0000-4000-8000-000000000301","participationType":"PROJECT","title":"자율주행 객체탐지 고도화","createdAt":"2026-07-10T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8900-000000000003","companyId":"fd010000-0000-4000-8000-000000000301","participationType":"PROJECT","title":"센서융합 데이터 품질개선","createdAt":"2026-07-12T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8900-000000000004","companyId":"fd010000-0000-4000-8000-000000000301","participationType":"INTERNSHIP","title":"AI 엔지니어 인턴십 3명","createdAt":"2026-07-15T03:00:00.000Z"},
+    {"id":"fd010000-0000-4000-8900-000000000005","companyId":"fd010000-0000-4000-8000-000000000301","participationType":"EMPLOYMENT","title":"프로젝트 우수학생 채용연계","createdAt":"2026-07-18T03:00:00.000Z"}
+  ],
+  "previewOperations": {
+    "benefitPolicies": [
+      {"id":"fd010000-0000-4000-8a00-000000000001","name":"학업장려 수혜제도","status":"ACTIVE","candidateCount":12,"reviewRequired":4},
+      {"id":"fd010000-0000-4000-8a00-000000000002","name":"우수이수 수혜제도","status":"ACTIVE","candidateCount":8,"paidCount":5}
+    ],
+    "companyApplications": [
+      {"id":"fd010000-0000-4000-8a10-000000000001","companyName":"가상모빌리티신청기업01","status":"SUPPLEMENT_REQUESTED","note":"참여확약서 유효기간 및 수용인원 보완 필요"},
+      {"id":"fd010000-0000-4000-8a10-000000000002","companyName":"가상AI협력기업02","status":"REVIEWING","note":"프로젝트 담당 전문가 확인 중"}
+    ],
+    "contentWorkflow": [
+      {"id":"fd010000-0000-4000-8a20-000000000001","title":"가상 2026 하반기 학생모집 공고","contentType":"RECRUITMENT","status":"DRAFT"},
+      {"id":"fd010000-0000-4000-8a20-000000000002","title":"가상 참여기업 성과사례","contentType":"CASE_STUDY","status":"IN_REVIEW"},
+      {"id":"fd010000-0000-4000-8a20-000000000003","title":"가상 장학금 수혜제도 안내","contentType":"BENEFIT_GUIDE","status":"PUBLISHED"}
+    ],
+    "reviewQueue": [
+      {"id":"fd010000-0000-4000-8a30-000000000001","type":"BENEFIT_APPROVAL","title":"가상학생02 우수이수 수혜 승인","status":"PENDING"},
+      {"id":"fd010000-0000-4000-8a30-000000000002","type":"PERFORMANCE_RESULT","title":"KPI-01 참여학생 실적 확정","status":"PENDING"},
+      {"id":"fd010000-0000-4000-8a30-000000000003","type":"BUDGET_CHANGE","title":"PBL 운영비 증액 검토","status":"PENDING"}
+    ]
+  },
+  "auditLogs": []
+}

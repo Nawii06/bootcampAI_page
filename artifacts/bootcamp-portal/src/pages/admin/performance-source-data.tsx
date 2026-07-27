@@ -1,58 +1,48 @@
+import { useQuery } from "@tanstack/react-query";
+import { contractFetch } from "@workspace/api-client-react";
+import {
+  BusinessYearListResponseSchema,
+  PerformanceSourceSummaryResponseSchema,
+  type PerformanceSourceRow as SourceRow,
+} from "@workspace/api-zod";
 import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
-import { sourceCompaniesSeed, sourceEmploymentsSeed, sourceProgramsSeed, sourceStudentsSeed } from "@/performance/seedData";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminPerformanceSourceData() {
-  const students = sourceStudentsSeed.map((row) => ({ ...row, id: row.student_id }));
-  const companies = sourceCompaniesSeed.map((row) => ({ ...row, id: row.company_id }));
-  const programs = sourceProgramsSeed.map((row) => ({ ...row, id: row.program_id }));
-  const employments = sourceEmploymentsSeed.map((row) => ({ ...row, id: row.employment_id }));
-
+  const years = useQuery({
+    queryKey: ["reference", "business-years", "active"],
+    queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
+  });
+  const yearId = years.data?.data[0]?.id;
+  const summary = useQuery({
+    queryKey: ["performance", "source-summary", yearId],
+    enabled: Boolean(yearId),
+    queryFn: () => contractFetch(
+      PerformanceSourceSummaryResponseSchema,
+      `/api/v1/performance/source-summary?businessYearId=${yearId}`,
+      { credentials: "include" },
+    ),
+  });
+  const columns: ColumnDef<SourceRow>[] = [
+    { key: "domain", header: "원천 도메인" },
+    { key: "table", header: "DB 테이블" },
+    { key: "count", header: "현재 데이터 건수", cell: (row) => `${row.count.toLocaleString("ko-KR")}건` },
+    {
+      key: "yearScoped",
+      header: "집계 기준",
+      cell: (row) => <Badge variant={row.yearScoped ? "default" : "outline"}>{row.yearScoped ? "사업연도" : "전체 누적"}</Badge>,
+    },
+  ];
   return (
     <PortalLayout>
-      <SectionHeader title="연동 기초 데이터" description="학생·기업·교육프로그램·취업 데이터와 성과지표를 연결하기 위한 seed 구조입니다." />
-      <div className="space-y-8">
-        <section>
-          <h3 className="font-semibold mb-3">학생 데이터</h3>
-          <DataTable data={students} columns={[
-            { key: "student_id", header: "student_id" },
-            { key: "department", header: "department" },
-            { key: "program_level", header: "program_level" },
-            { key: "completion_status", header: "completion_status" },
-            { key: "employment_status", header: "employment_status" }
-          ] as ColumnDef<(typeof students)[number]>[]} />
-        </section>
-        <section>
-          <h3 className="font-semibold mb-3">기업 데이터</h3>
-          <DataTable data={companies} columns={[
-            { key: "company_id", header: "company_id" },
-            { key: "company_name", header: "company_name" },
-            { key: "industry", header: "industry" },
-            { key: "participation_type", header: "participation_type" }
-          ] as ColumnDef<(typeof companies)[number]>[]} />
-        </section>
-        <section>
-          <h3 className="font-semibold mb-3">교육프로그램 데이터</h3>
-          <DataTable data={programs} columns={[
-            { key: "program_id", header: "program_id" },
-            { key: "program_name", header: "program_name" },
-            { key: "program_type", header: "program_type" },
-            { key: "participants", header: "participants" },
-            { key: "completers", header: "completers" }
-          ] as ColumnDef<(typeof programs)[number]>[]} />
-        </section>
-        <section>
-          <h3 className="font-semibold mb-3">취업 데이터</h3>
-          <DataTable data={employments} columns={[
-            { key: "employment_id", header: "employment_id" },
-            { key: "student_id", header: "student_id" },
-            { key: "company_name", header: "company_name" },
-            { key: "is_partner_company", header: "is_partner_company" },
-            { key: "is_linked_employment", header: "is_linked_employment" }
-          ] as ColumnDef<(typeof employments)[number]>[]} />
-        </section>
-      </div>
+      <SectionHeader title="성과 원천데이터 현황" description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 성과 산출에 사용하는 운영 DB 현황`} />
+      <p className="mb-4 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+        이 화면은 seed 샘플이 아니라 실제 운영 테이블을 집계합니다. 개인 단위 원천자료는 노출하지 않습니다.
+      </p>
+      {summary.isError && <p className="mb-4 text-destructive">원천데이터 집계를 불러오지 못했습니다.</p>}
+      <DataTable data={summary.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );
 }

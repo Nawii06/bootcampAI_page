@@ -1,0 +1,17 @@
+.git
+.github
+.data
+node_modules
+**/node_modules
+**/.cache
+**/*.log
+**/*.tsbuildinfo
+attached_assets
+docs
+lib
+scripts
+artifacts/mockup-sandbox
+artifacts/api-server/src
+artifacts/bootcamp-portal/src
+artifacts/bootcamp-portal/dev
+artifacts/bootcamp-portal/fake-data
