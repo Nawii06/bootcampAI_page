@@ -13,12 +13,16 @@ import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 const request = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
 
 export default function AdminAcademics() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [courseCode, setCourseCode] = useState("");
   const [courseName, setCourseName] = useState("");
   const [courseEnglishName, setCourseEnglishName] = useState("");
@@ -47,6 +51,126 @@ export default function AdminAcademics() {
   const [requirementOperator, setRequirementOperator] = useState("GTE");
   const [requiredValue, setRequiredValue] = useState("3");
   const [requirementUnit, setRequirementUnit] = useState("학점");
+
+  // ── Draft persistence (one instance per form section) ───────────────────
+  const { clearDraft: clearCourseDraft } = useFormDraft(
+    "admin/academics/course",
+    { courseCode, courseName, courseEnglishName, courseDescription, departmentCode, sourceSystem, externalId, credits },
+    (draft) => {
+      if (draft.courseCode) setCourseCode(draft.courseCode);
+      if (draft.courseName) setCourseName(draft.courseName);
+      if (draft.courseEnglishName) setCourseEnglishName(draft.courseEnglishName);
+      if (draft.courseDescription) setCourseDescription(draft.courseDescription);
+      if (draft.departmentCode) setDepartmentCode(draft.departmentCode);
+      if (draft.sourceSystem) setSourceSystem(draft.sourceSystem);
+      if (draft.externalId) setExternalId(draft.externalId);
+      if (draft.credits) setCredits(draft.credits);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setCourseCode(""); setCourseName(""); setCourseEnglishName("");
+              setCourseDescription(""); setDepartmentCode("AI_BOOTCAMP");
+              setSourceSystem(""); setExternalId(""); setCredits("3");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
+
+  const { clearDraft: clearOfferingDraft } = useFormDraft(
+    "admin/academics/offering",
+    { sectionCode, capacity, instructorName },
+    (draft) => {
+      if (draft.sectionCode) setSectionCode(draft.sectionCode);
+      if (draft.capacity) setCapacity(draft.capacity);
+      if (draft.instructorName) setInstructorName(draft.instructorName);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setSectionCode("01"); setCapacity("30"); setInstructorName("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
+
+  const { clearDraft: clearCurriculumDraft } = useFormDraft(
+    "admin/academics/curriculum",
+    { curriculumCode, curriculumName, effectiveFrom, effectiveTo },
+    (draft) => {
+      if (draft.curriculumCode) setCurriculumCode(draft.curriculumCode);
+      if (draft.curriculumName) setCurriculumName(draft.curriculumName);
+      if (draft.effectiveFrom) setEffectiveFrom(draft.effectiveFrom);
+      if (draft.effectiveTo) setEffectiveTo(draft.effectiveTo);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setCurriculumCode(""); setCurriculumName("");
+              setEffectiveFrom(new Date().toISOString().slice(0, 10));
+              setEffectiveTo("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
+
+  const { clearDraft: clearRequirementDraft } = useFormDraft(
+    "admin/academics/requirement",
+    { requirementCode, requirementName, requirementType, requirementOperator, requiredValue, requirementUnit },
+    (draft) => {
+      if (draft.requirementCode) setRequirementCode(draft.requirementCode);
+      if (draft.requirementName) setRequirementName(draft.requirementName);
+      if (draft.requirementType) setRequirementType(draft.requirementType);
+      if (draft.requirementOperator) setRequirementOperator(draft.requirementOperator);
+      if (draft.requiredValue) setRequiredValue(draft.requiredValue);
+      if (draft.requirementUnit) setRequirementUnit(draft.requirementUnit);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setRequirementCode(""); setRequirementName("");
+              setRequirementType("TOTAL_CREDITS"); setRequirementOperator("GTE");
+              setRequiredValue("3"); setRequirementUnit("학점");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
 
   const years = useQuery({
     queryKey: ["reference", "business-years"],
@@ -109,6 +233,7 @@ export default function AdminAcademics() {
       }),
     }),
     onSuccess: () => {
+      clearCourseDraft();
       setCourseCode(""); setCourseName(""); setCourseEnglishName(""); setCourseDescription("");
       setSourceSystem(""); setExternalId(""); setEditingCourseId("");
       queryClient.invalidateQueries({ queryKey: ["admin", "courses"] });
@@ -124,6 +249,7 @@ export default function AdminAcademics() {
       }),
     }),
     onSuccess: () => {
+      clearOfferingDraft();
       setEditingOfferingId(""); setSectionCode("01"); setCapacity("30"); setInstructorName("");
       queryClient.invalidateQueries({ queryKey: ["admin", "course-offerings"] });
     },
@@ -141,6 +267,7 @@ export default function AdminAcademics() {
       }),
     }),
     onSuccess: () => {
+      clearCurriculumDraft();
       setCurriculumCode(""); setCurriculumName(""); setEditingCurriculumId(""); setEffectiveTo("");
       queryClient.invalidateQueries({ queryKey: ["admin", "curricula"] });
     },
@@ -155,6 +282,7 @@ export default function AdminAcademics() {
       }),
     }),
     onSuccess: () => {
+      clearRequirementDraft();
       setRequirementName(""); setRequirementCode(""); setEditingRequirementId("");
       queryClient.invalidateQueries({ queryKey: ["admin", "curriculum-requirements", selectedCurriculumId] });
     },
