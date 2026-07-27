@@ -12,6 +12,9 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -21,6 +24,37 @@ export default function AdminProgramOperations() {
   const [sessionId, setSessionId] = useState("");
   const [participantId, setParticipantId] = useState("");
   const [title, setTitle] = useState("");
+  const { toast } = useToast();
+
+  // Draft persistence: keeps the session/participant editing context alongside
+  // the title field so an expired session doesn't lose the admin's context.
+  const { clearDraft } = useFormDraft(
+    "admin/program-operations/session",
+    { sessionId, participantId, title },
+    (draft) => {
+      if (draft.sessionId) setSessionId(draft.sessionId);
+      if (draft.participantId) setParticipantId(draft.participantId);
+      if (draft.title) setTitle(draft.title);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작업 중이던 운영 컨텍스트를 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              setSessionId("");
+              setParticipantId("");
+              setTitle("");
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
   const programs = useQuery({
     queryKey: ["admin", "programs", "operations"],
     queryFn: () => contractFetch(

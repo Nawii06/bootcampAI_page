@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
 import {
@@ -13,9 +14,51 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ErrorCard";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function AdminPartners() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editingCompanyId, setEditingCompanyId] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companyType, setCompanyType] = useState("");
+
+  const resetCompanyForm = () => {
+    setEditingCompanyId("");
+    setCompanyName("");
+    setCompanyType("");
+  };
+
+  // Draft persistence: keeps the editing company ID alongside field values so
+  // an expired session doesn't lose the admin's edit context.
+  const { clearDraft: clearCompanyDraft } = useFormDraft(
+    "admin/partners/company",
+    { companyName, companyType, editingCompanyId },
+    (draft) => {
+      if (draft.companyName) setCompanyName(draft.companyName);
+      if (draft.companyType) setCompanyType(draft.companyType);
+      if (draft.editingCompanyId) setEditingCompanyId(draft.editingCompanyId);
+    },
+    (clear) => {
+      toast({
+        title: "이전에 작성 중이던 내용을 불러왔습니다",
+        action: (
+          <ToastAction
+            altText="초기화"
+            onClick={() => {
+              clear();
+              resetCompanyForm();
+            }}
+          >
+            초기화
+          </ToastAction>
+        ),
+      });
+    },
+  );
   const companies = useQuery({
     queryKey: ["admin", "companies"],
     queryFn: () =>
@@ -50,6 +93,22 @@ export default function AdminPartners() {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "companies"] }),
   });
+  const saveCompanyEdit = () => {
+    if (!editingCompanyId || !companyName.trim() || !companyType.trim()) return;
+    companyMutation.mutate(
+      {
+        url: `/api/v1/companies/${editingCompanyId}`,
+        method: "PATCH",
+        body: { name: companyName.trim(), companyType: companyType.trim() },
+      },
+      {
+        onSuccess: () => {
+          clearCompanyDraft();
+          resetCompanyForm();
+        },
+      },
+    );
+  };
   const columns: ColumnDef<Company>[] = [
     {
       key: "name",
@@ -99,6 +158,18 @@ export default function AdminPartners() {
       header: "관리",
       cell: (row) => (
         <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={companyMutation.isPending}
+            onClick={() => {
+              setEditingCompanyId(row.id);
+              setCompanyName(row.name);
+              setCompanyType(row.companyType ?? "");
+            }}
+          >
+            수정
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -225,6 +296,39 @@ export default function AdminPartners() {
               ))}
         </div>
       </section>
+      {editingCompanyId && (
+        <section className="mb-8 rounded-lg border bg-card p-4">
+          <h2 className="mb-3 font-semibold">기업정보 수정</h2>
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
+            <Input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="기업명"
+            />
+            <Input
+              value={companyType}
+              onChange={(e) => setCompanyType(e.target.value)}
+              placeholder="기업유형"
+            />
+            <Button
+              disabled={companyMutation.isPending || !companyName.trim() || !companyType.trim()}
+              onClick={saveCompanyEdit}
+            >
+              저장
+            </Button>
+            <Button
+              variant="outline"
+              disabled={companyMutation.isPending}
+              onClick={() => {
+                clearCompanyDraft();
+                resetCompanyForm();
+              }}
+            >
+              취소
+            </Button>
+          </div>
+        </section>
+      )}
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-semibold">승인 참여기업</h2>
         <span className="text-sm text-muted-foreground">확약서 {applications.data?.commitments.length ?? 0}건</span>
