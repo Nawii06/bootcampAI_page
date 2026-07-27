@@ -39,6 +39,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 ## Gotchas
 
 - Every new bootcamp-portal page must get loading-state tests in `artifacts/bootcamp-portal/dev/loading-spinner-states.test.ts` — see `artifacts/bootcamp-portal/dev/TESTING.md` for the checklist and template.
+- A git pre-commit hook (`.git/hooks/pre-commit`) runs `node scripts/secret-scan.mjs --staged`, scanning **every staged file** for likely secrets (API keys, tokens, private keys, credential URLs) and blocking the commit if any are found. False positives can be allowlisted by adding a `secret-scan:allow` comment on the flagged line, or by adding a path regex to `.secretscanignore` (test fixtures, example strings). Real secrets belong in Replit Secrets, never in git. Note: `.git/hooks` is not versioned — if the hook is missing after a fresh clone, reinstall it with the same one-liner calling the scanner.
 
 ## Pointers
 
