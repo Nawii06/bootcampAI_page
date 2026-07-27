@@ -19,6 +19,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link2, Unlink } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -49,6 +59,7 @@ export default function StudentPortfolio() {
   const { toast } = useToast();
   const [copyingId, setCopyingId] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<PortfolioRecord | null>(null);
 
   async function handleRevokeLink(record: PortfolioRecord) {
     setRevokingId(record.id);
@@ -271,7 +282,7 @@ export default function StudentPortfolio() {
                             size="sm"
                             variant="outline"
                             disabled={revokingId === record.id}
-                            onClick={() => handleRevokeLink(record)}
+                            onClick={() => setRevokeTarget(record)}
                           >
                             <Unlink className="mr-1.5 h-3.5 w-3.5" />
                             {revokingId === record.id ? "해제 중…" : "링크 해제"}
@@ -312,6 +323,35 @@ export default function StudentPortfolio() {
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={revokeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>공유 링크를 해제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {revokeTarget
+                ? `"${revokeTarget.title}" 포트폴리오의 기존 공유 링크가 즉시 작동을 멈춥니다. 링크를 받은 사람은 더 이상 열람할 수 없으며, 필요하면 링크 복사 버튼으로 새 링크를 만들 수 있습니다.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (revokeTarget) handleRevokeLink(revokeTarget);
+                setRevokeTarget(null);
+              }}
+            >
+              링크 해제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Employment / internship links ── */}
       <div className="mt-10">
