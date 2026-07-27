@@ -123,6 +123,20 @@ function removeLoadingFetch(): void {
   globalThis.fetch = _originalFetch;
 }
 
+/**
+ * Install a fetch stub that rejects immediately, driving every useQuery
+ * (with retry: 0) straight into its error state.
+ */
+function installErrorFetch(): void {
+  globalThis.fetch = (): Promise<Response> =>
+    Promise.reject(new Error("test-network-failure"));
+}
+
+/** Restore the original fetch after an error-state test. */
+function removeErrorFetch(): void {
+  globalThis.fetch = _originalFetch;
+}
+
 // ─── Mock auth values ─────────────────────────────────────────────────────────
 
 const AUTH_LOADING = {
@@ -223,6 +237,24 @@ function withLoadingCleanup(fn: () => void | Promise<void>) {
     } finally {
       cleanup();
       removeLoadingFetch();
+    }
+  };
+}
+
+/**
+ * Wraps an "error state" test body:
+ *   1. Installs the immediately-rejecting fetch stub.
+ *   2. Runs `fn` (which should await the error UI via findByText).
+ *   3. Unmounts via cleanup() and restores the original fetch.
+ */
+function withErrorCleanup(fn: () => void | Promise<void>) {
+  return async () => {
+    installErrorFetch();
+    try {
+      await fn();
+    } finally {
+      cleanup();
+      removeErrorFetch();
     }
   };
 }
@@ -606,6 +638,119 @@ test(
     assert.ok(
       !screen.queryByText("버전 이력을 불러오는 중입니다."),
       "AdminContent should hide LoadingCard in the versions panel once versions are loaded",
+    );
+  }),
+);
+
+// ─── Error states ─────────────────────────────────────────────────────────────
+// Each test installs a fetch stub that rejects immediately, so every query
+// (retry: 0) lands in isError=true. We assert a meaningful ErrorCard message
+// and a retry button — never a blank page.
+
+test(
+  "Curriculum — shows ErrorCard with retry when the courses query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(Curriculum), { auth: AUTH_ADMIN });
+    assert.ok(
+      await screen.findByText("교육과정 API에 연결할 수 없습니다."),
+      "Curriculum should show a helpful error message when the courses query fails",
+    );
+    assert.ok(
+      screen.queryByText("다시 시도"),
+      "Curriculum should show a retry button on error",
+    );
+    assert.ok(
+      !screen.queryByText("교육과정을 불러오는 중입니다."),
+      "Curriculum should not remain in loading state after the query fails",
+    );
+  }),
+);
+
+test(
+  "Resources — shows ErrorCard with retry when the resources query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(Resources), { auth: AUTH_ADMIN });
+    assert.ok(
+      await screen.findByText("자료실 API에 연결할 수 없습니다."),
+      "Resources should show a helpful error message when the resources query fails",
+    );
+    assert.ok(
+      screen.queryByText("다시 시도"),
+      "Resources should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "StudentStatus — shows ErrorCards when both queries fail",
+  withErrorCleanup(async () => {
+    renderPage(createElement(StudentStatus), { auth: AUTH_STUDENT });
+    assert.ok(
+      await screen.findByText("신청현황 API에 연결할 수 없습니다."),
+      "StudentStatus should show an error message when the applications query fails",
+    );
+    assert.ok(
+      await screen.findByText("채용·연계 이력을 불러오지 못했습니다."),
+      "StudentStatus should show an error message when the employment-links query fails",
+    );
+    const retryButtons = screen.queryAllByText("다시 시도");
+    assert.ok(
+      retryButtons.length >= 2,
+      "StudentStatus should show retry buttons for both failed queries",
+    );
+  }),
+);
+
+test(
+  "PartnerEmployment — shows ErrorCard with retry when the years query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(PartnerEmployment), { auth: AUTH_ADMIN });
+    assert.ok(
+      await screen.findByText("API에 연결할 수 없습니다."),
+      "PartnerEmployment should show a helpful error message when initial data fails to load",
+    );
+    assert.ok(
+      screen.queryByText("다시 시도"),
+      "PartnerEmployment should show a retry button on error",
+    );
+    assert.ok(
+      !screen.queryByText("데이터를 불러오는 중입니다."),
+      "PartnerEmployment should not remain in loading state after the query fails",
+    );
+  }),
+);
+
+test(
+  "AdminBenefits — shows ErrorCard with retry when benefit-operations query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(AdminBenefits), { auth: AUTH_ADMIN });
+    // ErrorCard renders error.message plus its standard guidance line.
+    assert.ok(
+      await screen.findByText("API 서버 또는 네트워크 연결 상태를 확인해 주세요."),
+      "AdminBenefits should show the ErrorCard guidance message when the query fails",
+    );
+    assert.ok(
+      screen.queryByText("다시 시도"),
+      "AdminBenefits should show a retry button on error",
+    );
+    assert.ok(
+      !screen.queryByText("수혜업무를 불러오는 중입니다."),
+      "AdminBenefits should not remain in loading state after the query fails",
+    );
+  }),
+);
+
+test(
+  "AdminContent — shows ErrorCard with retry when the content query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(AdminContent), { auth: AUTH_ADMIN });
+    assert.ok(
+      await screen.findByText("API 서버 또는 네트워크 연결 상태를 확인해 주세요."),
+      "AdminContent should show the ErrorCard guidance message when the content query fails",
+    );
+    assert.ok(
+      screen.queryByText("다시 시도"),
+      "AdminContent should show a retry button on error",
     );
   }),
 );
