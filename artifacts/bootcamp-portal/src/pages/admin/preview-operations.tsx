@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const roleSections: Record<string, Array<keyof OperationsResponse["operations"]>> = {
   BENEFIT_STAFF: ["benefitPolicies"],
@@ -63,7 +64,13 @@ export default function AdminPreviewOperations() {
           </Button>
         </div>
       )}
-      {operations.isError && <p className="text-destructive">역할별 Preview 데이터를 불러오지 못했습니다.</p>}
+            {operations.isError && (
+        <ErrorCard
+          message="역할별 Preview 데이터를 불러오지 못했습니다."
+          onRetry={() => operations.refetch()}
+          isRetrying={operations.isFetching}
+        />
+      )}
       <div className="grid gap-5 xl:grid-cols-2">
         {sections.map((section) => (
           <Card key={section}>

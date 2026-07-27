@@ -12,6 +12,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import type { ApplicationStatus } from "../../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function displayStatus(status: string): ApplicationStatus {
   if (status === "APPROVED" || status === "OPEN") return "selected";
@@ -84,7 +85,14 @@ export default function AdminPrograms() {
     <PortalLayout>
       <SectionHeader title="프로그램 관리" description="프로그램 신청자격·이수기준과 회차별 신청기간·정원을 관리합니다." />
       <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        {programs.isError ? <p className="text-destructive">프로그램 API에 연결할 수 없습니다.</p> : (
+        {programs.isError && (
+          <ErrorCard
+            message="프로그램 API에 연결할 수 없습니다."
+            onRetry={() => programs.refetch()}
+            isRetrying={programs.isFetching}
+          />
+        )}
+        {!programs.isError && (
           <DataTable data={programs.data?.data ?? []} columns={columns} onRowClick={(row) => {
             setSelected(programs.data?.data.find((item) => item.id === row.id));
           }} />

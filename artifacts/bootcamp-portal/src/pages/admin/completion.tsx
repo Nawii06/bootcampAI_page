@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function AdminCompletion() {
   const assessments = useQuery({
@@ -72,9 +73,11 @@ export default function AdminCompletion() {
         description="교육과정 요건으로 계산·저장된 최신 이수 snapshot을 조회합니다."
       />
       {assessments.isError && (
-        <p className="mb-4 text-destructive">
-          이수 평가 결과를 불러오지 못했습니다.
-        </p>
+        <ErrorCard
+          message="이수 평가 결과를 불러오지 못했습니다."
+          onRetry={() => assessments.refetch()}
+          isRetrying={assessments.isFetching}
+        />
       )}
       <DataTable
         data={assessments.data?.data ?? []}

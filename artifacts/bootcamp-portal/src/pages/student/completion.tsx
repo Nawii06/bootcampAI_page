@@ -9,6 +9,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "../../contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function StudentCompletion() {
   const { user } = useAuth();
@@ -44,7 +45,13 @@ export default function StudentCompletion() {
           </div>
         </div>
       )}
-      {assessments.isError && <p className="text-destructive">이수정보 API에 연결할 수 없습니다.</p>}
+            {assessments.isError && (
+        <ErrorCard
+          message="이수정보 API에 연결할 수 없습니다."
+          onRetry={() => assessments.refetch()}
+          isRetrying={assessments.isFetching}
+        />
+      )}
     </PortalLayout>
   );
 }

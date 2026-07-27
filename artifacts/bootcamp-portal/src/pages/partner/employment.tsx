@@ -8,6 +8,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -102,14 +103,11 @@ export default function PartnerEmployment() {
       )}
 
       {!isLoading && isError && (
-        <Card className="border-destructive/40">
-          <CardContent className="py-12 text-center">
-            <p className="font-semibold text-destructive">API에 연결할 수 없습니다.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              API 서버와 데이터베이스 연결 상태를 확인해 주세요.
-            </p>
-          </CardContent>
-        </Card>
+        <ErrorCard
+          message="API에 연결할 수 없습니다."
+          onRetry={() => { years.refetch(); employment.refetch(); internship.refetch(); fieldPractice.refetch(); }}
+          isRetrying={years.isFetching || employment.isFetching || internship.isFetching || fieldPractice.isFetching}
+        />
       )}
 
       {!isLoading && !isError && noActiveYear && (

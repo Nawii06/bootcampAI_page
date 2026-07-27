@@ -10,6 +10,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function AdminPartners() {
   const queryClient = useQueryClient();
@@ -205,7 +206,11 @@ export default function AdminPartners() {
         <span className="text-sm text-muted-foreground">확약서 {applications.data?.commitments.length ?? 0}건</span>
       </div>
       {companies.isError && (
-        <p className="mb-4 text-destructive">참여기업 정보를 불러오지 못했습니다.</p>
+        <ErrorCard
+          message="참여기업 정보를 불러오지 못했습니다."
+          onRetry={() => companies.refetch()}
+          isRetrying={companies.isFetching}
+        />
       )}
       {(applications.isError || decision.isError || companyMutation.isError) && (
         <p className="mb-4 text-destructive">{(applications.error ?? decision.error ?? companyMutation.error)?.message}</p>

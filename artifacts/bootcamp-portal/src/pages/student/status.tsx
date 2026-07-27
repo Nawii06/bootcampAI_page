@@ -10,6 +10,7 @@ import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useAuth } from "../../contexts/AuthContext";
 import type { ApplicationStatus } from "../../types";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function displayStatus(status: string): ApplicationStatus {
   const mapped: Record<string, ApplicationStatus> = {
@@ -49,11 +50,14 @@ export default function StudentStatus() {
   return (
     <PortalLayout>
       <SectionHeader title="신청현황" description="프로그램 신청과 검토 상태를 확인합니다." />
-      {applications.isError ? (
-        <p className="text-sm text-destructive">신청현황 API에 연결할 수 없습니다.</p>
-      ) : (
-        <DataTable data={applications.data?.data ?? []} columns={columns} />
+      {applications.isError && (
+        <ErrorCard
+          message="신청현황 API에 연결할 수 없습니다."
+          onRetry={() => applications.refetch()}
+          isRetrying={applications.isFetching}
+        />
       )}
+      {!applications.isError && <DataTable data={applications.data?.data ?? []} columns={columns} />}
     </PortalLayout>
   );
 }

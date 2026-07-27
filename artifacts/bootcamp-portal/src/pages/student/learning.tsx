@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -90,7 +91,14 @@ export default function StudentLearning() {
           </div>
         </section>
       </div>
-      {(learning.isError || submit.isError) && <p className="mt-4 text-sm text-destructive">{(learning.error ?? submit.error)?.message}</p>}
+            {learning.isError && (
+        <ErrorCard
+          message="학습 콘텐츠를 불러오지 못했습니다."
+          onRetry={() => learning.refetch()}
+          isRetrying={learning.isFetching}
+        />
+      )}
+      {submit.isError && <p className="mt-4 text-sm text-destructive">{submit.error?.message}</p>}
     </PortalLayout>
   );
 }

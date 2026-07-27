@@ -5,6 +5,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function Status({ ready, readyLabel = "설정됨" }: { ready: boolean; readyLabel?: string }) {
   return <Badge variant={ready ? "default" : "secondary"}>{ready ? readyLabel : "미설정"}</Badge>;
@@ -37,7 +38,13 @@ export default function AdminSettings() {
           </p>
         </CardContent></Card>
       </div>
-      {status.isError && <p className="mt-4 text-destructive">시스템 상태를 조회하지 못했습니다. SYSTEM_ADMIN 또는 AUDITOR 권한을 확인해 주세요.</p>}
+            {status.isError && (
+        <ErrorCard
+          message="시스템 상태를 조회하지 못했습니다. SYSTEM_ADMIN 또는 AUDITOR 권한을 확인해 주세요."
+          onRetry={() => status.refetch()}
+          isRetrying={status.isFetching}
+        />
+      )}
     </PortalLayout>
   );
 }

@@ -5,6 +5,7 @@ import { ProgramListResponseSchema } from "@workspace/api-zod";
 import { Layout } from "../../components/Layout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function Recruitment() {
   const programs = useQuery({
@@ -19,7 +20,13 @@ export default function Recruitment() {
     <Layout>
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <SectionHeader title="학생모집" description="현재 신청 가능한 교육 프로그램과 회차입니다." />
-        {programs.isError && <p className="text-destructive">모집 API에 연결할 수 없습니다.</p>}
+                {programs.isError && (
+          <ErrorCard
+            message="모집 API에 연결할 수 없습니다."
+            onRetry={() => programs.refetch()}
+            isRetrying={programs.isFetching}
+          />
+        )}
         <div className="space-y-4">
           {sessions.map(({ program, ...session }) => (
             <Card key={session.id}>

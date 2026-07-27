@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { StatCard } from "@/components/StatCard";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string }
 interface Row extends Indicator { target?: number; actual?: number; rate?: number; status?: string }
@@ -62,7 +63,13 @@ export default function AdminPerformanceDashboard() {
         <StatCard label="공개 승인" value={`${rows.filter((row) => row.status === "PUBLISHED").length}개`} />
         <StatCard label="달성률 70% 미만" value={`${risk}개`} color={risk ? "text-destructive" : ""} />
       </div>
-      {overview.isError && <p className="mb-4 text-destructive">성과 현황을 불러오지 못했습니다.</p>}
+            {overview.isError && (
+        <ErrorCard
+          message="성과 현황을 불러오지 못했습니다."
+          onRetry={() => overview.refetch()}
+          isRetrying={overview.isFetching}
+        />
+      )}
       <DataTable data={rows} columns={columns} />
     </PortalLayout>
   );

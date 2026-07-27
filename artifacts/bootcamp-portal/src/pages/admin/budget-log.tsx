@@ -7,6 +7,7 @@ import {
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const money = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -57,9 +58,11 @@ export default function AdminBudgetLog() {
         description="배정액과 편성액의 변경사유 및 변경자를 조회합니다."
       />
       {history.isError && (
-        <p className="mb-4 text-destructive">
-          예산 변경이력을 불러오지 못했습니다.
-        </p>
+        <ErrorCard
+          message="예산 변경이력을 불러오지 못했습니다."
+          onRetry={() => history.refetch()}
+          isRetrying={history.isFetching}
+        />
       )}
       <DataTable data={history.data?.data ?? []} columns={columns} />
     </PortalLayout>

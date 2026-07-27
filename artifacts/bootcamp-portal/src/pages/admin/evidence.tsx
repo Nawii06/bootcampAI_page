@@ -12,6 +12,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
@@ -86,7 +87,11 @@ export default function AdminEvidence() {
         개인정보 포함 파일은 비공개가 기본이며, 조회·수정·다운로드 작업은 감사로그 대상입니다.
       </div>
       {files.isError && (
-        <p className="mb-4 text-destructive">증빙자료 목록을 불러오지 못했습니다.</p>
+        <ErrorCard
+          message="증빙자료 목록을 불러오지 못했습니다."
+          onRetry={() => files.refetch()}
+          isRetrying={files.isFetching}
+        />
       )}
       <DataTable data={files.data?.data ?? []} columns={columns} />
       <div className="mt-6 space-y-2">

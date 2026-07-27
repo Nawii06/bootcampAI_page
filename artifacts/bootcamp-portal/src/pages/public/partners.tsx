@@ -5,6 +5,7 @@ import { PublicCompanyListResponseSchema } from "@workspace/api-zod";
 import { Layout } from "../../components/Layout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function Partners() {
   const companies = useQuery({
@@ -16,7 +17,13 @@ export default function Partners() {
     <Layout>
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <SectionHeader title="참여기업·기관" description="공개 승인을 받은 협력기업과 기관입니다." />
-        {companies.isError && <p className="text-destructive">참여기업 API에 연결할 수 없습니다.</p>}
+                {companies.isError && (
+          <ErrorCard
+            message="참여기업 API에 연결할 수 없습니다."
+            onRetry={() => companies.refetch()}
+            isRetrying={companies.isFetching}
+          />
+        )}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {companies.data?.data.map((company) => (
             <Card key={company.id}>

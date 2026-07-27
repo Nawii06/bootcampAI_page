@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function PartnerEvaluation() {
   const queryClient = useQueryClient();
@@ -101,9 +102,14 @@ export default function PartnerEvaluation() {
           공개에 동의한 학생 프로젝트가 없습니다.
         </div>
       )}
-      {(portfolios.isError || submit.isError) && (
-        <p className="mt-4 text-destructive">포트폴리오 조회 또는 피드백 저장에 실패했습니다.</p>
+      {portfolios.isError && (
+        <ErrorCard
+          message="포트폴리오 데이터를 불러오지 못했습니다."
+          onRetry={() => portfolios.refetch()}
+          isRetrying={portfolios.isFetching}
+        />
       )}
+      {submit.isError && <p className="mt-4 text-destructive">피드백 저장에 실패했습니다.</p>}
     </PortalLayout>
   );
 }

@@ -7,6 +7,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 interface BudgetSummary {
   allocated: number;
@@ -163,8 +164,21 @@ export default function AdminBudget() {
           })}
         </div>
       </section>
-      {(years.isError || summary.isError || files.isError) && <p className="mt-4 text-destructive">예산 또는 증빙파일 API에 연결할 수 없습니다.</p>}
-      {(operations.isError || mutation.isError) && <p className="mt-4 text-destructive">{(operations.error ?? mutation.error)?.message}</p>}
+            {(years.isError || summary.isError || files.isError) && (
+        <ErrorCard
+          message="예산 또는 증빙파일 API에 연결할 수 없습니다."
+          onRetry={() => { years.refetch(); summary.refetch(); files.refetch(); }}
+          isRetrying={years.isFetching || summary.isFetching || files.isFetching}
+        />
+      )}
+            {operations.isError && (
+        <ErrorCard
+          message={operations.error?.message}
+          onRetry={() => operations.refetch()}
+          isRetrying={operations.isFetching}
+        />
+      )}
+      {mutation.isError && <p className="mt-4 text-destructive">{mutation.error?.message}</p>}
     </PortalLayout>
   );
 }

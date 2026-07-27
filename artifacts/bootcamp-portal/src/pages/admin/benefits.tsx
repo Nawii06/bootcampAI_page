@@ -11,6 +11,7 @@ import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -194,9 +195,16 @@ export default function AdminBenefits() {
         })}
       </div>
       {operations.isLoading && <p className="text-sm text-muted-foreground">수혜업무를 불러오는 중입니다.</p>}
-      {(operations.isError || mutation.isError || bulkMutation.isError) && (
+      {operations.isError && (
+        <ErrorCard
+          message={operations.error?.message}
+          onRetry={() => operations.refetch()}
+          isRetrying={operations.isFetching}
+        />
+      )}
+      {(mutation.isError || bulkMutation.isError) && (
         <p className="mt-4 text-sm text-destructive">
-          {(operations.error ?? mutation.error ?? bulkMutation.error)?.message}
+          {(mutation.error ?? bulkMutation.error)?.message}
         </p>
       )}
     </PortalLayout>

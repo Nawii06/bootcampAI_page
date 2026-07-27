@@ -5,6 +5,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function PartnerDashboard() {
   const activities = useQuery({
@@ -41,7 +42,13 @@ export default function PartnerDashboard() {
           </div>
         </CardContent>
       </Card>
-      {activities.isError && <p className="mt-4 text-destructive">승인 기업 연결정보 또는 활동내역을 불러오지 못했습니다.</p>}
+            {activities.isError && (
+        <ErrorCard
+          message="승인 기업 연결정보 또는 활동내역을 불러오지 못했습니다."
+          onRetry={() => activities.refetch()}
+          isRetrying={activities.isFetching}
+        />
+      )}
     </PortalLayout>
   );
 }

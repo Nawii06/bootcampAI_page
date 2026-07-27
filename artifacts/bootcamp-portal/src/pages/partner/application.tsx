@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 declare const __FAKE_DATA_SET__: string | null;
 
@@ -111,7 +112,14 @@ export default function PartnerApplication() {
           {commitment.isError && <p className="mt-2 text-sm text-destructive">{commitment.error.message}</p>}
         </section>
       )}
-      {(applications.isError || mutation.isError) && <p className="mt-4 text-sm text-destructive">{(applications.error ?? mutation.error)?.message}</p>}
+            {applications.isError && (
+        <ErrorCard
+          message={applications.error?.message}
+          onRetry={() => applications.refetch()}
+          isRetrying={applications.isFetching}
+        />
+      )}
+      {mutation.isError && <p className="mt-4 text-sm text-destructive">{mutation.error?.message}</p>}
     </PortalLayout>
   );
 }

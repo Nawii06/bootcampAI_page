@@ -7,6 +7,7 @@ import {
 import { Layout } from "../../components/Layout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function Performance() {
   const results = useQuery({
@@ -48,7 +49,13 @@ export default function Performance() {
             </Card>
           ))}
         </div>
-        {(results.isError || news.isError) && <p className="mt-4 text-destructive">공개 성과 API 일부에 연결할 수 없습니다.</p>}
+                {(results.isError || news.isError) && (
+          <ErrorCard
+            message="공개 성과 API 일부에 연결할 수 없습니다."
+            onRetry={() => { results.refetch(); news.refetch(); }}
+            isRetrying={results.isFetching || news.isFetching}
+          />
+        )}
       </div>
     </Layout>
   );

@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function dateInput(daysAgo: number) {
   const date = new Date();
@@ -140,7 +141,13 @@ export default function AdminAuditLogs() {
           CSV 내보내기
         </Button>
       </div>
-      {logs.isError && <p className="mb-4 text-destructive">감사로그를 조회하지 못했습니다.</p>}
+            {logs.isError && (
+        <ErrorCard
+          message="감사로그를 조회하지 못했습니다."
+          onRetry={() => logs.refetch()}
+          isRetrying={logs.isFetching}
+        />
+      )}
       {exportLogs.isError && <p className="mb-4 text-destructive">감사로그를 내보내지 못했습니다.</p>}
       <DataTable data={logs.data?.data ?? []} columns={columns} />
       <p className="mt-3 text-xs text-muted-foreground">

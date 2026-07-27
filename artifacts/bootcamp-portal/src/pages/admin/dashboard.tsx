@@ -10,6 +10,7 @@ import {
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function AdminDashboard() {
   const years = useQuery({
@@ -91,9 +92,11 @@ export default function AdminDashboard() {
         />
       </div>
       {hasError && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          일부 운영 지표를 불러오지 못했습니다. 권한과 API 연결 상태를 확인해 주세요.
-        </div>
+        <ErrorCard
+          message="일부 운영 지표를 불러오지 못했습니다. 권한과 API 연결 상태를 확인해 주세요."
+          onRetry={() => { years.refetch(); programs.refetch(); applications.refetch(); assessments.refetch(); budget.refetch(); }}
+          isRetrying={years.isFetching || programs.isFetching || applications.isFetching || assessments.isFetching || budget.isFetching}
+        />
       )}
     </PortalLayout>
   );

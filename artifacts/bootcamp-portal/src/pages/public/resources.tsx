@@ -6,6 +6,7 @@ import { Layout } from "../../components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "../../components/SectionHeader";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function Resources() {
   const resources = useQuery({
@@ -53,16 +54,11 @@ export default function Resources() {
         )}
 
         {resources.isError && (
-          <Card className="border-destructive/40">
-            <CardContent className="p-8 text-center">
-              <p className="font-semibold text-destructive">
-                자료실 API에 연결할 수 없습니다.
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                API 서버와 데이터베이스 연결 상태를 확인해 주세요.
-              </p>
-            </CardContent>
-          </Card>
+          <ErrorCard
+            message="자료실 API에 연결할 수 없습니다."
+            onRetry={() => resources.refetch()}
+            isRetrying={resources.isFetching}
+          />
         )}
 
         {resources.data?.data.length === 0 && (

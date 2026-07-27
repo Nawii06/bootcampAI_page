@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 interface ContentItem {
   id: string; contentType: string; title: string; slug: string; status: string;
@@ -145,9 +146,16 @@ export default function AdminContent() {
           </article>;
         })}
       </div>
-      {(content.isError || create.isError || transition.isError || update.isError || versions.isError) && (
+      {(content.isError || versions.isError) && (
+        <ErrorCard
+          message={(content.error ?? versions.error)?.message}
+          onRetry={() => { content.refetch(); versions.refetch(); }}
+          isRetrying={content.isFetching || versions.isFetching}
+        />
+      )}
+      {(create.isError || transition.isError || update.isError) && (
         <p className="mt-4 text-sm text-destructive">
-          {(content.error ?? create.error ?? transition.error ?? update.error ?? versions.error)?.message}
+          {(create.error ?? transition.error ?? update.error)?.message}
         </p>
       )}
     </PortalLayout>

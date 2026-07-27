@@ -11,6 +11,7 @@ import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -118,7 +119,14 @@ export default function AdminProgramOperations() {
           <Button className="w-full" disabled={!participantId || mutate.isPending} onClick={confirmCompletion}>선택 학생 이수 계산·확정</Button>
         </OperationCard>
       </div>
-      {(operations.isError || mutate.isError) && <p className="mt-4 text-sm text-destructive">{(operations.error ?? mutate.error)?.message}</p>}
+            {operations.isError && (
+        <ErrorCard
+          message={operations.error?.message}
+          onRetry={() => operations.refetch()}
+          isRetrying={operations.isFetching}
+        />
+      )}
+      {mutate.isError && <p className="mt-4 text-sm text-destructive">{mutate.error?.message}</p>}
     </PortalLayout>
   );
 }
