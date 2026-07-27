@@ -15,6 +15,7 @@ import {
   getExperientialRecordByToken,
   listCompletionAssessments,
   listExperientialRecords,
+  revokeShareToken,
 } from "./service";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
@@ -179,6 +180,27 @@ router.post(
         );
       }
       res.json(await generateShareToken(String(req.params.id), studentId));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.delete(
+  "/v1/experiential-records/:id/share-token",
+  requireAuth,
+  requireRoles("STUDENT"),
+  async (req, res, next) => {
+    try {
+      const studentId = await currentStudentId(req.auth!.id);
+      if (!studentId) {
+        throw new ApiError(
+          409,
+          "STUDENT_PROFILE_REQUIRED",
+          "연결된 학생 프로필이 없습니다.",
+        );
+      }
+      res.json(await revokeShareToken(String(req.params.id), studentId));
     } catch (error) {
       next(error);
     }

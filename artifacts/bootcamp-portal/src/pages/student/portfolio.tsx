@@ -20,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link2 } from "lucide-react";
+import { Link2, Unlink } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
@@ -48,6 +48,29 @@ export default function StudentPortfolio() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  async function handleRevokeLink(record: PortfolioRecord) {
+    setRevokingId(record.id);
+    try {
+      await customFetch(
+        `/api/v1/experiential-records/${record.id}/share-token`,
+        { method: "DELETE", responseType: "json", credentials: "include" },
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["student", "experiential-records"],
+      });
+      toast({
+        title: "링크 해제됨",
+        description:
+          "기존 공유 링크가 더 이상 작동하지 않습니다. 링크 복사 버튼으로 새 링크를 만들 수 있습니다.",
+      });
+    } catch {
+      toast({ title: "링크 해제 실패", variant: "destructive" });
+    } finally {
+      setRevokingId(null);
+    }
+  }
 
   async function handleCopyLink(record: PortfolioRecord) {
     setCopyingId(record.id);
@@ -233,15 +256,28 @@ export default function StudentPortfolio() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {record.evidence.publicConsent && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={copyingId === record.id}
-                        onClick={() => handleCopyLink(record)}
-                      >
-                        <Link2 className="mr-1.5 h-3.5 w-3.5" />
-                        {copyingId === record.id ? "복사 중…" : "링크 복사"}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={copyingId === record.id}
+                          onClick={() => handleCopyLink(record)}
+                        >
+                          <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                          {copyingId === record.id ? "복사 중…" : "링크 복사"}
+                        </Button>
+                        {record.evidence.shareToken && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={revokingId === record.id}
+                            onClick={() => handleRevokeLink(record)}
+                          >
+                            <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                            {revokingId === record.id ? "해제 중…" : "링크 해제"}
+                          </Button>
+                        )}
+                      </>
                     )}
                     <Badge variant={record.status === "VERIFIED" ? "default" : "secondary"}>
                       {record.status}

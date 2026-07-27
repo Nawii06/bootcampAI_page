@@ -214,6 +214,34 @@ export async function generateShareToken(recordId: string, studentId: string) {
   return { shareToken };
 }
 
+/** Clears the share token so the public URL immediately stops working.
+ *  Enforces ownership (studentId). Idempotent when no token exists. */
+export async function revokeShareToken(recordId: string, studentId: string) {
+  const [record] = await db
+    .select({ id: experientialRecords.id, evidence: experientialRecords.evidence })
+    .from(experientialRecords)
+    .where(
+      and(
+        eq(experientialRecords.id, recordId),
+        eq(experientialRecords.studentId, studentId),
+        isNull(experientialRecords.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!record) {
+    throw new ApiError(404, "EXPERIENTIAL_RECORD_NOT_FOUND", "포트폴리오를 찾을 수 없습니다.");
+  }
+  const evidence = record.evidence as Record<string, unknown>;
+  if (evidence.shareToken) {
+    const { shareToken: _removed, ...rest } = evidence;
+    await db
+      .update(experientialRecords)
+      .set({ evidence: rest, updatedAt: new Date() })
+      .where(eq(experientialRecords.id, recordId));
+  }
+  return { revoked: true };
+}
+
 export function createExperientialRecord(
   input: ExperientialRecordInput,
   studentId: string,
