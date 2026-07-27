@@ -13,8 +13,8 @@ import {
   CompanyParticipationUpdateSchema,
 } from "@workspace/api-zod";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
-import PortalLayout from "@/components/PortalLayout";
-import SectionHeader from "@/components/SectionHeader";
+import { PortalLayout } from "@/components/PortalLayout";
+import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
