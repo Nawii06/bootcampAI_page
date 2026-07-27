@@ -13,6 +13,7 @@ import { contractFetch, customFetch, setUnauthorizedHandler } from "@workspace/a
 import { SessionResponseSchema, type SessionResponse } from "@workspace/api-zod";
 import { toast } from "@/hooks/use-toast";
 import { SessionExpiryWarning } from "@/components/SessionExpiryWarning";
+import { computeSessionSchedule, WARN_BEFORE_MS } from "@/lib/session-schedule";
 import type { Role, User } from "../types";
 
 interface AuthContextType {
@@ -54,8 +55,6 @@ function toPortalUser(session: SessionResponse["user"]): User {
   };
 }
 
-// Show warning this many ms before the server expiry (5 minutes)
-const WARN_BEFORE_MS = 5 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -109,35 +108,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       setWarningVisible(false);
 
-      const msUntilExpiry = new Date(expiresAt).getTime() - Date.now();
+      const schedule = computeSessionSchedule(expiresAt);
 
-      if (msUntilExpiry <= 0) {
+      if (!schedule) {
         forceLogout();
         return;
       }
 
-      const msUntilWarn = msUntilExpiry - WARN_BEFORE_MS;
-
-      if (msUntilWarn > 0) {
+      if (schedule.showImmediately) {
+        setWarningSecondsLeft(schedule.initialSecondsLeft);
+        setWarningVisible(true);
+      } else {
         warnTimerRef.current = setTimeout(() => {
           if (!userRef.current) return;
-          // Recompute remaining seconds at the moment the warning fires
+          // Recompute remaining seconds at the exact moment the warning fires
           const remaining = Math.round(
             (new Date(expiresAt).getTime() - Date.now()) / 1000,
           );
           setWarningSecondsLeft(Math.max(0, remaining));
           setWarningVisible(true);
-        }, msUntilWarn);
-      } else {
-        // Already inside the warning window — show immediately
-        const remaining = Math.round(msUntilExpiry / 1000);
-        setWarningSecondsLeft(Math.max(0, remaining));
-        setWarningVisible(true);
+        }, schedule.msUntilWarn);
       }
 
       logoutTimerRef.current = setTimeout(() => {
         forceLogout();
-      }, msUntilExpiry);
+      }, schedule.msUntilExpiry);
     },
     [forceLogout],
   );
