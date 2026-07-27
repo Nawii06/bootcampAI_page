@@ -3,7 +3,9 @@ FROM node:24-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S -G app -u 10001 app \
+RUN rm -rf /usr/local/lib/node_modules/npm \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+  && addgroup -S app && adduser -S -G app -u 10001 app \
   && mkdir -p /app/data/files \
   && chown -R app:app /app
 
