@@ -56,18 +56,50 @@ export function SessionExpiryWarning({
   // Flash the browser tab title while the warning is mounted so users in
   // other tabs get a visual cue in the tab strip. The original title is
   // captured on mount and restored on unmount (extend, dismiss, or expiry).
+  //
+  // Flashing only runs while the tab is hidden: once the user switches back
+  // to this tab the alternation is noise (chat apps stop flashing on focus),
+  // so on visibilitychange we stop the interval and restore the original
+  // title. If the user leaves again while the warning is still open, the
+  // flashing resumes.
   useEffect(() => {
     const originalTitle = document.title;
     const warningTitle = `⚠️ 세션 만료 임박 — ${originalTitle}`;
-    let showWarning = true;
-    document.title = warningTitle;
-    const id = setInterval(() => {
-      showWarning = !showWarning;
-      document.title = showWarning ? warningTitle : originalTitle;
-    }, 2000);
-    return () => {
-      clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+
+    const startFlashing = () => {
+      if (id !== null) return;
+      let showWarning = true;
+      document.title = warningTitle;
+      id = setInterval(() => {
+        showWarning = !showWarning;
+        document.title = showWarning ? warningTitle : originalTitle;
+      }, 2000);
+    };
+
+    const stopFlashing = () => {
+      if (id !== null) {
+        clearInterval(id);
+        id = null;
+      }
       document.title = originalTitle;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        startFlashing();
+      } else {
+        stopFlashing();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // Only flash if the tab is already hidden when the warning appears.
+    if (document.hidden) startFlashing();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      stopFlashing();
     };
   }, []);
 
