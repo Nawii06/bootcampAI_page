@@ -22,6 +22,13 @@ export const SessionResponseSchema = z.object({
   }),
   /** ISO 8601 timestamp of when the server-side session will expire */
   expiresAt: z.string().datetime().optional(),
+  /**
+   * ISO 8601 timestamp of the server's clock at response time.
+   * The client uses this to compute a clock-offset and pass an adjusted
+   * `nowMs` to `computeSessionSchedule`, so session timers are anchored to
+   * the server's clock rather than the browser's clock.
+   */
+  serverNow: z.string().datetime().optional(),
 });
 
 export const FakeIdentitySummarySchema = z.object({

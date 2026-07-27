@@ -78,6 +78,9 @@ router.get("/v1/session", requireAuth, async (req, res, next) => {
           grade: student?.grade ?? undefined,
         },
         expiresAt: sessionExpiresAt(req),
+        // Capture server time immediately before serialising so the client can
+        // compute a clock offset and correct for browser/server skew.
+        serverNow: new Date().toISOString(),
       }),
     );
   } catch (error) {

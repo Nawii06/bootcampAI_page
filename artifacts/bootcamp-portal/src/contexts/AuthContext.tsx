@@ -77,6 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * arm-on-login effect can read it once the state commit is visible.
    */
   const expiresAtRef = useRef<string | null>(null);
+  /**
+   * Estimated offset between server clock and browser clock (ms).
+   * offset = serverNow − clientNow (captured just before the request).
+   * Positive → server is ahead of the browser.
+   * Applied as `Date.now() + clockOffsetMsRef.current` when computing timer
+   * durations, so all timers are anchored to the server's clock.
+   * Ignored (stays 0) when clocks are within ~1 s of each other.
+   */
+  const clockOffsetMsRef = useRef<number>(0);
 
   const forceLogout = useCallback(() => {
     if (!userRef.current) return; // already logged out
@@ -108,7 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       setWarningVisible(false);
 
-      const schedule = computeSessionSchedule(expiresAt);
+      // Apply the server/browser clock offset so all timers are anchored to
+      // the server's clock even when the browser clock is skewed.
+      const adjustedNow = Date.now() + clockOffsetMsRef.current;
+      const schedule = computeSessionSchedule(expiresAt, adjustedNow);
 
       if (!schedule) {
         forceLogout();
@@ -121,9 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         warnTimerRef.current = setTimeout(() => {
           if (!userRef.current) return;
-          // Recompute remaining seconds at the exact moment the warning fires
+          // Recompute remaining seconds at the exact moment the warning fires,
+          // applying the same clock offset for consistency.
           const remaining = Math.round(
-            (new Date(expiresAt).getTime() - Date.now()) / 1000,
+            (new Date(expiresAt).getTime() - (Date.now() + clockOffsetMsRef.current)) / 1000,
           );
           setWarningSecondsLeft(Math.max(0, remaining));
           setWarningVisible(true);
@@ -139,10 +152,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     try {
+      // Capture client time BEFORE the request so that serverNow (captured by
+      // the server just before it sends the response) is comparable to it.
+      // offset = serverNow − clientNowBeforeRequest ≈ server_clock − browser_clock
+      const clientNowBeforeRequest = Date.now();
       const session = await contractFetch(SessionResponseSchema, "/api/v1/session", {
         credentials: "include",
       });
       const nextUser = toPortalUser(session.user);
+
+      // Calibrate the clock offset from the server's timestamp.
+      if (session.serverNow) {
+        clockOffsetMsRef.current =
+          new Date(session.serverNow).getTime() - clientNowBeforeRequest;
+      }
+
       // Store expiresAt BEFORE setUser so it is ready when the arm-on-login
       // effect fires after React commits the new user state.
       if (session.expiresAt) {
