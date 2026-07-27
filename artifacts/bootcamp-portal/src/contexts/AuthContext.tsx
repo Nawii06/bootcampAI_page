@@ -91,6 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Reset to false on explicit logout so a fresh login can re-trigger it.
    */
   const skewWarnedRef = useRef<boolean>(false);
+  /**
+   * Timestamp (Date.now()) of the last *successful* refreshSession() call.
+   * Used to debounce rapid `visibilitychange` events (e.g. fast alt-tab)
+   * so at most one refresh fires per VISIBILITY_DEBOUNCE_MS window.
+   */
+  const lastRefreshAtRef = useRef<number>(0);
+
+  /** Minimum gap (ms) between visibility-triggered refreshes. */
+  const VISIBILITY_DEBOUNCE_MS = 2_000;
 
   const forceLogout = useCallback(() => {
     if (!userRef.current) return; // already logged out
@@ -196,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         expiresAtRef.current = session.expiresAt;
       }
       setUser(nextUser);
+      lastRefreshAtRef.current = Date.now();
       return nextUser;
     } catch {
       setUser(null);
@@ -309,9 +319,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // clears the timers cleanly — no extra handling needed here.
   useEffect(() => {
     function handleVisibilityChange() {
-      if (document.visibilityState === "visible" && userRef.current) {
-        refreshSession();
-      }
+      if (document.visibilityState !== "visible" || !userRef.current) return;
+      // Skip if a refresh completed within the debounce window — rapid
+      // alt-tab sequences or extension-triggered events would otherwise
+      // fire multiple overlapping requests against /api/v1/session.
+      if (Date.now() - lastRefreshAtRef.current < VISIBILITY_DEBOUNCE_MS) return;
+      refreshSession();
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
