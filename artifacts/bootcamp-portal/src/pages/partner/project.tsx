@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -116,9 +117,32 @@ export default function PartnerProject() {
           {createProject.isError && <p className="text-sm text-destructive">{createProject.error.message}</p>}
         </form></CardContent></Card>
         <div className="space-y-3">
-          {(projects.data?.data ?? []).map((project) => (
-            <Card key={project.id}><CardContent className="p-5"><div className="flex justify-between"><h2 className="font-medium">{project.title}</h2><Badge variant="secondary">{project.details.track ?? "트랙 미지정"}</Badge></div><p className="mt-3 text-sm text-muted-foreground">{project.details.problemDefinition}</p></CardContent></Card>
-          ))}
+          {projects.isLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-4/5" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            : (projects.data?.data ?? []).map((project) => (
+                <Card key={project.id}>
+                  <CardContent className="p-5">
+                    <div className="flex justify-between">
+                      <h2 className="font-medium">{project.title}</h2>
+                      <Badge variant="secondary">{project.details.track ?? "트랙 미지정"}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{project.details.problemDefinition}</p>
+                  </CardContent>
+                </Card>
+              ))}
         </div>
       </div>
     </PortalLayout>

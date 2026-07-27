@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -200,8 +201,28 @@ export default function StudentPortfolio() {
           </CardContent>
         </Card>
         <div className="space-y-4">
-          {(records.data?.data ?? []).map((record) => (
-            <Card key={record.id}>
+          {records.isLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-4 w-56" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-4/5" />
+                        <Skeleton className="h-3 w-3/5" />
+                      </div>
+                      <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                      <Skeleton className="h-5 w-18 rounded-full" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            : (records.data?.data ?? []).map((record) => (
+                <Card key={record.id}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -264,7 +285,20 @@ export default function StudentPortfolio() {
         />
 
         {employmentLinks.isLoading && (
-          <p className="text-sm text-muted-foreground">불러오는 중…</p>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="flex items-start justify-between gap-4 p-5">
+                  <div className="min-w-0 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {employmentLinks.isError && (

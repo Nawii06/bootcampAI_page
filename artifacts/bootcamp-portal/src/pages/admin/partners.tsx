@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-zod";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
@@ -186,27 +187,42 @@ export default function AdminPartners() {
       <section className="mb-8">
         <h2 className="mb-3 font-semibold">기업 신청 검토</h2>
         <div className="space-y-3">
-          {(applications.data?.data ?? []).map((application) => (
-            <div key={application.id} className="rounded-lg border bg-card p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium">{application.companyName}</p>
-                  <p className="text-sm text-muted-foreground">{application.status}</p>
-                </div>
-                {["SUBMITTED", "REVIEWING", "SUPPLEMENT_REQUESTED"].includes(application.status) && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" disabled={decision.isPending} onClick={() => decision.mutate({
-                      id: application.id, decision: "SUPPLEMENT_REQUESTED",
-                      note: "참여확약서 유효기간과 프로그램별 수용인원을 보완해 주세요.",
-                    })}>보완요청</Button>
-                    <Button disabled={decision.isPending} onClick={() => decision.mutate({
-                      id: application.id, decision: "APPROVED", note: "참여기업 승인",
-                    })}>승인</Button>
+          {applications.isLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border bg-card p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-20 rounded-md" />
+                      <Skeleton className="h-9 w-16 rounded-md" />
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
+                </div>
+              ))
+            : (applications.data?.data ?? []).map((application) => (
+                <div key={application.id} className="rounded-lg border bg-card p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{application.companyName}</p>
+                      <p className="text-sm text-muted-foreground">{application.status}</p>
+                    </div>
+                    {["SUBMITTED", "REVIEWING", "SUPPLEMENT_REQUESTED"].includes(application.status) && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" disabled={decision.isPending} onClick={() => decision.mutate({
+                          id: application.id, decision: "SUPPLEMENT_REQUESTED",
+                          note: "참여확약서 유효기간과 프로그램별 수용인원을 보완해 주세요.",
+                        })}>보완요청</Button>
+                        <Button disabled={decision.isPending} onClick={() => decision.mutate({
+                          id: application.id, decision: "APPROVED", note: "참여기업 승인",
+                        })}>승인</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
         </div>
       </section>
       <div className="mb-3 flex items-center justify-between">
@@ -228,6 +244,7 @@ export default function AdminPartners() {
         columns={columns}
         filterKey="name"
         filterPlaceholder="기업명 검색"
+        loading={companies.isLoading}
       />
     </PortalLayout>
   );

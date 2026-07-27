@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ColumnDef<T> {
   key: string;
@@ -15,6 +16,10 @@ interface DataTableProps<T> {
   filterPlaceholder?: string;
   onRowClick?: (item: T) => void;
   actions?: React.ReactNode;
+  /** Show skeleton rows instead of data while a query is loading. */
+  loading?: boolean;
+  /** Number of skeleton rows to display. Defaults to 5. */
+  loadingRows?: number;
 }
 
 export function DataTable<T extends { id: string }>({ 
@@ -23,7 +28,9 @@ export function DataTable<T extends { id: string }>({
   filterKey, 
   filterPlaceholder,
   onRowClick,
-  actions 
+  actions,
+  loading = false,
+  loadingRows = 5,
 }: DataTableProps<T>) {
   const [filterValue, setFilterValue] = useState("");
 
@@ -44,6 +51,7 @@ export function DataTable<T extends { id: string }>({
                 placeholder={filterPlaceholder || "검색..."}
                 value={filterValue}
                 onChange={(e) => setFilterValue(e.target.value)}
+                disabled={loading}
               />
             </div>
           )}
@@ -61,7 +69,21 @@ export function DataTable<T extends { id: string }>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {loading ? (
+              Array.from({ length: loadingRows }).map((_, rowIdx) => (
+                <TableRow key={rowIdx}>
+                  {columns.map((col, colIdx) => (
+                    <TableCell key={col.key}>
+                      {/* Vary widths so the skeleton looks natural */}
+                      <Skeleton
+                        className="h-4"
+                        style={{ width: `${60 + ((rowIdx * columns.length + colIdx) % 4) * 10}%` }}
+                      />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filteredData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
                   데이터가 없습니다.

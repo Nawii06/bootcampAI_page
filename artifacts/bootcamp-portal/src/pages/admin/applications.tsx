@@ -48,7 +48,11 @@ export default function AdminApplications() {
     <PortalLayout>
       <SectionHeader title="신청·선발 관리" description="신청서를 검토하고 선발 상태를 변경합니다." />
       {decision.isError && <p className="mb-3 text-destructive">{decision.error.message}</p>}
-      <DataTable data={applications.data?.data ?? []} columns={columns} />
+      <DataTable
+        data={applications.data?.data ?? []}
+        columns={columns}
+        loading={applications.isLoading}
+      />
     </PortalLayout>
   );
 }
