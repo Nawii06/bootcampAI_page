@@ -34,11 +34,21 @@
  *  3. Returns `clearDraft` to remove the draft (call on successful submit).
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 const DEBOUNCE_MS = 400;
 /** Drafts older than this are silently discarded on restore. */
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Drafts within this window of the TTL are flagged as near expiry. */
+const NEAR_EXPIRY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** Extra context passed to `onRestored` about the recovered draft. */
+export interface RestoredDraftInfo {
+  /** Age of the recovered draft in milliseconds (now - savedAt). */
+  draftAgeMs: number;
+  /** True when the draft was within 24 hours of its TTL when restored. */
+  isNearExpiry: boolean;
+}
 
 interface StoredDraft<T> {
   data: T;
@@ -49,12 +59,19 @@ export function useFormDraft<T extends object>(
   key: string,
   state: T,
   restore: (draft: T) => void,
-  onRestored?: (clearDraft: () => void) => void,
+  onRestored?: (clearDraft: () => void, info: RestoredDraftInfo) => void,
   /** Maximum age (ms) before a stored draft is silently discarded. Default: 7 days. */
   ttlMs: number = DEFAULT_TTL_MS,
-): { clearDraft: () => void } {
+): {
+  clearDraft: () => void;
+  /** Age (ms) of the restored draft, or undefined when nothing was restored. */
+  draftAgeMs?: number;
+  /** True when the restored draft was within 24 hours of its TTL. */
+  isNearExpiry: boolean;
+} {
   const storageKey = `form-draft:${key}`;
   const restoredRef = useRef(false);
+  const [restoredInfo, setRestoredInfo] = useState<RestoredDraftInfo | null>(null);
 
   // Capture the form's initial state once (never updated after mount).
   // Used to gate saves and restores to meaningful/non-default content.
@@ -99,7 +116,13 @@ export function useFormDraft<T extends object>(
       restore(draft);
       // Remove immediately so back-nav or refresh doesn't re-apply
       localStorage.removeItem(storageKey);
-      onRestored?.(clearDraft);
+      const draftAgeMs = Date.now() - stored.savedAt;
+      const info: RestoredDraftInfo = {
+        draftAgeMs,
+        isNearExpiry: draftAgeMs > ttlMs - NEAR_EXPIRY_WINDOW_MS,
+      };
+      setRestoredInfo(info);
+      onRestored?.(clearDraft, info);
     } catch {
       // Malformed JSON or SecurityError — silently ignore
     }
@@ -145,5 +168,9 @@ export function useFormDraft<T extends object>(
     };
   }, [state, storageKey]);
 
-  return { clearDraft };
+  return {
+    clearDraft,
+    draftAgeMs: restoredInfo?.draftAgeMs,
+    isNearExpiry: restoredInfo?.isNearExpiry ?? false,
+  };
 }
