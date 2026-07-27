@@ -16,7 +16,7 @@ import { SessionExpiryWarning } from "@/components/SessionExpiryWarning";
 import { computeSessionSchedule, WARN_BEFORE_MS } from "@/lib/session-schedule";
 import type { Role, User } from "../types";
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   refreshSession: () => Promise<User | null>;
@@ -25,7 +25,7 @@ interface AuthContextType {
   hasPermission: (roles: string[]) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function portalRole(roles: string[]): Role {
   if (roles.includes("SYSTEM_ADMIN")) return "superAdmin";
