@@ -12,6 +12,7 @@ import {
   AdminCompanyParticipationListResponseSchema,
   type AdminCompanyParticipationItem,
   CompanyParticipationUpdateSchema,
+  CompanyListResponseSchema,
 } from "@workspace/api-zod";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
 import { PortalLayout } from "@/components/PortalLayout";
@@ -113,6 +114,27 @@ export default function AdminEmployment() {
         { credentials: "include" },
       ),
   });
+
+  // Companies list — used to resolve the pre-filter chip label even when the
+  // filtered company has zero participation records.
+  const { data: companiesData } = useQuery({
+    queryKey: ["admin", "companies"],
+    queryFn: () =>
+      contractFetch(CompanyListResponseSchema, "/api/v1/companies", {
+        credentials: "include",
+      }),
+    enabled: !!companyIdFilter,
+  });
+
+  const filterCompanyName = useMemo(() => {
+    if (!companyIdFilter) return null;
+    return (
+      companiesData?.data.find((c) => c.id === companyIdFilter)?.name ??
+      data?.data.find((item) => item.companyId === companyIdFilter)
+        ?.companyName ??
+      null
+    );
+  }, [companyIdFilter, companiesData, data]);
 
   // ── Filtering & grouping ────────────────────────────────────────────────────
 
@@ -266,7 +288,7 @@ export default function AdminEmployment() {
         {/* Company ID pre-filter chip — set when navigated from /admin/partners */}
         {companyIdFilter && (
           <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1 text-xs font-medium self-center">
-            {groups[0]?.[1]?.companyName ?? "기업 필터 적용 중"}
+            {filterCompanyName ?? "기업 필터 적용 중"}
             <button
               type="button"
               aria-label="기업 필터 해제"
