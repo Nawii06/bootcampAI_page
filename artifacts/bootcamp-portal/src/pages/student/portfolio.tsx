@@ -4,7 +4,9 @@ import { contractFetch, customFetch } from "@workspace/api-client-react";
 import {
   BusinessYearListResponseSchema,
   ExperientialRecordListResponseSchema,
+  StudentEmploymentLinksResponseSchema,
   type ExperientialRecordResponse as PortfolioRecord,
+  type StudentEmploymentLinkResponse,
 } from "@workspace/api-zod";
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -15,9 +17,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
+import { useAuth } from "../../contexts/AuthContext";
+
+const PARTICIPATION_LABELS: Record<string, string> = {
+  EMPLOYMENT: "채용 연계",
+  INTERNSHIP: "인턴십",
+  FIELD_PRACTICE: "현장실습",
+};
+
+function formatDateRange(
+  startsAt: string | null | undefined,
+  endsAt: string | null | undefined,
+) {
+  const fmt = (iso: string) =>
+    new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(
+      new Date(iso),
+    );
+  if (startsAt && endsAt) return `${fmt(startsAt)} ~ ${fmt(endsAt)}`;
+  if (startsAt) return `${fmt(startsAt)} ~`;
+  if (endsAt) return `~ ${fmt(endsAt)}`;
+  return "기간 미정";
+}
 
 export default function StudentPortfolio() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [techStack, setTechStack] = useState("");
@@ -32,6 +57,17 @@ export default function StudentPortfolio() {
       ),
   });
   const yearId = years.data?.data[0]?.id;
+  const employmentLinks = useQuery({
+    queryKey: ["student", "employment-links", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: () =>
+      contractFetch(
+        StudentEmploymentLinksResponseSchema,
+        "/api/v1/my-employment-links",
+        { credentials: "include" },
+      ),
+  });
+
   const records = useQuery({
     queryKey: ["student", "experiential-records", yearId, "PROJECT"],
     enabled: Boolean(yearId),
@@ -172,6 +208,61 @@ export default function StudentPortfolio() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Employment / internship links ── */}
+      <div className="mt-10">
+        <SectionHeader
+          title="채용·연계 이력"
+          description="파트너 기업이 귀하의 포트폴리오와 연결한 채용·실습 현황입니다."
+        />
+
+        {employmentLinks.isLoading && (
+          <p className="text-sm text-muted-foreground">불러오는 중…</p>
+        )}
+
+        {employmentLinks.isError && (
+          <ErrorCard
+            message="채용·연계 이력을 불러오지 못했습니다."
+            onRetry={() => employmentLinks.refetch()}
+            isRetrying={employmentLinks.isFetching}
+          />
+        )}
+
+        {!employmentLinks.isLoading &&
+          !employmentLinks.isError &&
+          employmentLinks.data?.data.length === 0 && (
+            <div className="rounded-md border p-10 text-center text-sm text-muted-foreground">
+              아직 연결된 채용·연계 건이 없습니다. 파트너 기업의 담당자가
+              연결하면 여기에 표시됩니다.
+            </div>
+          )}
+
+        {employmentLinks.data && employmentLinks.data.data.length > 0 && (
+          <div className="space-y-3">
+            {employmentLinks.data.data.map(
+              (link: StudentEmploymentLinkResponse) => (
+                <Card key={link.id}>
+                  <CardContent className="flex items-start justify-between gap-4 p-5">
+                    <div className="min-w-0">
+                      <p className="font-medium">{link.companyName}</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {link.title}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDateRange(link.startsAt, link.endsAt)}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0">
+                      {PARTICIPATION_LABELS[link.participationType] ??
+                        link.participationType}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ),
+            )}
+          </div>
+        )}
       </div>
     </PortalLayout>
   );
