@@ -9,6 +9,7 @@ import {
 import { useLocation } from "wouter";
 import { contractFetch, customFetch, setUnauthorizedHandler } from "@workspace/api-client-react";
 import { SessionResponseSchema, type SessionResponse } from "@workspace/api-zod";
+import { toast } from "@/hooks/use-toast";
 import type { Role, User } from "../types";
 
 interface AuthContextType {
@@ -90,7 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentPath.startsWith("/login")) return;
 
       setUser(null);
-      setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      toast({
+        title: "세션이 만료되었습니다",
+        description: "다시 로그인해 주세요.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      }, 1500);
     });
 
     return () => setUnauthorizedHandler(null);
