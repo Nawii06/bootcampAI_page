@@ -180,7 +180,12 @@ export function getExperientialRecordByToken(token: string) {
 
 /** Returns the share token for a record, generating one if it doesn't exist yet.
  *  Enforces ownership (studentId) and publicConsent before issuing a token. */
-export async function generateShareToken(recordId: string, studentId: string) {
+export async function generateShareToken(
+  recordId: string,
+  studentId: string,
+  actorId: string,
+  requestId: string,
+) {
   const [record] = await db
     .select({ id: experientialRecords.id, evidence: experientialRecords.evidence })
     .from(experientialRecords)
@@ -207,16 +212,31 @@ export async function generateShareToken(recordId: string, studentId: string) {
     return { shareToken: evidence.shareToken as string };
   }
   const shareToken = randomBytes(24).toString("base64url");
-  await db
-    .update(experientialRecords)
-    .set({ evidence: { ...evidence, shareToken }, updatedAt: new Date() })
-    .where(eq(experientialRecords.id, recordId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(experientialRecords)
+      .set({ evidence: { ...evidence, shareToken }, updatedAt: new Date() })
+      .where(eq(experientialRecords.id, recordId));
+    await tx.insert(auditLogs).values({
+      actorUserId: actorId,
+      action: "GENERATE_SHARE_TOKEN",
+      resourceType: "EXPERIENTIAL_RECORD",
+      resourceId: recordId,
+      requestId,
+      metadata: { studentId },
+    });
+  });
   return { shareToken };
 }
 
 /** Clears the share token so the public URL immediately stops working.
  *  Enforces ownership (studentId). Idempotent when no token exists. */
-export async function revokeShareToken(recordId: string, studentId: string) {
+export async function revokeShareToken(
+  recordId: string,
+  studentId: string,
+  actorId: string,
+  requestId: string,
+) {
   const [record] = await db
     .select({ id: experientialRecords.id, evidence: experientialRecords.evidence })
     .from(experientialRecords)
@@ -234,10 +254,20 @@ export async function revokeShareToken(recordId: string, studentId: string) {
   const evidence = record.evidence as Record<string, unknown>;
   if (evidence.shareToken) {
     const { shareToken: _removed, ...rest } = evidence;
-    await db
-      .update(experientialRecords)
-      .set({ evidence: rest, updatedAt: new Date() })
-      .where(eq(experientialRecords.id, recordId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(experientialRecords)
+        .set({ evidence: rest, updatedAt: new Date() })
+        .where(eq(experientialRecords.id, recordId));
+      await tx.insert(auditLogs).values({
+        actorUserId: actorId,
+        action: "REVOKE_SHARE_TOKEN",
+        resourceType: "EXPERIENTIAL_RECORD",
+        resourceId: recordId,
+        requestId,
+        metadata: { studentId },
+      });
+    });
   }
   return { revoked: true };
 }

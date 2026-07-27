@@ -179,7 +179,14 @@ router.post(
           "연결된 학생 프로필이 없습니다.",
         );
       }
-      res.json(await generateShareToken(String(req.params.id), studentId));
+      res.json(
+        await generateShareToken(
+          String(req.params.id),
+          studentId,
+          req.auth!.id,
+          String(req.id),
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -200,7 +207,14 @@ router.delete(
           "연결된 학생 프로필이 없습니다.",
         );
       }
-      res.json(await revokeShareToken(String(req.params.id), studentId));
+      res.json(
+        await revokeShareToken(
+          String(req.params.id),
+          studentId,
+          req.auth!.id,
+          String(req.id),
+        ),
+      );
     } catch (error) {
       next(error);
     }
