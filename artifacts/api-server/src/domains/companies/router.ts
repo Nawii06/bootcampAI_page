@@ -5,6 +5,7 @@ import {
   CompanyApplicationInputSchema,
   CompanyParticipationInputSchema,
   CompanyParticipationQuerySchema,
+  CompanyParticipationUpdateSchema,
   CompanyApplicationsQuerySchema,
   CompanyCommitmentInputSchema,
   CompanyContactInputSchema,
@@ -17,6 +18,8 @@ import { requireAuth, requireRoles } from "../../middleware/auth";
 import {
   decideCompanyApplication,
   createCompanyParticipation,
+  updateCompanyParticipation,
+  deleteCompanyParticipation,
   submitCompanyApplication,
   resubmitCompanyApplication,
   upsertCompanyCommitment,
@@ -205,6 +208,35 @@ router.post(
     } catch (error) {
       next(error);
     }
+  },
+);
+
+router.patch(
+  "/v1/company-participations/:id",
+  requireAuth,
+  requireRoles("COMPANY_MANAGER"),
+  async (req, res, next) => {
+    try {
+      const { id } = CompanyIdParamsSchema.parse(req.params);
+      const input = CompanyParticipationUpdateSchema.parse(req.body);
+      const company = await findCompanyForUser(req.auth!.id);
+      if (!company) throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
+      res.json(await updateCompanyParticipation(id, company.id, input, req.auth!.id, String(req.id)));
+    } catch (error) { next(error); }
+  },
+);
+
+router.delete(
+  "/v1/company-participations/:id",
+  requireAuth,
+  requireRoles("COMPANY_MANAGER"),
+  async (req, res, next) => {
+    try {
+      const { id } = CompanyIdParamsSchema.parse(req.params);
+      const company = await findCompanyForUser(req.auth!.id);
+      if (!company) throw new ApiError(409, "APPROVED_COMPANY_REQUIRED", "승인되어 연결된 참여기업이 없습니다.");
+      res.json(await deleteCompanyParticipation(id, company.id, req.auth!.id, String(req.id)));
+    } catch (error) { next(error); }
   },
 );
 

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -36,10 +37,20 @@ const PARTICIPATION_TYPES: ParticipationType[] = [
   "FIELD_PRACTICE",
 ];
 
+/** Convert an ISO timestamp or undefined to a YYYY-MM-DD string for <input type="date"> */
+function toDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
+
 export default function PartnerEmployment() {
   const queryClient = useQueryClient();
 
-  // Form state
+  // ─── Form state (shared between create and edit modes) ──────────────────
   const [participationType, setParticipationType] =
     useState<ParticipationType>("EMPLOYMENT");
   const [title, setTitle] = useState("");
@@ -48,6 +59,12 @@ export default function PartnerEmployment() {
   const [employmentCount, setEmploymentCount] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+
+  // ─── Edit / delete mode ─────────────────────────────────────────────────
+  /** ID of the record currently open for editing (null = create mode) */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  /** ID of the record awaiting delete confirmation */
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { clearDraft } = useFormDraft(
     "/partner/employment",
@@ -63,6 +80,7 @@ export default function PartnerEmployment() {
     },
   );
 
+  // ─── Queries ─────────────────────────────────────────────────────────────
   const years = useQuery({
     queryKey: ["reference", "business-years", "active"],
     queryFn: () =>
@@ -106,6 +124,7 @@ export default function PartnerEmployment() {
       ),
   });
 
+  // ─── Mutations ────────────────────────────────────────────────────────────
   const createParticipation = useMutation({
     mutationFn: () =>
       customFetch("/api/v1/company-participations", {
@@ -130,9 +149,7 @@ export default function PartnerEmployment() {
       }),
     onSuccess: () => {
       clearDraft();
-      queryClient.invalidateQueries({
-        queryKey: ["partner", "company-participations"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
       setTitle("");
       setSkills("");
       setParticipantCount(0);
@@ -142,28 +159,90 @@ export default function PartnerEmployment() {
     },
   });
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (yearId && title.trim()) createParticipation.mutate();
+  const updateParticipation = useMutation({
+    mutationFn: (id: string) =>
+      customFetch(`/api/v1/company-participations/${id}`, {
+        method: "PATCH",
+        responseType: "json",
+        credentials: "include",
+        body: JSON.stringify({
+          participationType,
+          title: title.trim(),
+          participantCount,
+          employmentCount,
+          details: {
+            requiredSkills: skills
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          },
+          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
+          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
+      handleCancelEdit();
+    },
+  });
+
+  const deleteParticipation = useMutation({
+    mutationFn: (id: string) =>
+      customFetch(`/api/v1/company-participations/${id}`, {
+        method: "DELETE",
+        responseType: "json",
+        credentials: "include",
+      }),
+    onSuccess: () => {
+      setDeletingId(null);
+      queryClient.invalidateQueries({ queryKey: ["partner", "company-participations"] });
+    },
+  });
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  function handleCancelEdit() {
+    setEditingId(null);
+    setParticipationType("EMPLOYMENT");
+    setTitle("");
+    setSkills("");
+    setParticipantCount(0);
+    setEmploymentCount(0);
+    setStartsAt("");
+    setEndsAt("");
+    clearDraft();
   }
 
-  // years.isLoading must propagate — if years fails, participation queries never run
+  function handleEditClick(record: typeof allRecords[number]) {
+    setDeletingId(null);
+    setEditingId(record.id);
+    setParticipationType(record._type as ParticipationType);
+    setTitle(record.title);
+    setSkills((record.details.requiredSkills ?? []).join(", "));
+    setParticipantCount(record.participantCount ?? 0);
+    setEmploymentCount(record.employmentCount ?? 0);
+    setStartsAt(toDateInput(record.startsAt));
+    setEndsAt(toDateInput(record.endsAt));
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!title.trim()) return;
+    if (editingId) {
+      updateParticipation.mutate(editingId);
+    } else if (yearId) {
+      createParticipation.mutate();
+    }
+  }
+
+  // ─── Derived state ────────────────────────────────────────────────────────
   const isLoading =
     years.isLoading ||
     (Boolean(yearId) &&
-      (employment.isLoading ||
-        internship.isLoading ||
-        fieldPractice.isLoading));
+      (employment.isLoading || internship.isLoading || fieldPractice.isLoading));
 
-  // Treat years failure as a top-level error: without a business year, the page
-  // cannot render meaningful data, so showing a false empty state is misleading.
   const isError =
-    years.isError ||
-    employment.isError ||
-    internship.isError ||
-    fieldPractice.isError;
+    years.isError || employment.isError || internship.isError || fieldPractice.isError;
 
-  // years succeeded but returned no active business year
   const noActiveYear =
     !years.isLoading && !years.isError && years.data?.data.length === 0;
 
@@ -182,9 +261,12 @@ export default function PartnerEmployment() {
     })),
   ].sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 
-  const canSubmit =
-    Boolean(yearId) && title.trim().length > 0 && !createParticipation.isPending;
+  const isMutating =
+    createParticipation.isPending || updateParticipation.isPending;
 
+  const canSubmit = Boolean(yearId) && title.trim().length > 0 && !isMutating;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <PortalLayout>
       <SectionHeader
@@ -193,10 +275,12 @@ export default function PartnerEmployment() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
-        {/* Registration form */}
+        {/* Registration / edit form */}
         <Card>
           <CardContent className="pt-6">
-            <h2 className="mb-5 text-sm font-semibold">신규 고용 건 등록</h2>
+            <h2 className="mb-5 text-sm font-semibold">
+              {editingId ? "고용 건 수정" : "신규 고용 건 등록"}
+            </h2>
             <form className="space-y-5" onSubmit={handleSubmit}>
               <FormField label="유형" required>
                 <Select
@@ -275,18 +359,35 @@ export default function PartnerEmployment() {
               </div>
 
               <Button className="w-full" disabled={!canSubmit}>
-                {createParticipation.isPending ? "등록 중…" : "등록"}
+                {updateParticipation.isPending
+                  ? "수정 중…"
+                  : createParticipation.isPending
+                    ? "등록 중…"
+                    : editingId
+                      ? "수정 완료"
+                      : "등록"}
               </Button>
 
-              {createParticipation.isError && (
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleCancelEdit}
+                >
+                  취소
+                </Button>
+              )}
+
+              {(createParticipation.isError || updateParticipation.isError) && (
                 <p className="text-sm text-destructive">
-                  {createParticipation.error instanceof Error
-                    ? createParticipation.error.message
-                    : "등록 중 오류가 발생했습니다."}
+                  {(updateParticipation.error ?? createParticipation.error) instanceof Error
+                    ? (updateParticipation.error ?? createParticipation.error)!.message
+                    : "처리 중 오류가 발생했습니다."}
                 </p>
               )}
 
-              {createParticipation.isSuccess && (
+              {createParticipation.isSuccess && !editingId && (
                 <p className="text-sm text-green-600">등록되었습니다.</p>
               )}
             </form>
@@ -306,8 +407,18 @@ export default function PartnerEmployment() {
           {!isLoading && isError && (
             <ErrorCard
               message="API에 연결할 수 없습니다."
-              onRetry={() => { years.refetch(); employment.refetch(); internship.refetch(); fieldPractice.refetch(); }}
-              isRetrying={years.isFetching || employment.isFetching || internship.isFetching || fieldPractice.isFetching}
+              onRetry={() => {
+                years.refetch();
+                employment.refetch();
+                internship.refetch();
+                fieldPractice.refetch();
+              }}
+              isRetrying={
+                years.isFetching ||
+                employment.isFetching ||
+                internship.isFetching ||
+                fieldPractice.isFetching
+              }
             />
           )}
 
@@ -335,31 +446,104 @@ export default function PartnerEmployment() {
 
           {!isLoading && !isError && allRecords.length > 0 && (
             <>
-              {allRecords.map((record) => (
-                <Card key={`${record._type}-${record.id}`}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="font-medium">{record.title}</h2>
-                        {record.details.requiredSkills &&
-                          record.details.requiredSkills.length > 0 && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              필요 기술:{" "}
-                              {record.details.requiredSkills.join(", ")}
+              {allRecords.map((record) => {
+                const isDeleting = deletingId === record.id;
+                const isEditing = editingId === record.id;
+                return (
+                  <Card
+                    key={`${record._type}-${record.id}`}
+                    className={isEditing ? "ring-2 ring-primary" : undefined}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h2 className="font-medium">{record.title}</h2>
+                          {record.details.requiredSkills &&
+                            record.details.requiredSkills.length > 0 && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                필요 기술:{" "}
+                                {record.details.requiredSkills.join(", ")}
+                              </p>
+                            )}
+                          {(record.participantCount > 0 ||
+                            record.employmentCount > 0) && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              참여 {record.participantCount}명 · 채용{" "}
+                              {record.employmentCount}명
                             </p>
                           )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Badge variant="secondary">
+                            {PARTICIPATION_LABELS[record._type] ?? record._type}
+                          </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            title="수정"
+                            onClick={() => handleEditClick(record)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            title="삭제"
+                            onClick={() =>
+                              setDeletingId(isDeleting ? null : record.id)
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <Badge variant="secondary">
-                        {PARTICIPATION_LABELS[record._type] ?? record._type}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      등록일:{" "}
-                      {new Date(record.createdAt).toLocaleDateString("ko-KR")}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        등록일:{" "}
+                        {new Date(record.createdAt).toLocaleDateString("ko-KR")}
+                      </p>
+
+                      {/* Inline delete confirmation */}
+                      {isDeleting && (
+                        <div className="mt-3 flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+                          <p className="text-sm text-destructive">
+                            정말 삭제하시겠습니까?
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteParticipation.isPending}
+                              onClick={() => deleteParticipation.mutate(record.id)}
+                            >
+                              {deleteParticipation.isPending
+                                ? "삭제 중…"
+                                : "삭제 확인"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setDeletingId(null)}
+                            >
+                              취소
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {deleteParticipation.isError &&
+                        deletingId === record.id && (
+                          <p className="mt-2 text-xs text-destructive">
+                            {deleteParticipation.error instanceof Error
+                              ? deleteParticipation.error.message
+                              : "삭제 중 오류가 발생했습니다."}
+                          </p>
+                        )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </>
           )}
         </div>

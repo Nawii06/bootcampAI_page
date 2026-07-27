@@ -13,6 +13,7 @@ import type {
   CompanyApplicationDecision,
   CompanyApplicationInput,
   CompanyParticipationInput,
+  CompanyParticipationUpdate,
   CompanyCommitmentInput,
   CompanyContactInput,
   CompanyExpertInput,
@@ -265,6 +266,66 @@ export function decideCompanyApplication(
       metadata: company ? { companyId: company.id } : {},
     });
     return { application: updated, company };
+  });
+}
+
+export function updateCompanyParticipation(
+  id: string,
+  companyId: string,
+  input: CompanyParticipationUpdate,
+  actorId: string,
+  requestId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(companyParticipations)
+      .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
+      .for("update");
+    if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
+    if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 수정할 수 있습니다.");
+    const [updated] = await tx.update(companyParticipations).set({
+      ...(input.participationType !== undefined ? { participationType: input.participationType } : {}),
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.details !== undefined ? { details: input.details } : {}),
+      ...(input.participantCount !== undefined ? { participantCount: input.participantCount } : {}),
+      ...(input.employmentCount !== undefined ? { employmentCount: input.employmentCount } : {}),
+      ...("startsAt" in input ? { startsAt: input.startsAt ? new Date(input.startsAt) : null } : {}),
+      ...("endsAt" in input ? { endsAt: input.endsAt ? new Date(input.endsAt) : null } : {}),
+      updatedAt: new Date(),
+    }).where(eq(companyParticipations.id, id)).returning();
+    await tx.insert(auditLogs).values({
+      actorUserId: actorId, action: "UPDATE",
+      resourceType: "COMPANY_PARTICIPATION", resourceId: id,
+      businessYearId: current.businessYearId, requestId,
+      before: { title: current.title, participationType: current.participationType },
+      after: { title: updated?.title, participationType: updated?.participationType },
+      changedFields: Object.keys(input),
+    });
+    return updated;
+  });
+}
+
+export function deleteCompanyParticipation(
+  id: string,
+  companyId: string,
+  actorId: string,
+  requestId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(companyParticipations)
+      .where(and(eq(companyParticipations.id, id), isNull(companyParticipations.deletedAt)))
+      .for("update");
+    if (!current) throw new ApiError(404, "COMPANY_PARTICIPATION_NOT_FOUND", "채용연계 건을 찾을 수 없습니다.");
+    if (current.companyId !== companyId) throw new ApiError(403, "FORBIDDEN", "본인 회사의 채용연계 건만 삭제할 수 있습니다.");
+    await tx.update(companyParticipations)
+      .set({ deletedAt: new Date() })
+      .where(eq(companyParticipations.id, id));
+    await tx.insert(auditLogs).values({
+      actorUserId: actorId, action: "DELETE",
+      resourceType: "COMPANY_PARTICIPATION", resourceId: id,
+      businessYearId: current.businessYearId, requestId,
+      before: { title: current.title, participationType: current.participationType },
+    });
+    return { ok: true };
   });
 }
 

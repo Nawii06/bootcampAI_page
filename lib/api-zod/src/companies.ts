@@ -161,6 +161,23 @@ export const PublicCompanyListResponseSchema = z.object({
   data: z.array(PublicCompanyResponseSchema),
 });
 
+export const CompanyParticipationUpdateSchema = z.object({
+  participationType: z.enum([
+    "DEMAND_SURVEY",
+    "PROJECT",
+    "PROJECT_EVALUATION",
+    "FIELD_PRACTICE",
+    "INTERNSHIP",
+    "EMPLOYMENT",
+  ]).optional(),
+  title: z.string().trim().min(1).max(200).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+  participantCount: z.number().int().nonnegative().optional(),
+  employmentCount: z.number().int().nonnegative().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
+}).refine((v) => Object.keys(v).length > 0, { message: "변경할 내용이 없습니다." });
+
 export const CompanyParticipationResponseSchema = z.object({
   id: z.string().uuid(),
   participationType: z.string(),
@@ -173,6 +190,10 @@ export const CompanyParticipationResponseSchema = z.object({
     requiredSkills: z.array(z.string()).optional(),
     projectTopics: z.array(z.string()).optional(),
   }).passthrough().default({}),
+  participantCount: z.number().default(0),
+  employmentCount: z.number().default(0),
+  startsAt: z.string().nullable().optional(),
+  endsAt: z.string().nullable().optional(),
   createdAt: z.string(),
 }).passthrough();
 
@@ -217,6 +238,7 @@ export type CompanyParticipationInput = z.infer<
   typeof CompanyParticipationInputSchema
 >;
 export type CompanyMasterUpdate = z.infer<typeof CompanyMasterUpdateSchema>;
+export type CompanyParticipationUpdate = z.infer<typeof CompanyParticipationUpdateSchema>;
 export type CompanyContactInput = z.infer<typeof CompanyContactInputSchema>;
 export type CompanyExpertInput = z.infer<typeof CompanyExpertInputSchema>;
 export type CompanyCommitmentInput = z.infer<
