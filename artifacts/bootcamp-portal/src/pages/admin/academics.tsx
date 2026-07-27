@@ -55,7 +55,7 @@ export default function AdminAcademics() {
   // ── Draft persistence (one instance per form section) ───────────────────
   const { clearDraft: clearCourseDraft } = useFormDraft(
     "admin/academics/course",
-    { courseCode, courseName, courseEnglishName, courseDescription, departmentCode, sourceSystem, externalId, credits },
+    { courseCode, courseName, courseEnglishName, courseDescription, departmentCode, sourceSystem, externalId, credits, editingCourseId },
     (draft) => {
       if (draft.courseCode) setCourseCode(draft.courseCode);
       if (draft.courseName) setCourseName(draft.courseName);
@@ -65,6 +65,7 @@ export default function AdminAcademics() {
       if (draft.sourceSystem) setSourceSystem(draft.sourceSystem);
       if (draft.externalId) setExternalId(draft.externalId);
       if (draft.credits) setCredits(draft.credits);
+      if (draft.editingCourseId) setEditingCourseId(draft.editingCourseId);
     },
     (clear) => {
       toast({
@@ -77,6 +78,7 @@ export default function AdminAcademics() {
               setCourseCode(""); setCourseName(""); setCourseEnglishName("");
               setCourseDescription(""); setDepartmentCode("AI_BOOTCAMP");
               setSourceSystem(""); setExternalId(""); setCredits("3");
+              setEditingCourseId("");
             }}
           >
             초기화
@@ -88,11 +90,12 @@ export default function AdminAcademics() {
 
   const { clearDraft: clearOfferingDraft } = useFormDraft(
     "admin/academics/offering",
-    { sectionCode, capacity, instructorName },
+    { sectionCode, capacity, instructorName, editingOfferingId },
     (draft) => {
       if (draft.sectionCode) setSectionCode(draft.sectionCode);
       if (draft.capacity) setCapacity(draft.capacity);
       if (draft.instructorName) setInstructorName(draft.instructorName);
+      if (draft.editingOfferingId) setEditingOfferingId(draft.editingOfferingId);
     },
     (clear) => {
       toast({
@@ -103,6 +106,7 @@ export default function AdminAcademics() {
             onClick={() => {
               clear();
               setSectionCode("01"); setCapacity("30"); setInstructorName("");
+              setEditingOfferingId("");
             }}
           >
             초기화
@@ -114,12 +118,13 @@ export default function AdminAcademics() {
 
   const { clearDraft: clearCurriculumDraft } = useFormDraft(
     "admin/academics/curriculum",
-    { curriculumCode, curriculumName, effectiveFrom, effectiveTo },
+    { curriculumCode, curriculumName, effectiveFrom, effectiveTo, editingCurriculumId },
     (draft) => {
       if (draft.curriculumCode) setCurriculumCode(draft.curriculumCode);
       if (draft.curriculumName) setCurriculumName(draft.curriculumName);
       if (draft.effectiveFrom) setEffectiveFrom(draft.effectiveFrom);
       if (draft.effectiveTo) setEffectiveTo(draft.effectiveTo);
+      if (draft.editingCurriculumId) setEditingCurriculumId(draft.editingCurriculumId);
     },
     (clear) => {
       toast({
@@ -131,7 +136,7 @@ export default function AdminAcademics() {
               clear();
               setCurriculumCode(""); setCurriculumName("");
               setEffectiveFrom(new Date().toISOString().slice(0, 10));
-              setEffectiveTo("");
+              setEffectiveTo(""); setEditingCurriculumId("");
             }}
           >
             초기화
@@ -143,7 +148,7 @@ export default function AdminAcademics() {
 
   const { clearDraft: clearRequirementDraft } = useFormDraft(
     "admin/academics/requirement",
-    { requirementCode, requirementName, requirementType, requirementOperator, requiredValue, requirementUnit },
+    { requirementCode, requirementName, requirementType, requirementOperator, requiredValue, requirementUnit, editingRequirementId },
     (draft) => {
       if (draft.requirementCode) setRequirementCode(draft.requirementCode);
       if (draft.requirementName) setRequirementName(draft.requirementName);
@@ -151,6 +156,7 @@ export default function AdminAcademics() {
       if (draft.requirementOperator) setRequirementOperator(draft.requirementOperator);
       if (draft.requiredValue) setRequiredValue(draft.requiredValue);
       if (draft.requirementUnit) setRequirementUnit(draft.requirementUnit);
+      if (draft.editingRequirementId) setEditingRequirementId(draft.editingRequirementId);
     },
     (clear) => {
       toast({
@@ -163,6 +169,7 @@ export default function AdminAcademics() {
               setRequirementCode(""); setRequirementName("");
               setRequirementType("TOTAL_CREDITS"); setRequirementOperator("GTE");
               setRequiredValue("3"); setRequirementUnit("학점");
+              setEditingRequirementId("");
             }}
           >
             초기화
