@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "../../components/SectionHeader";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 function useCourses() {
   return useQuery({
@@ -69,11 +70,7 @@ export default function Curriculum() {
         </div>
 
         {courses.isLoading && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              교육과정을 불러오는 중입니다.
-            </CardContent>
-          </Card>
+          <LoadingCard message="교육과정을 불러오는 중입니다." />
         )}
 
         {courses.isError && (

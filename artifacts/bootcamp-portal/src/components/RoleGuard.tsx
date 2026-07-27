@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export function withRoleGuard(
   Component: ComponentType,
@@ -14,8 +15,8 @@ export function withRoleGuard(
 
     if (isLoading) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-muted/30">
-          <p className="text-sm text-muted-foreground">세션 확인 중입니다…</p>
+        <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+          <LoadingCard message="세션 확인 중입니다…" className="w-full max-w-sm" />
         </div>
       );
     }

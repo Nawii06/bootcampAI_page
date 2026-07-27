@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "../../components/SectionHeader";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function Resources() {
   const resources = useQuery({
@@ -46,11 +47,7 @@ export default function Resources() {
         </div>
 
         {resources.isLoading && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              공개 자료를 불러오는 중입니다.
-            </CardContent>
-          </Card>
+          <LoadingCard message="공개 자료를 불러오는 중입니다." />
         )}
 
         {resources.isError && (

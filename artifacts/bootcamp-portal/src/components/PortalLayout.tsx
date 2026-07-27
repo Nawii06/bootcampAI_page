@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
+import { LoadingCard } from "@/components/LoadingCard";
 
 declare const __FAKE_DATA_SET__: string | null;
 
@@ -69,7 +70,11 @@ export function PortalLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
   const [location] = useLocation();
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">세션 확인 중입니다.</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+        <LoadingCard message="세션 확인 중입니다…" className="w-full max-w-sm" />
+      </div>
+    );
   }
   if (!user) {
     const redirectParam = encodeURIComponent(location);

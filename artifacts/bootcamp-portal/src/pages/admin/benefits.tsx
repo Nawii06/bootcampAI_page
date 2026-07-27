@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -194,7 +195,7 @@ export default function AdminBenefits() {
           );
         })}
       </div>
-      {operations.isLoading && <p className="text-sm text-muted-foreground">수혜업무를 불러오는 중입니다.</p>}
+      {operations.isLoading && <LoadingCard message="수혜업무를 불러오는 중입니다." />}
       {operations.isError && (
         <ErrorCard
           message={operations.error?.message}

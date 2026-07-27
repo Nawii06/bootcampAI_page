@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 interface ContentItem {
   id: string; contentType: string; title: string; slug: string; status: string;
@@ -135,7 +136,7 @@ export default function AdminContent() {
             </div>
             {historyContentId === item.id && (
               <div className="mt-3 border-t pt-3 text-sm">
-                {versions.isLoading && <p className="text-muted-foreground">버전 이력을 불러오는 중입니다.</p>}
+                {versions.isLoading && <LoadingCard message="버전 이력을 불러오는 중입니다." className="mt-2" />}
                 {(versions.data?.data ?? []).map((version) => (
                   <p key={version.id}>
                     v{version.version} · {version.changeSummary} · {new Date(version.createdAt).toLocaleString("ko-KR")}

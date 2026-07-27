@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
 import {
   Select,
@@ -352,9 +353,7 @@ export default function PartnerEmployment() {
                 </div>
 
                 {candidates.isLoading && (
-                  <p className="text-sm text-muted-foreground">
-                    포트폴리오 목록 불러오는 중…
-                  </p>
+                  <LoadingCard message="포트폴리오 목록을 불러오는 중입니다." />
                 )}
                 {candidates.isError && (
                   <p className="text-sm text-destructive">
@@ -550,11 +549,7 @@ export default function PartnerEmployment() {
         {/* Records list */}
         <div className="space-y-3">
           {isLoading && (
-            <Card>
-              <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                데이터를 불러오는 중입니다…
-              </CardContent>
-            </Card>
+            <LoadingCard message="데이터를 불러오는 중입니다." />
           )}
 
           {!isLoading && isError && (

@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "../../contexts/AuthContext";
 import type { ApplicationStatus } from "../../types";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -129,7 +130,7 @@ export default function StudentStatus() {
         />
 
         {employmentLinks.isLoading && (
-          <p className="text-sm text-muted-foreground">불러오는 중…</p>
+          <LoadingCard message="채용·연계 이력을 불러오는 중입니다." />
         )}
 
         {employmentLinks.isError && (
