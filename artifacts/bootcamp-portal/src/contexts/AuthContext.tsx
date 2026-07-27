@@ -87,10 +87,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const clockOffsetMsRef = useRef<number>(0);
   /**
-   * Guards the clock-skew toast so it fires at most once per page load.
-   * Reset to false on explicit logout so a fresh login can re-trigger it.
+   * Offset (ms) recorded at the moment the last clock-skew warning fired,
+   * or null when no warning has fired yet (or after the "synced" reset).
+   * Hysteresis: re-warn only when the current offset differs from this value
+   * by more than SKEW_REARM_DELTA_MS, so gradual drift past the threshold
+   * triggers a new nudge without spamming on every refresh.
    */
-  const skewWarnedRef = useRef<boolean>(false);
+  const lastWarnedOffsetRef = useRef<number | null>(null);
+  /**
+   * Guards the one-time "clock is back in sync" confirmation so it only
+   * shows once after a warning, when skew drops back below the threshold.
+   */
+  const syncConfirmedRef = useRef<boolean>(false);
   /**
    * Timestamp (Date.now()) set at the *start* of each refreshSession() call.
    * Used to debounce rapid `visibilitychange` events (e.g. fast alt-tab)
@@ -193,20 +201,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           new Date(session.serverNow).getTime() - clientNowBeforeRequest;
         clockOffsetMsRef.current = offset;
 
-        // Warn once per page load when skew exceeds 1 minute so users
-        // understand why session timers may feel off.
+        // Warn when skew exceeds 1 minute so users understand why session
+        // timers may feel off.  Hysteresis: after the first warning, re-warn
+        // only when the offset has changed by more than 2 minutes since the
+        // last warned value — this catches gradual drift over a long-lived
+        // session without spamming on every refresh.
         const SKEW_WARN_THRESHOLD_MS = 60_000;
-        if (!skewWarnedRef.current && Math.abs(offset) > SKEW_WARN_THRESHOLD_MS) {
-          skewWarnedRef.current = true;
-          const minutes = Math.round(Math.abs(offset) / 60_000);
-          // offset > 0 → server is ahead → client clock is slow/late
-          // offset < 0 → server is behind → client clock is fast/early
-          const direction = offset > 0 ? "늦습니다" : "앞서 있습니다";
+        const SKEW_REARM_DELTA_MS = 120_000;
+        if (Math.abs(offset) > SKEW_WARN_THRESHOLD_MS) {
+          const lastWarned = lastWarnedOffsetRef.current;
+          const shouldWarn =
+            lastWarned === null ||
+            Math.abs(offset - lastWarned) > SKEW_REARM_DELTA_MS;
+          if (shouldWarn) {
+            lastWarnedOffsetRef.current = offset;
+            syncConfirmedRef.current = false;
+            const minutes = Math.round(Math.abs(offset) / 60_000);
+            // offset > 0 → server is ahead → client clock is slow/late
+            // offset < 0 → server is behind → client clock is fast/early
+            const direction = offset > 0 ? "늦습니다" : "앞서 있습니다";
+            toast({
+              title: "기기 시계 동기화 문제",
+              description: `귀하의 기기 시계가 서버 시계보다 약 ${minutes}분 ${direction}. 기기 시계를 동기화하면 세션 오류를 방지할 수 있습니다.`,
+              variant: "destructive",
+              duration: 12_000,
+            });
+          }
+        } else if (
+          lastWarnedOffsetRef.current !== null &&
+          !syncConfirmedRef.current
+        ) {
+          // Skew dropped back below the threshold after a warning — confirm
+          // once that the clock is in sync, and clear the warned offset so a
+          // future drift past the threshold warns again immediately.
+          syncConfirmedRef.current = true;
+          lastWarnedOffsetRef.current = null;
           toast({
-            title: "기기 시계 동기화 문제",
-            description: `귀하의 기기 시계가 서버 시계보다 약 ${minutes}분 ${direction}. 기기 시계를 동기화하면 세션 오류를 방지할 수 있습니다.`,
-            variant: "destructive",
-            duration: 12_000,
+            title: "기기 시계가 동기화되었습니다",
+            description: "세션 타이머가 정상적으로 작동합니다.",
+            duration: 8_000,
           });
         }
       }
