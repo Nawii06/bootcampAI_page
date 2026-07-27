@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "wouter";
-import { contractFetch, customFetch } from "@workspace/api-client-react";
+import { contractFetch, customFetch, setUnauthorizedHandler } from "@workspace/api-client-react";
 import { SessionResponseSchema, type SessionResponse } from "@workspace/api-zod";
 import type { Role, User } from "../types";
 
@@ -73,6 +73,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshSession()
       .finally(() => setIsLoading(false));
   }, []);
+
+  // Redirect to /login with ?redirect= when any API call receives 401,
+  // so the user returns to the exact page they were on after re-logging in.
+  useEffect(() => {
+    setUnauthorizedHandler((url) => {
+      // The session-check endpoint returns 401 when no session exists — that
+      // is handled by refreshSession() itself, so skip it here to avoid a
+      // redirect loop on initial load.
+      if (url.includes("/api/v1/session")) return;
+
+      const currentPath =
+        window.location.pathname + window.location.search + window.location.hash;
+
+      // Don't redirect if already on the login page.
+      if (currentPath.startsWith("/login")) return;
+
+      setUser(null);
+      setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    });
+
+    return () => setUnauthorizedHandler(null);
+  }, [setLocation]);
 
   async function loginWithFakeIdentity(identityId: string) {
     await customFetch("/api/v1/fake-auth/login", {
