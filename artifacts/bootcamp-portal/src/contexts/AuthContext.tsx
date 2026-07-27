@@ -54,9 +54,7 @@ function toPortalUser(session: SessionResponse["user"]): User {
   };
 }
 
-// Total idle time before auto-logout (30 minutes)
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-// Show warning this many ms before the timeout fires (5 minutes)
+// Show warning this many ms before the server expiry (5 minutes)
 const WARN_BEFORE_MS = 5 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -75,27 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRef = useRef<User | null>(null);
   userRef.current = user;
-
-  async function refreshSession() {
-    try {
-      const session = await contractFetch(SessionResponseSchema, "/api/v1/session", {
-        credentials: "include",
-      });
-      const nextUser = toPortalUser(session.user);
-      setUser(nextUser);
-      return nextUser;
-    } catch {
-      setUser(null);
-      return null;
-    }
-  }
-
-  useEffect(() => {
-    refreshSession()
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  // ─── Inactivity timer ──────────────────────────────────────────────────────
+  /**
+   * Latest server-provided expiry timestamp.  Written before `setUser` so the
+   * arm-on-login effect can read it once the state commit is visible.
+   */
+  const expiresAtRef = useRef<string | null>(null);
 
   const forceLogout = useCallback(() => {
     if (!userRef.current) return; // already logged out
@@ -113,76 +95,110 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 1500);
   }, [setLocation]);
 
-  const resetIdleTimer = useCallback(() => {
-    // Clear any pending timers
-    if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
-    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+  // ─── Server-expiry timer ───────────────────────────────────────────────────
 
-    // Don't arm timers when there is no active session
-    if (!userRef.current) return;
+  /**
+   * Schedule the warning dialog and auto-logout based on the ISO 8601
+   * `expiresAt` value returned by the server.  May be called either from a
+   * useEffect (after user state commits) or directly when the user is already
+   * authenticated (e.g. session extend).
+   */
+  const scheduleFromExpiry = useCallback(
+    (expiresAt: string) => {
+      if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      setWarningVisible(false);
 
-    setWarningVisible(false);
+      const msUntilExpiry = new Date(expiresAt).getTime() - Date.now();
 
-    // Schedule the warning WARN_BEFORE_MS before the logout
-    warnTimerRef.current = setTimeout(() => {
-      if (!userRef.current) return;
-      setWarningSecondsLeft(Math.round(WARN_BEFORE_MS / 1000));
-      setWarningVisible(true);
-    }, IDLE_TIMEOUT_MS - WARN_BEFORE_MS);
+      if (msUntilExpiry <= 0) {
+        forceLogout();
+        return;
+      }
 
-    // Schedule the actual logout
-    logoutTimerRef.current = setTimeout(() => {
-      forceLogout();
-    }, IDLE_TIMEOUT_MS);
-  }, [forceLogout]);
+      const msUntilWarn = msUntilExpiry - WARN_BEFORE_MS;
 
-  // Arm timers when the user logs in; disarm when they log out
+      if (msUntilWarn > 0) {
+        warnTimerRef.current = setTimeout(() => {
+          if (!userRef.current) return;
+          // Recompute remaining seconds at the moment the warning fires
+          const remaining = Math.round(
+            (new Date(expiresAt).getTime() - Date.now()) / 1000,
+          );
+          setWarningSecondsLeft(Math.max(0, remaining));
+          setWarningVisible(true);
+        }, msUntilWarn);
+      } else {
+        // Already inside the warning window — show immediately
+        const remaining = Math.round(msUntilExpiry / 1000);
+        setWarningSecondsLeft(Math.max(0, remaining));
+        setWarningVisible(true);
+      }
+
+      logoutTimerRef.current = setTimeout(() => {
+        forceLogout();
+      }, msUntilExpiry);
+    },
+    [forceLogout],
+  );
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const session = await contractFetch(SessionResponseSchema, "/api/v1/session", {
+        credentials: "include",
+      });
+      const nextUser = toPortalUser(session.user);
+      // Store expiresAt BEFORE setUser so it is ready when the arm-on-login
+      // effect fires after React commits the new user state.
+      if (session.expiresAt) {
+        expiresAtRef.current = session.expiresAt;
+      }
+      setUser(nextUser);
+      return nextUser;
+    } catch {
+      setUser(null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
-    if (user) {
-      resetIdleTimer();
-    } else {
+    refreshSession().finally(() => setIsLoading(false));
+  }, [refreshSession]);
+
+  // ─── Arm / disarm timers in response to committed user state ──────────────
+  // This effect runs after React has flushed the setUser() call, so userRef
+  // is guaranteed to reflect the new value by the time scheduleFromExpiry runs.
+  useEffect(() => {
+    if (user && expiresAtRef.current) {
+      scheduleFromExpiry(expiresAtRef.current);
+    } else if (!user) {
       if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       setWarningVisible(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!user]); // only re-run when logged-in status flips
-
-  // Reset the timer on user activity
-  useEffect(() => {
-    if (!user) return;
-
-    const EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
-    let ticking = false;
-
-    function onActivity() {
-      if (ticking) return;
-      ticking = true;
-      // Throttle to once per second to avoid hammering
-      setTimeout(() => {
-        ticking = false;
-        resetIdleTimer();
-      }, 1000);
-    }
-
-    EVENTS.forEach((ev) => window.addEventListener(ev, onActivity, { passive: true }));
-    return () => EVENTS.forEach((ev) => window.removeEventListener(ev, onActivity));
-  }, [user, resetIdleTimer]);
+  }, [user, scheduleFromExpiry]);
 
   // ─── Session-expiry warning handlers ──────────────────────────────────────
 
   async function handleExtendSession() {
+    setWarningVisible(false);
     try {
-      await customFetch("/api/v1/session/extend", {
+      const data = await customFetch("/api/v1/session/extend", {
         method: "POST",
         responseType: "json",
         credentials: "include",
-      });
+      }) as { ok: boolean; expiresAt?: string };
+      // Use the fresh expiresAt from the extend response if available,
+      // otherwise fall back to a full session refresh.
+      if (data?.expiresAt) {
+        expiresAtRef.current = data.expiresAt;
+        scheduleFromExpiry(data.expiresAt);
+      } else {
+        await refreshSession();
+      }
     } catch {
       // If extending fails the session has already expired; forceLogout will fire
     }
-    setWarningVisible(false);
-    resetIdleTimer();
   }
 
   function handleDismissWarning() {
@@ -257,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       },
     }),
-    [isLoading, setLocation, user],
+    [isLoading, refreshSession, setLocation, user],
   );
 
   return (

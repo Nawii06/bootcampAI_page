@@ -20,6 +20,8 @@ export const SessionResponseSchema = z.object({
     isFakeSession: z.boolean().optional(),
     fakeDataSetId: z.string().optional(),
   }),
+  /** ISO 8601 timestamp of when the server-side session will expire */
+  expiresAt: z.string().datetime().optional(),
 });
 
 export const FakeIdentitySummarySchema = z.object({
