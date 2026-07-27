@@ -245,6 +245,23 @@ export const CompanyParticipationStudentLinkSchema = z.object({
   portfolioIds: z.array(z.string().uuid()),
 });
 export type CompanyParticipationStudentLink = z.infer<typeof CompanyParticipationStudentLinkSchema>;
+
+export const StudentEmploymentLinkResponseSchema = z.object({
+  id: z.string().uuid(),
+  companyName: z.string(),
+  companyType: z.string(),
+  participationType: z.string(),
+  title: z.string(),
+  startsAt: z.string().nullable().optional(),
+  endsAt: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+
+export const StudentEmploymentLinksResponseSchema = z.object({
+  data: z.array(StudentEmploymentLinkResponseSchema),
+});
+
+export type StudentEmploymentLinkResponse = z.infer<typeof StudentEmploymentLinkResponseSchema>;
 export type CompanyContactInput = z.infer<typeof CompanyContactInputSchema>;
 export type CompanyExpertInput = z.infer<typeof CompanyExpertInputSchema>;
 export type CompanyCommitmentInput = z.infer<

@@ -35,6 +35,8 @@ import {
   findCompanyForUser,
   listCompanies,
   listCompanyParticipations,
+  listParticipationsForPortfolio,
+  listStudentPortfolios,
   listConsentedProjectPortfolios,
   listPublicCompanies,
   listCompanyApplications,
@@ -95,6 +97,19 @@ router.get("/v1/company-applications", requireAuth, async (req, res, next) => {
     });
   } catch (error) { next(error); }
 });
+
+router.get(
+  "/v1/my-employment-links",
+  requireAuth,
+  requireRoles("STUDENT"),
+  async (req, res, next) => {
+    try {
+      const portfolios = await listStudentPortfolios(req.auth!.id);
+      const portfolioIds = portfolios.map((p) => p.id);
+      res.json({ data: await listParticipationsForPortfolio(portfolioIds) });
+    } catch (error) { next(error); }
+  },
+);
 
 router.get("/v1/public/companies", async (_req, res, next) => {
   try {

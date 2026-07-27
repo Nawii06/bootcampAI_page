@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   companies,
@@ -118,6 +118,56 @@ export function listCompanyParticipations(
             )
           : undefined,
         isNull(companyParticipations.deletedAt),
+      ),
+    )
+    .orderBy(asc(companyParticipations.createdAt));
+}
+
+/** All PROJECT-type experiential records for a given student (not soft-deleted). */
+export function listStudentPortfolios(studentId: string) {
+  return db
+    .select({ id: experientialRecords.id })
+    .from(experientialRecords)
+    .where(
+      and(
+        eq(experientialRecords.studentId, studentId),
+        eq(experientialRecords.type, "PROJECT"),
+        isNull(experientialRecords.deletedAt),
+      ),
+    );
+}
+
+/**
+ * Return all non-deleted company participations whose details.linkedPortfolioIds
+ * contains at least one of the supplied portfolio IDs, joined with company info.
+ */
+export async function listParticipationsForPortfolio(portfolioIds: string[]) {
+  if (portfolioIds.length === 0) return [];
+  return db
+    .select({
+      id: companyParticipations.id,
+      companyName: companies.name,
+      companyType: companies.companyType,
+      participationType: companyParticipations.participationType,
+      title: companyParticipations.title,
+      startsAt: companyParticipations.startsAt,
+      endsAt: companyParticipations.endsAt,
+      createdAt: companyParticipations.createdAt,
+    })
+    .from(companyParticipations)
+    .innerJoin(companies, eq(companies.id, companyParticipations.companyId))
+    .where(
+      and(
+        isNull(companyParticipations.deletedAt),
+        isNull(companies.deletedAt),
+        // Use JSONB @> (contains) operator: checks if linkedPortfolioIds array
+        // contains any of the student's portfolio IDs.
+        or(
+          ...portfolioIds.map(
+            (pid) =>
+              sql`${companyParticipations.details}->'linkedPortfolioIds' @> ${JSON.stringify([pid])}::jsonb`,
+          ),
+        ),
       ),
     )
     .orderBy(asc(companyParticipations.createdAt));
