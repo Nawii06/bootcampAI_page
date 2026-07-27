@@ -67,9 +67,16 @@ export default function AdminAcademics() {
       if (draft.credits) setCredits(draft.credits);
       if (draft.editingCourseId) setEditingCourseId(draft.editingCourseId);
     },
-    (clear) => {
+    (clear, info) => {
+      const draftAgeDays = Math.floor(info.draftAgeMs / (24 * 60 * 60 * 1000));
       toast({
         title: "이전에 작성 중이던 내용을 불러왔습니다",
+        ...(info.isNearExpiry
+          ? {
+              description: `${draftAgeDays}일 전에 저장된 임시저장본입니다. 24시간 내에 만료되니 지금 제출하거나 내용을 수정해 다시 저장해 주세요.`,
+              className: "border-yellow-500 bg-yellow-50 text-yellow-900",
+            }
+          : {}),
         action: (
           <ToastAction
             altText="초기화"
@@ -97,9 +104,16 @@ export default function AdminAcademics() {
       if (draft.instructorName) setInstructorName(draft.instructorName);
       if (draft.editingOfferingId) setEditingOfferingId(draft.editingOfferingId);
     },
-    (clear) => {
+    (clear, info) => {
+      const draftAgeDays = Math.floor(info.draftAgeMs / (24 * 60 * 60 * 1000));
       toast({
         title: "이전에 작성 중이던 내용을 불러왔습니다",
+        ...(info.isNearExpiry
+          ? {
+              description: `${draftAgeDays}일 전에 저장된 임시저장본입니다. 24시간 내에 만료되니 지금 제출하거나 내용을 수정해 다시 저장해 주세요.`,
+              className: "border-yellow-500 bg-yellow-50 text-yellow-900",
+            }
+          : {}),
         action: (
           <ToastAction
             altText="초기화"
@@ -126,9 +140,16 @@ export default function AdminAcademics() {
       if (draft.effectiveTo) setEffectiveTo(draft.effectiveTo);
       if (draft.editingCurriculumId) setEditingCurriculumId(draft.editingCurriculumId);
     },
-    (clear) => {
+    (clear, info) => {
+      const draftAgeDays = Math.floor(info.draftAgeMs / (24 * 60 * 60 * 1000));
       toast({
         title: "이전에 작성 중이던 내용을 불러왔습니다",
+        ...(info.isNearExpiry
+          ? {
+              description: `${draftAgeDays}일 전에 저장된 임시저장본입니다. 24시간 내에 만료되니 지금 제출하거나 내용을 수정해 다시 저장해 주세요.`,
+              className: "border-yellow-500 bg-yellow-50 text-yellow-900",
+            }
+          : {}),
         action: (
           <ToastAction
             altText="초기화"
@@ -158,9 +179,16 @@ export default function AdminAcademics() {
       if (draft.requirementUnit) setRequirementUnit(draft.requirementUnit);
       if (draft.editingRequirementId) setEditingRequirementId(draft.editingRequirementId);
     },
-    (clear) => {
+    (clear, info) => {
+      const draftAgeDays = Math.floor(info.draftAgeMs / (24 * 60 * 60 * 1000));
       toast({
         title: "이전에 작성 중이던 내용을 불러왔습니다",
+        ...(info.isNearExpiry
+          ? {
+              description: `${draftAgeDays}일 전에 저장된 임시저장본입니다. 24시간 내에 만료되니 지금 제출하거나 내용을 수정해 다시 저장해 주세요.`,
+              className: "border-yellow-500 bg-yellow-50 text-yellow-900",
+            }
+          : {}),
         action: (
           <ToastAction
             altText="초기화"
