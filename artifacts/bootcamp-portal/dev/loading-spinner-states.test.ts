@@ -1076,8 +1076,12 @@ test(
       auth: AUTH_ADMIN,
       queryData: [
         {
+          // Infinite query — cache shape is { pages, pageParams }.
           queryKey: ["audit-logs", auditFiltersKey()],
-          data: { data: [], meta: { page: 1, pageSize: 100, total: 0 } },
+          data: {
+            pages: [{ page: 1, items: [], total: 0, hasMore: false }],
+            pageParams: [1],
+          },
         },
         {
           // Infinite query — cache shape is { pages, pageParams }.

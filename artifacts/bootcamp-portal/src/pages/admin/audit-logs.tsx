@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
 import {
   AuditLogListResponseSchema,
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 
 const SHARE_TOKEN_ACTIONS = [
   "GENERATE_SHARE_TOKEN",
@@ -25,6 +25,7 @@ const SHARE_TOKEN_ACTION_LABELS: Record<string, string> = {
 
 const SHARE_TOKEN_PAGE_SIZE = 100;
 
+const MAIN_LOG_PAGE_SIZE = 100;
 function shareTokenQueryString(recordId: string, page: number) {
   const params = new URLSearchParams({
     resourceType: "EXPERIENTIAL_RECORD",
@@ -61,27 +62,52 @@ export default function AdminAuditLogs() {
     resourceType: "",
   }));
 
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams({
-      startAt: filters.startAt,
-      endAt: filters.endAt,
-      page: "1",
-      pageSize: "100",
-    });
-    if (filters.action) params.set("action", filters.action);
-    if (filters.resourceType) params.set("resourceType", filters.resourceType);
-    return params.toString();
-  }, [filters]);
-
-  const logs = useQuery({
+  const logs = useInfiniteQuery({
     queryKey: ["audit-logs", filters],
-    queryFn: () =>
-      contractFetch(
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({
+        startAt: filters.startAt,
+        endAt: filters.endAt,
+        page: String(pageParam),
+        pageSize: String(MAIN_LOG_PAGE_SIZE),
+      });
+      if (filters.action) params.set("action", filters.action);
+      if (filters.resourceType) {
+        params.set("resourceType", filters.resourceType);
+      }
+      const response = await contractFetch(
         AuditLogListResponseSchema,
-        `/api/v1/audit-logs?${queryString}`,
+        `/api/v1/audit-logs?${params.toString()}`,
         { credentials: "include" },
-      ),
+      );
+      return {
+        page: pageParam,
+        items: response.data,
+        total: response.meta.total,
+        hasMore:
+          response.meta.page * response.meta.pageSize < response.meta.total,
+      };
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.page + 1 : undefined,
   });
+
+  const logRows = useMemo(() => {
+    const pages = logs.data?.pages ?? [];
+    const seen = new Set<string>();
+    const merged: AuditLogItem[] = [];
+    for (const page of pages) {
+      for (const item of page.items) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        merged.push(item);
+      }
+    }
+    return merged;
+  }, [logs.data]);
+
+  const logsTotal = logs.data?.pages[0]?.total ?? 0;
 
   const exportLogs = useMutation({
     mutationFn: () =>
@@ -245,9 +271,20 @@ export default function AdminAuditLogs() {
         <LoadingCard message="감사로그를 불러오는 중입니다." />
       ) : (
         <>
-          <DataTable data={logs.data?.data ?? []} columns={columns} />
+          <DataTable data={logRows} columns={columns} />
+          {logs.hasNextPage && (
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                disabled={logs.isFetchingNextPage}
+                onClick={() => logs.fetchNextPage()}
+              >
+                {logs.isFetchingNextPage ? "불러오는 중..." : "더 보기"}
+              </Button>
+            </div>
+          )}
           <p className="mt-3 text-xs text-muted-foreground">
-            총 {logs.data?.meta.total ?? 0}건 · 개인정보성 필드와 접속 IP는 서버에서 마스킹됩니다.
+            총 {logsTotal}건 중 {logRows.length}건 표시 · 개인정보성 필드와 접속 IP는 서버에서 마스킹됩니다.
           </p>
         </>
       )}
