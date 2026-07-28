@@ -27,6 +27,7 @@ import {
 } from "./page-test-utils.ts";
 import StudentPortfolio from "../src/pages/student/portfolio.tsx";
 import { Toaster } from "../src/components/ui/toaster.tsx";
+import { resetToastStore } from "../src/hooks/use-toast.ts";
 
 // ─── Fixture data (query keys copied verbatim from portfolio.tsx) ────────────
 
@@ -164,6 +165,9 @@ function withCopyTest(
     } finally {
       cleanup();
       removeRecordingFetch();
+      // The module-global toast store can hold several toasts; clear it so
+      // toasts from one test cannot leak into the next.
+      resetToastStore();
     }
   };
 }

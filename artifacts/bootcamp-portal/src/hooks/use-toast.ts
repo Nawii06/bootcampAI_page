@@ -5,7 +5,10 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
+// admin/academics has four independent draft-recovery forms that can each
+// dispatch a restore toast on the same mount. The limit must be at least 4 so
+// no section's 초기화 action is silently dropped (see dev/draft-reset-action.test.ts).
+const TOAST_LIMIT = 4
 const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
@@ -188,4 +191,14 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+/**
+ * Test-only helper: clear the module-global toast store so toasts from one
+ * test cannot leak into the next (the store outlives React unmounts).
+ */
+function resetToastStore() {
+  toastTimeouts.forEach((timeout) => clearTimeout(timeout))
+  toastTimeouts.clear()
+  dispatch({ type: "REMOVE_TOAST" })
+}
+
+export { useToast, toast, resetToastStore }

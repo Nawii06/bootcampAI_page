@@ -562,3 +562,145 @@ test(
     assert.equal(unitInput.value, "학점", "unit should return to its default");
   }),
 );
+
+// ─── admin/academics — ALL four sections seeded simultaneously ────────────────
+// The toast store's TOAST_LIMIT must be ≥ 4 so every section's restore toast
+// (and its 초기화 action) survives when all four drafts exist at once, and
+// clicking one section's 초기화 must leave the other sections' drafts and
+// fields untouched.
+test(
+  "admin/academics — four simultaneous drafts each stay recoverable and 초기화 is section-scoped",
+  withCleanup(async () => {
+    const KEYS = {
+      course: "form-draft:admin/academics/course",
+      offering: "form-draft:admin/academics/offering",
+      curriculum: "form-draft:admin/academics/curriculum",
+      requirement: "form-draft:admin/academics/requirement",
+    };
+    seedDraft("admin/academics/course", {
+      courseCode: "AI-999",
+      courseName: "임시 저장된 교과목",
+      courseEnglishName: "",
+      courseDescription: "",
+      departmentCode: "AI_BOOTCAMP",
+      sourceSystem: "",
+      externalId: "",
+      credits: "5",
+      editingCourseId: "",
+    });
+    seedDraft("admin/academics/offering", {
+      sectionCode: "03",
+      capacity: "45",
+      instructorName: "임시 저장된 교수",
+      editingOfferingId: "",
+    });
+    seedDraft("admin/academics/curriculum", {
+      curriculumCode: "CUR-임시",
+      curriculumName: "임시 저장된 교육과정",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: "2026-12-31",
+      editingCurriculumId: "",
+    });
+    seedDraft("admin/academics/requirement", {
+      requirementCode: "REQ-임시",
+      requirementName: "임시 저장된 요건",
+      requirementType: "PROJECT",
+      requirementOperator: "LTE",
+      requiredValue: "9",
+      requirementUnit: "시간",
+      editingRequirementId: "",
+    });
+
+    const { container } = renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+
+    // Every restore toast must survive the toast limit.
+    const restoreToasts = captured.filter((t) => t.title === RESTORED_TITLE);
+    assert.equal(
+      restoreToasts.length,
+      4,
+      `all four restore toasts must be visible (TOAST_LIMIT too low?); got ${restoreToasts.length}`,
+    );
+    lastSeenToastId = captured[0]?.id ?? lastSeenToastId;
+
+    // The hooks mount in source order (course, offering, curriculum,
+    // requirement) and ADD_TOAST prepends, so the store is newest-first.
+    const [requirementToast, curriculumToast, offeringToast, courseToast] =
+      restoreToasts;
+
+    // ── Every seeded draft is restored into its fields ──
+    const q = <T extends HTMLElement>(sel: string) =>
+      container.querySelector<T>(sel);
+    const courseCodeInput = q<HTMLInputElement>('input[placeholder="교과목 코드"]');
+    const courseNameInput = q<HTMLInputElement>('input[placeholder="교과목명"]');
+    const sectionInput = q<HTMLInputElement>('input[placeholder="분반"]');
+    const capacityInput = q<HTMLInputElement>('input[placeholder="정원"]');
+    const instructorInput = q<HTMLInputElement>('input[placeholder="담당교수"]');
+    const curCodeInput = q<HTMLInputElement>('input[placeholder="과정 코드"]');
+    const curNameInput = q<HTMLInputElement>('input[placeholder="교육과정명"]');
+    const reqCodeInput = q<HTMLInputElement>('input[placeholder="요건 코드"]');
+    const reqNameInput = q<HTMLInputElement>('input[placeholder="요건명"]');
+    assert.ok(
+      courseCodeInput && courseNameInput && sectionInput && capacityInput &&
+        instructorInput && curCodeInput && curNameInput && reqCodeInput &&
+        reqNameInput,
+      "all section inputs should render",
+    );
+    assert.equal(courseCodeInput.value, "AI-999");
+    assert.equal(courseNameInput.value, "임시 저장된 교과목");
+    assert.equal(sectionInput.value, "03");
+    assert.equal(capacityInput.value, "45");
+    assert.equal(instructorInput.value, "임시 저장된 교수");
+    assert.equal(curCodeInput.value, "CUR-임시");
+    assert.equal(curNameInput.value, "임시 저장된 교육과정");
+    assert.equal(reqCodeInput.value, "REQ-임시");
+    assert.equal(reqNameInput.value, "임시 저장된 요건");
+
+    // All four drafts re-persist after the debounce (pre-condition).
+    await sleep(DEBOUNCE_WAIT_MS);
+    for (const key of Object.values(KEYS)) {
+      assert.ok(localStorage.getItem(key), `${key} should be re-saved after restore`);
+    }
+
+    // ── 초기화 on the OFFERING section only touches the offering section ──
+    clickReset(offeringToast);
+    await sleep(DEBOUNCE_WAIT_MS);
+    assert.equal(localStorage.getItem(KEYS.offering), null, "offering draft removed");
+    assert.equal(sectionInput.value, "01", "offering section reset");
+    assert.equal(capacityInput.value, "30", "offering capacity reset");
+    assert.equal(instructorInput.value, "", "offering instructor reset");
+    // Other sections' drafts and fields are untouched.
+    assert.ok(localStorage.getItem(KEYS.course), "course draft untouched");
+    assert.ok(localStorage.getItem(KEYS.curriculum), "curriculum draft untouched");
+    assert.ok(localStorage.getItem(KEYS.requirement), "requirement draft untouched");
+    assert.equal(courseCodeInput.value, "AI-999", "course fields untouched");
+    assert.equal(curCodeInput.value, "CUR-임시", "curriculum fields untouched");
+    assert.equal(reqCodeInput.value, "REQ-임시", "requirement fields untouched");
+
+    // ── 초기화 on CURRICULUM only touches the curriculum section ──
+    clickReset(curriculumToast);
+    await sleep(DEBOUNCE_WAIT_MS);
+    assert.equal(localStorage.getItem(KEYS.curriculum), null, "curriculum draft removed");
+    assert.equal(curCodeInput.value, "", "curriculum code reset");
+    assert.equal(curNameInput.value, "", "curriculum name reset");
+    assert.ok(localStorage.getItem(KEYS.course), "course draft still untouched");
+    assert.ok(localStorage.getItem(KEYS.requirement), "requirement draft still untouched");
+    assert.equal(courseCodeInput.value, "AI-999");
+    assert.equal(reqNameInput.value, "임시 저장된 요건");
+
+    // ── 초기화 on COURSE ──
+    clickReset(courseToast);
+    await sleep(DEBOUNCE_WAIT_MS);
+    assert.equal(localStorage.getItem(KEYS.course), null, "course draft removed");
+    assert.equal(courseCodeInput.value, "", "course code reset");
+    assert.equal(courseNameInput.value, "", "course name reset");
+    assert.ok(localStorage.getItem(KEYS.requirement), "requirement draft still untouched");
+    assert.equal(reqCodeInput.value, "REQ-임시");
+
+    // ── 초기화 on REQUIREMENT (last one) ──
+    clickReset(requirementToast);
+    await sleep(DEBOUNCE_WAIT_MS);
+    assert.equal(localStorage.getItem(KEYS.requirement), null, "requirement draft removed");
+    assert.equal(reqCodeInput.value, "", "requirement code reset");
+    assert.equal(reqNameInput.value, "", "requirement name reset");
+  }),
+);

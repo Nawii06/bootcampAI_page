@@ -28,6 +28,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthContext } from "../src/contexts/AuthContext.tsx";
 import StudentPortfolio from "../src/pages/student/portfolio.tsx";
 import { Toaster } from "../src/components/ui/toaster.tsx";
+import { resetToastStore } from "../src/hooks/use-toast.ts";
 
 // ─── One-time global setup (same as loading-spinner-states.test.ts) ─────────
 
@@ -228,6 +229,9 @@ function withRevokeTest(
     } finally {
       cleanup();
       removeRecordingFetch();
+      // The toast store is module-global and can hold several toasts at once;
+      // clear it so toasts from one test cannot leak into the next.
+      resetToastStore();
     }
   };
 }

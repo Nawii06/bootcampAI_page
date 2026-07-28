@@ -27,7 +27,7 @@ import {
   type AuthContextType,
 } from "../src/contexts/AuthContext.tsx";
 import AdminPartners from "../src/pages/admin/partners.tsx";
-import { useToast } from "../src/hooks/use-toast.ts";
+import { useToast, resetToastStore } from "../src/hooks/use-toast.ts";
 
 /**
  * Probe component that mirrors the toast store into plain DOM nodes so tests
@@ -198,6 +198,7 @@ test("DataTable — highlighted row shows ring classes, then fades after 3 s", (
     );
   } finally {
     cleanup();
+    resetToastStore();
     restoreTimers();
     mock.timers.reset();
   }
@@ -236,6 +237,7 @@ test("DataTable — highlight persists just before the 3 s delay elapses", () =>
     );
   } finally {
     cleanup();
+    resetToastStore();
     restoreTimers();
     mock.timers.reset();
   }
@@ -339,6 +341,7 @@ test("DataTable — highlight scrolls exactly once after loading finishes, not r
     );
   } finally {
     cleanup();
+    resetToastStore();
     restoreTimers();
     mock.timers.reset();
   }
@@ -398,6 +401,7 @@ test("DataTable — highlightId matching no row: no scroll, no highlight, toast 
     assert.equal(scrollCalls.length, 0, "still no scroll after refresh");
   } finally {
     cleanup();
+    resetToastStore();
   }
 });
 
@@ -421,6 +425,7 @@ test("DataTable — custom highlightMissingMessage is used for the toast", () =>
     assert.equal(descriptions[descriptions.length - 1].textContent, "해당 기업을 찾을 수 없습니다.");
   } finally {
     cleanup();
+    resetToastStore();
   }
 });
 
@@ -461,6 +466,7 @@ test("DataTable — highlight target hidden by filter: filter is cleared and row
     assert.equal(scrollCalls.length, 1, "row must be scrolled into view after filter reset");
   } finally {
     cleanup();
+    resetToastStore();
   }
 });
 
@@ -514,6 +520,7 @@ test("AdminPartners — ?highlight= query param is removed from the URL after mo
     assert.ok(screen.getByText("하이라이트 기업"));
   } finally {
     cleanup();
+    resetToastStore();
     qc.clear();
     window.history.replaceState(null, "", "/");
   }

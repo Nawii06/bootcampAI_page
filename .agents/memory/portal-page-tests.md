@@ -7,4 +7,5 @@ description: Conventions and environment quirks for loading/error-state page tes
 - **Why:** `mock.module()` is unavailable in the node:test + happy-dom runtime, so tests rely on AuthContext injection, fetch stubbing, and `setQueryData`.
 - happy-dom lacks `ResizeObserver`; Radix primitives (react-use-size) throw on mount. A no-op ResizeObserver shim is needed in test setup for pages using such components.
 - happy-dom also doesn't expose `NodeFilter` or `HTMLInputElement`/`HTMLSelectElement`/etc. as bare globals; Radix Dialog's focus scope needs them. Shim `NodeFilter` constants and copy the HTML element classes from `window` onto `globalThis` in the test file before rendering dialog-bearing pages.
+- The toast store (`use-toast.ts`) is module-global and survives React unmounts; with TOAST_LIMIT > 1 toasts leak between tests. Call the exported `resetToastStore()` in each test's cleanup when a test file mounts `<Toaster>` or probes the store.
 - **How to apply:** when adding page tests, follow `dev/TESTING.md`; error-state tests assert an ErrorCard message + "다시 시도" retry button via a rejecting fetch stub with retry: 0.
