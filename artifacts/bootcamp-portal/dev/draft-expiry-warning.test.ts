@@ -16,6 +16,10 @@
  *   • student/apply.tsx            (key: form-draft:/student/apply)
  *   • partner/employment.tsx       (key: form-draft:/partner/employment)
  *   • admin/academics.tsx (course) (key: form-draft:admin/academics/course)
+ *   • partner/project.tsx           (key: form-draft:/partner/project)
+ *   • admin/academics.tsx (offering)    (key: form-draft:admin/academics/offering)
+ *   • admin/academics.tsx (curriculum)  (key: form-draft:admin/academics/curriculum)
+ *   • admin/academics.tsx (requirement) (key: form-draft:admin/academics/requirement)
  *
  * Isolation strategy mirrors page-loading-states.test.ts:
  *   – AuthContext.Provider with a resolved mock session
@@ -40,6 +44,7 @@ import { useToast } from "../src/hooks/use-toast.ts";
 import StudentApply from "../src/pages/student/apply.tsx";
 import PartnerEmployment from "../src/pages/partner/employment.tsx";
 import AdminAcademics from "../src/pages/admin/academics.tsx";
+import PartnerProject from "../src/pages/partner/project.tsx";
 
 // ─── Globals needed outside a Vite bundle ────────────────────────────────────
 (globalThis as Record<string, unknown>).__FAKE_DATA_SET__ = null;
@@ -290,6 +295,116 @@ test(
   "admin/academics (course) — fresh draft shows the normal (non-yellow) toast",
   withCleanup(() => {
     seedDraft("admin/academics/course", COURSE_DRAFT, FRESH_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertFreshToast(getNewToast());
+  }),
+);
+
+// ─── partner/project ──────────────────────────────────────────────────────────
+const PROJECT_DRAFT = {
+  title: "임시 저장된 프로젝트 제안",
+  track: "railway",
+  problem: "임시 저장된 문제 정의",
+  dataTypes: "영상, 센서 로그",
+  outputs: "모델, 보고서",
+  mentorRole: "주간 멘토링",
+};
+
+test(
+  "partner/project — near-expiry draft shows the yellow warning toast",
+  withCleanup(() => {
+    seedDraft("/partner/project", PROJECT_DRAFT, NEAR_EXPIRY_AGE_MS);
+    renderPage(createElement(PartnerProject), PARTNER_AUTH);
+    assertNearExpiryToast(getNewToast());
+  }),
+);
+
+test(
+  "partner/project — fresh draft shows the normal (non-yellow) toast",
+  withCleanup(() => {
+    seedDraft("/partner/project", PROJECT_DRAFT, FRESH_AGE_MS);
+    renderPage(createElement(PartnerProject), PARTNER_AUTH);
+    assertFreshToast(getNewToast());
+  }),
+);
+
+// ─── admin/academics (offering section) ───────────────────────────────────────
+const OFFERING_DRAFT = {
+  sectionCode: "02",
+  capacity: "45",
+  instructorName: "임시 저장된 담당교수",
+  editingOfferingId: "",
+};
+
+test(
+  "admin/academics (offering) — near-expiry draft shows the yellow warning toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/offering", OFFERING_DRAFT, NEAR_EXPIRY_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertNearExpiryToast(getNewToast());
+  }),
+);
+
+test(
+  "admin/academics (offering) — fresh draft shows the normal (non-yellow) toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/offering", OFFERING_DRAFT, FRESH_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertFreshToast(getNewToast());
+  }),
+);
+
+// ─── admin/academics (curriculum section) ─────────────────────────────────────
+const CURRICULUM_DRAFT = {
+  curriculumCode: "CUR-999",
+  curriculumName: "임시 저장된 교육과정",
+  effectiveFrom: "2026-03-01",
+  effectiveTo: "",
+  editingCurriculumId: "",
+};
+
+test(
+  "admin/academics (curriculum) — near-expiry draft shows the yellow warning toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/curriculum", CURRICULUM_DRAFT, NEAR_EXPIRY_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertNearExpiryToast(getNewToast());
+  }),
+);
+
+test(
+  "admin/academics (curriculum) — fresh draft shows the normal (non-yellow) toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/curriculum", CURRICULUM_DRAFT, FRESH_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertFreshToast(getNewToast());
+  }),
+);
+
+// ─── admin/academics (requirement section) ────────────────────────────────────
+const REQUIREMENT_DRAFT = {
+  requirementCode: "REQ-999",
+  requirementName: "임시 저장된 이수요건",
+  requirementType: "PROJECT",
+  requirementOperator: "GTE",
+  requiredValue: "2",
+  requirementUnit: "건",
+  editingRequirementId: "",
+};
+
+test(
+  "admin/academics (requirement) — near-expiry draft shows the yellow warning toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/requirement", REQUIREMENT_DRAFT, NEAR_EXPIRY_AGE_MS);
+    renderPage(createElement(AdminAcademics), ADMIN_AUTH);
+    assertNearExpiryToast(getNewToast());
+  }),
+);
+
+test(
+  "admin/academics (requirement) — fresh draft shows the normal (non-yellow) toast",
+  withCleanup(() => {
+    seedDraft("admin/academics/requirement", REQUIREMENT_DRAFT, FRESH_AGE_MS);
     renderPage(createElement(AdminAcademics), ADMIN_AUTH);
     assertFreshToast(getNewToast());
   }),
