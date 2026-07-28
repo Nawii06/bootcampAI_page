@@ -7,3 +7,5 @@ Rule: when `tsc --noEmit` in artifacts/api-server reports errors that contradict
 **Why:** api-server's tsconfig uses project references to `lib/api-zod` and `lib/db`, which are composite projects emitting declarations to `dist/`. Even though package.json exports point at `src/index.ts`, tsc resolves types through the referenced project's `dist` output — so a stale dist silently overrides current source types.
 
 **How to apply:** any TS2769/type mismatch on a `@workspace/*` import: check `dist/*.d.ts` mtime vs `src`, run `npx tsc -b` in the lib package, then re-run the consumer's type check.
+
+**Status (2026-07-28):** consumer typecheck scripts now use `tsc --build`, which rebuilds referenced lib dists automatically (verified: stale-src errors surface, fresh clone with no dist/tsbuildinfo passes). Lib dists are gitignored, so committed-stale-dist can't recur. Keep any new artifact that adds `references` on `tsc --build`, not `tsc -p --noEmit`.
