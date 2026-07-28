@@ -223,6 +223,109 @@ test("DataTable — highlight persists just before the 3 s delay elapses", () =>
   }
 });
 
+// ─── DataTable: loading→loaded transition still scrolls + highlights ────────
+
+test("DataTable — highlight scrolls exactly once after loading finishes, not re-triggered on refreshes", () => {
+  mock.timers.enable({ apis: ["setTimeout"] });
+  const restoreTimers = patchWindowTimers();
+  scrollCalls.length = 0;
+  try {
+    // 1) Mount while the query is still loading: skeleton rows, no data.
+    const { rerender } = render(
+      createElement(DataTable<Row>, {
+        data: [],
+        columns: COLUMNS,
+        loading: true,
+        highlightId: "row-b",
+      }),
+    );
+
+    assert.equal(
+      scrollCalls.length,
+      0,
+      "no scroll must happen while loading=true (rows are skeletons)",
+    );
+
+    // 2) Data arrives: loading flips to false with rows present.
+    act(() => {
+      rerender(
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          loading: false,
+          highlightId: "row-b",
+        }),
+      );
+    });
+
+    assert.equal(
+      scrollCalls.length,
+      1,
+      "row must be scrolled into view exactly once after loading finishes",
+    );
+    const highlighted = findRow("하이라이트 대상");
+    assert.match(
+      highlighted.className,
+      /bg-primary\/10/,
+      "highlighted row must have the highlight background after load",
+    );
+    assert.match(
+      highlighted.className,
+      /ring-primary\/40/,
+      "highlighted row must have the ring class after load",
+    );
+
+    // 3) A subsequent data refresh (new array identity) must NOT re-scroll:
+    //    hasScrolledRef guards against re-triggering.
+    act(() => {
+      rerender(
+        createElement(DataTable<Row>, {
+          data: ROWS.map((r) => ({ ...r })),
+          columns: COLUMNS,
+          loading: false,
+          highlightId: "row-b",
+        }),
+      );
+    });
+    assert.equal(
+      scrollCalls.length,
+      1,
+      "scroll must not be re-triggered on subsequent data refreshes",
+    );
+
+    // Even a refresh that passes through a loading state must not re-scroll.
+    act(() => {
+      rerender(
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          loading: true,
+          highlightId: "row-b",
+        }),
+      );
+    });
+    act(() => {
+      rerender(
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          loading: false,
+          highlightId: "row-b",
+        }),
+      );
+    });
+    assert.equal(
+      scrollCalls.length,
+      1,
+      "scroll must not be re-triggered after a refetch loading cycle",
+    );
+  } finally {
+    cleanup();
+    restoreTimers();
+    mock.timers.reset();
+  }
+});
+
 // ─── Page: ?highlight= param stripped from the URL on mount ─────────────────
 
 test("AdminPartners — ?highlight= query param is removed from the URL after mount", () => {
