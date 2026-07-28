@@ -4,6 +4,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   lte,
   type SQL,
 } from "drizzle-orm";
@@ -23,7 +24,9 @@ function conditionsFor(filters: AuditLogQuery) {
   if (filters.actorUserId) {
     conditions.push(eq(auditLogs.actorUserId, filters.actorUserId));
   }
-  if (filters.action) conditions.push(eq(auditLogs.action, filters.action));
+  if (filters.action?.length) {
+    conditions.push(inArray(auditLogs.action, filters.action));
+  }
   if (filters.resourceType) {
     conditions.push(eq(auditLogs.resourceType, filters.resourceType));
   }

@@ -25,10 +25,10 @@ const SHARE_TOKEN_ACTION_LABELS: Record<string, string> = {
 
 const SHARE_TOKEN_PAGE_SIZE = 100;
 
-function shareTokenQueryString(action: string, recordId: string, page: number) {
+function shareTokenQueryString(recordId: string, page: number) {
   const params = new URLSearchParams({
     resourceType: "EXPERIENTIAL_RECORD",
-    action,
+    action: SHARE_TOKEN_ACTIONS.join(","),
     page: String(page),
     pageSize: String(SHARE_TOKEN_PAGE_SIZE),
   });
@@ -116,26 +116,17 @@ export default function AdminAuditLogs() {
     queryKey: ["audit-logs", "share-token", shareRecordId],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
-      const responses = await Promise.all(
-        SHARE_TOKEN_ACTIONS.map((tokenAction) =>
-          contractFetch(
-            AuditLogListResponseSchema,
-            `/api/v1/audit-logs?${shareTokenQueryString(tokenAction, shareRecordId, pageParam)}`,
-            { credentials: "include" },
-          ),
-        ),
+      const response = await contractFetch(
+        AuditLogListResponseSchema,
+        `/api/v1/audit-logs?${shareTokenQueryString(shareRecordId, pageParam)}`,
+        { credentials: "include" },
       );
       return {
         page: pageParam,
-        items: responses.flatMap((response) => response.data),
-        total: responses.reduce(
-          (sum, response) => sum + response.meta.total,
-          0,
-        ),
-        hasMore: responses.some(
-          (response) =>
-            response.meta.page * response.meta.pageSize < response.meta.total,
-        ),
+        items: response.data,
+        total: response.meta.total,
+        hasMore:
+          response.meta.page * response.meta.pageSize < response.meta.total,
       };
     },
     getNextPageParam: (lastPage) =>

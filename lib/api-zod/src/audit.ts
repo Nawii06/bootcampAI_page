@@ -5,7 +5,20 @@ const AuditLogQueryBaseSchema = z.object({
     startAt: z.string().datetime().optional(),
     endAt: z.string().datetime().optional(),
     actorUserId: z.string().uuid().optional(),
-    action: z.string().trim().min(1).max(100).optional(),
+    action: z
+      .preprocess(
+        (value) => {
+          if (typeof value === "string") {
+            return value
+              .split(",")
+              .map((part) => part.trim())
+              .filter(Boolean);
+          }
+          return value;
+        },
+        z.array(z.string().trim().min(1).max(100)).max(20),
+      )
+      .optional(),
     resourceType: z.string().trim().min(1).max(100).optional(),
     resourceId: z.string().trim().min(1).max(200).optional(),
     page: z.coerce.number().int().min(1).default(1),

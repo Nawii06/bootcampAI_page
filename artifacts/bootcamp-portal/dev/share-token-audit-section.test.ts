@@ -1,10 +1,10 @@
 /**
  * Tests for the "포트폴리오 공유 링크 이력" section on the admin audit-logs page.
  *
- * The section merges two audit-log queries (GENERATE_SHARE_TOKEN and
- * REVOKE_SHARE_TOKEN, resourceType=EXPERIENTIAL_RECORD) into one table
- * sorted by occurredAt desc. These tests stub fetch to answer each query
- * based on its `action` query param and assert:
+ * The section issues one audit-log query with a multi-action filter
+ * (action=GENERATE_SHARE_TOKEN,REVOKE_SHARE_TOKEN, resourceType=
+ * EXPERIENTIAL_RECORD), server-sorted by occurredAt desc. These tests stub
+ * fetch to answer based on the `action` query param and assert:
  *   - both actions render with their Korean labels
  *   - the actor display name is shown
  *   - an empty result shows the dedicated empty message
@@ -48,14 +48,23 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-/** Stub fetch: answers audit-log queries per `action` param; others empty. */
+/** Stub fetch: answers audit-log queries per `action` param (supports
+ * comma-separated multi-action filters); others empty. */
 function installShareTokenFetch(
   byAction: Record<string, ReturnType<typeof auditItem>[]>,
 ): void {
   globalThis.fetch = async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input), "http://localhost");
-    const action = url.searchParams.get("action") ?? "";
-    const data = byAction[action] ?? [];
+    const actions = (url.searchParams.get("action") ?? "")
+      .split(",")
+      .filter(Boolean);
+    const data = actions
+      .flatMap((action) => byAction[action] ?? [])
+      .sort(
+        (a, b) =>
+          new Date(String(b.occurredAt)).getTime() -
+          new Date(String(a.occurredAt)).getTime(),
+      );
     return jsonResponse({
       data,
       meta: { page: 1, pageSize: 100, total: data.length },
@@ -120,24 +129,29 @@ test(
 function installPagedShareTokenFetch(totalPerAction: number): void {
   globalThis.fetch = async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input), "http://localhost");
-    const action = url.searchParams.get("action") ?? "";
+    const actions = (url.searchParams.get("action") ?? "")
+      .split(",")
+      .filter(Boolean);
     const page = Number(url.searchParams.get("page") ?? "1");
     const pageSize = Number(url.searchParams.get("pageSize") ?? "100");
+    const total = totalPerAction * actions.length;
     const start = (page - 1) * pageSize;
-    const count = Math.max(0, Math.min(pageSize, totalPerAction - start));
-    const data = Array.from({ length: count }, (_v, i) =>
-      auditItem({
-        id: `00000000-0000-4000-8000-${action === "REVOKE_SHARE_TOKEN" ? "9" : "1"}${String(start + i).padStart(11, "0")}`,
+    const count = Math.max(0, Math.min(pageSize, total - start));
+    const data = Array.from({ length: count }, (_v, i) => {
+      const index = start + i;
+      const action = actions[index % actions.length] ?? "GENERATE_SHARE_TOKEN";
+      return auditItem({
+        id: `00000000-0000-4000-8000-${action === "REVOKE_SHARE_TOKEN" ? "9" : "1"}${String(index).padStart(11, "0")}`,
         action,
-        actorDisplayName: `행위자-${action}-${start + i}`,
+        actorDisplayName: `행위자-${action}-${index}`,
         occurredAt: new Date(
-          Date.UTC(2026, 6, 1, 0, 0, 0) - (start + i) * 60000,
+          Date.UTC(2026, 6, 1, 0, 0, 0) - index * 60000,
         ).toISOString(),
-      }),
-    );
+      });
+    });
     return jsonResponse({
       data,
-      meta: { page, pageSize, total: totalPerAction },
+      meta: { page, pageSize, total },
     });
   };
 }
@@ -151,11 +165,17 @@ test(
     const loadMore = await screen.findByText("이력 더 보기");
     assert.ok(loadMore, "load-more button visible when more pages exist");
     assert.ok(
-      await screen.findByText(/총 300건 중 200건 표시/),
+      await screen.findByText(/총 300건 중 100건 표시/),
       "total reflects all events, shown count reflects loaded rows",
     );
 
     fireEvent.click(loadMore);
+    assert.ok(
+      await screen.findByText(/총 300건 중 200건 표시/),
+      "second page appends another server page of rows",
+    );
+
+    fireEvent.click(await screen.findByText("이력 더 보기"));
 
     assert.ok(
       await screen.findByText(/총 300건 중 300건 표시/),
