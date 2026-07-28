@@ -96,7 +96,7 @@ test("archiving the primary promotes the oldest remaining active contact", async
     headers,
   });
   assert.equal(res.status, 200);
-  const archived = await res.json();
+  const archived = (await res.json()) as typeof companyContacts.$inferSelect;
   assert.equal(archived.isPrimary, false);
   assert.ok(archived.deletedAt);
 
@@ -134,7 +134,7 @@ test("setting a new primary demotes the old one", async () => {
     headers,
   });
   assert.equal(res.status, 200);
-  const updated = await res.json();
+  const updated = (await res.json()) as typeof companyContacts.$inferSelect;
   assert.equal(updated.isPrimary, true);
 
   const rows = await loadContacts();
@@ -153,7 +153,7 @@ test("setting the current primary is a no-op", async () => {
     headers,
   });
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body = (await res.json()) as typeof companyContacts.$inferSelect;
   assert.equal(body.id, primary.id);
   assert.equal(body.isPrimary, true);
 

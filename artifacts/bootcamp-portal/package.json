@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "test": "TSX_TSCONFIG_PATH=./tsconfig.test.json node --import tsx --import ./dev/setup-dom.ts --test --test-force-exit dev/**/*.test.ts",
+    "test": "node --env-file=./dev/test.env --import tsx --import ./dev/setup-dom.ts --test --test-force-exit dev/**/*.test.ts",
     "typecheck": "tsc --build tsconfig.json"
   },
   "devDependencies": {
