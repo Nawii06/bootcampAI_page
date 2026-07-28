@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -163,4 +164,40 @@ test("binary content is skipped", async () => {
     await writeFile(file, Buffer.concat([Buffer.from([0]), Buffer.from(FAKE["Slack token"])]));
     assert.equal(runScan(dir, [file]).code, 0);
   });
+});
+
+// --- Lint the repo's REAL .secretscanignore file -------------------------
+// A syntactically invalid regex line would crash the scan, and an over-broad
+// pattern (e.g. ".*") would silently exclude everything from scanning.
+
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
+
+function realIgnoreLines() {
+  return readFileSync(path.join(REPO_ROOT, ".secretscanignore"), "utf8")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+test("real .secretscanignore: every line compiles as a regex", () => {
+  for (const line of realIgnoreLines()) {
+    assert.doesNotThrow(() => new RegExp(line), `invalid regex in .secretscanignore: ${line}`);
+  }
+});
+
+test("real .secretscanignore: no pattern matches representative source paths", () => {
+  const canaryPaths = [
+    "artifacts/api-server/src/index.ts",
+    "artifacts/bootcamp-portal/src/main.tsx",
+    "scripts/secret-scan.mjs",
+    "packages/db/src/index.ts",
+    ".env",
+    "artifacts/api-server/.env.example",
+  ];
+  for (const line of realIgnoreLines()) {
+    const re = new RegExp(line);
+    for (const p of canaryPaths) {
+      assert.ok(!re.test(p), `over-broad .secretscanignore pattern "${line}" matches source path "${p}"`);
+    }
+  }
 });
