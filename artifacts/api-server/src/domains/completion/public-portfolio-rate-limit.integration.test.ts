@@ -20,6 +20,11 @@ process.env.ENABLE_MOCK_AUTH = "true";
 process.env.NODE_ENV =
   process.env.NODE_ENV === "production" ? "test" : (process.env.NODE_ENV ?? "test");
 process.env.PUBLIC_PORTFOLIO_RATE_LIMIT = "5";
+// The rate-limit counters live in Postgres and are shared across processes,
+// so this test file isolates itself behind a unique client IP (via trust
+// proxy + X-Forwarded-For) — otherwise other test files hitting the endpoint
+// from 127.0.0.1, or a previous run inside the same window, would skew counts.
+process.env.TRUST_PROXY_HOPS = "1";
 
 const { db, pool } = await import("@workspace/db");
 const { businessYears, experientialRecords, students, users, auditLogs } =
@@ -117,9 +122,17 @@ after(async () => {
 const limit = 5;
 let requestCount = 0;
 
+// Unique per-run client IP so shared Postgres counters from other test files
+// or previous runs can't interfere.
+const clientIp = `10.${Math.floor(Math.random() * 250)}.${Math.floor(
+  Math.random() * 250,
+)}.${Math.floor(Math.random() * 250)}`;
+
 function visit(token: string) {
   requestCount += 1;
-  return fetch(`${baseUrl}/api/v1/public/portfolio/${token}`);
+  return fetch(`${baseUrl}/api/v1/public/portfolio/${token}`, {
+    headers: { "X-Forwarded-For": clientIp },
+  });
 }
 
 test("valid-token views beyond the strict limit still succeed", async () => {

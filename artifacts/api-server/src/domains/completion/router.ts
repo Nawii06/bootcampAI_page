@@ -23,6 +23,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { students } from "@workspace/db/schema";
 import { ApiError } from "../../lib/api-error";
+import {
+  getCounter,
+  incrementCounter,
+  pruneExpiredCounters,
+  PostgresRateLimitStore,
+} from "../../lib/rate-limit-store";
 
 const router: IRouter = Router();
 
@@ -244,32 +250,25 @@ const rateLimitedBody = {
 // Implemented in the handler (not as pre-request middleware) so a request
 // with a valid token is never blocked by someone else's guessing spree on
 // the same shared IP — only the guesses themselves burn the budget.
+//
+// Counters live in Postgres (see lib/rate-limit-store) so the budget is
+// shared across API instances and survives restarts — running N replicas
+// does not give an attacker N separate guess budgets.
 const guessWindowMs = 60_000;
-const failedGuesses = new Map<string, { count: number; resetAt: number }>();
+const guessKey = (ip: string) => `portfolio-guess:${ip}`;
 
-function guessBudgetExceeded(ip: string): boolean {
-  const now = Date.now();
-  const entry = failedGuesses.get(ip);
-  if (!entry || entry.resetAt <= now) return false;
-  return entry.count >= env.PUBLIC_PORTFOLIO_RATE_LIMIT;
+async function guessBudgetExceeded(ip: string): Promise<boolean> {
+  const count = await getCounter(guessKey(ip));
+  return count >= env.PUBLIC_PORTFOLIO_RATE_LIMIT;
 }
 
-function recordFailedGuess(ip: string): void {
-  const now = Date.now();
-  const entry = failedGuesses.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    failedGuesses.set(ip, { count: 1, resetAt: now + guessWindowMs });
-    return;
-  }
-  entry.count += 1;
+async function recordFailedGuess(ip: string): Promise<void> {
+  await incrementCounter(guessKey(ip), guessWindowMs);
 }
 
-// Periodically drop expired windows so the map can't grow unbounded.
+// Periodically drop expired windows so the table can't grow unbounded.
 setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of failedGuesses) {
-    if (entry.resetAt <= now) failedGuesses.delete(ip);
-  }
+  void pruneExpiredCounters().catch(() => {});
 }, guessWindowMs).unref();
 
 const publicPortfolioCeilingLimiter = rateLimit({
@@ -278,6 +277,9 @@ const publicPortfolioCeilingLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: rateLimitedBody,
+  // Shared Postgres store so the ceiling holds across multiple instances
+  // (the default MemoryStore is per-process).
+  store: new PostgresRateLimitStore("portfolio-ceiling:"),
 });
 
 router.get(
@@ -288,7 +290,7 @@ router.get(
       const ip = req.ip ?? "unknown";
       const token = String(req.params.token ?? "");
       if (!token || token.length > 150) {
-        recordFailedGuess(ip);
+        await recordFailedGuess(ip);
         throw new ApiError(400, "INVALID_TOKEN", "유효하지 않은 토큰입니다.");
       }
       const [record] = await getExperientialRecordByToken(token);
@@ -296,12 +298,12 @@ router.get(
         // Only failed lookups burn the guess budget, so a visitor with a
         // valid link is never blocked by guessing from the same shared IP.
         // The DB itself is protected by the ceiling limiter above.
-        if (guessBudgetExceeded(ip)) {
+        if (await guessBudgetExceeded(ip)) {
           res.setHeader("Retry-After", "60");
           res.status(429).json(rateLimitedBody);
           return;
         }
-        recordFailedGuess(ip);
+        await recordFailedGuess(ip);
         throw new ApiError(
           404,
           "PORTFOLIO_NOT_FOUND",
