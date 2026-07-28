@@ -26,7 +26,11 @@ instead of redefining. Error-state tests for pages live in the
 `dev/error-states-*.test.ts` files, grouped by area (public/student,
 partner, admin). Every data-driven page needs an error-state test asserting
 an ErrorCard message plus a "다시 시도" retry button when its on-mount
-query fails.
+query fails. This rule is enforced automatically:
+`dev/error-states-coverage.test.ts` scans `src/pages/` for pages using
+`useQuery` and fails if any of them is not referenced by an
+`error-states-*.test.ts` file. Pages with no on-mount query are listed in
+its `EXCLUDED_PAGES` set (with a reason).
 
 ## The pattern (3 techniques)
 
