@@ -30,6 +30,8 @@ import {
   AUTH_ADMIN,
 } from "./page-test-utils.ts";
 
+import AdminBenefits from "../src/pages/admin/benefits.tsx";
+import AdminContent from "../src/pages/admin/content.tsx";
 import AdminPartners from "../src/pages/admin/partners.tsx";
 import AdminPerformanceDashboard from "../src/pages/admin/performance-dashboard.tsx";
 import AdminKpi from "../src/pages/admin/kpi.tsx";
@@ -221,6 +223,40 @@ test(
     assert.ok(
       screen.queryAllByText("다시 시도").length >= 1,
       "AdminSettings should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "AdminBenefits — shows ErrorCard with retry when the operations query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(AdminBenefits), { auth: AUTH_ADMIN });
+    assert.ok(
+      (await screen.findAllByText(
+        "API 서버 또는 네트워크 연결 상태를 확인해 주세요.",
+      )).length >= 1,
+      "AdminBenefits should show the ErrorCard guidance message when the operations query fails",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "AdminBenefits should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "AdminContent — shows ErrorCard with retry when the content queries fail",
+  withErrorCleanup(async () => {
+    renderPage(createElement(AdminContent), { auth: AUTH_ADMIN });
+    assert.ok(
+      (await screen.findAllByText(
+        "API 서버 또는 네트워크 연결 상태를 확인해 주세요.",
+      )).length >= 1,
+      "AdminContent should show the ErrorCard guidance message when its queries fail",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "AdminContent should show a retry button on error",
     );
   }),
 );

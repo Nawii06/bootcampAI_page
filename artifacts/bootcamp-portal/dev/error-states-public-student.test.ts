@@ -42,6 +42,9 @@ if (!("ResizeObserver" in globalThis)) {
   };
 }
 
+import Curriculum from "../src/pages/public/curriculum.tsx";
+import Resources from "../src/pages/public/resources.tsx";
+import StudentStatus from "../src/pages/student/status.tsx";
 import Home from "../src/pages/public/home.tsx";
 import Partners from "../src/pages/public/partners.tsx";
 import Performance from "../src/pages/public/performance.tsx";
@@ -268,3 +271,52 @@ test("PublicPortfolio — shows the not-found UI (no retry) on an API 404", asyn
     globalThis.fetch = originalFetch;
   }
 });
+
+test(
+  "Curriculum — shows ErrorCard with retry when the courses query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(Curriculum), { auth: AUTH_ADMIN });
+    assert.ok(
+      (await screen.findAllByText("교육과정 API에 연결할 수 없습니다.")).length >= 1,
+      "Curriculum should show a helpful error message when the courses query fails",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "Curriculum should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "Resources — shows ErrorCard with retry when the resources query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(Resources), { auth: AUTH_ADMIN });
+    assert.ok(
+      (await screen.findAllByText("자료실 API에 연결할 수 없습니다.")).length >= 1,
+      "Resources should show a helpful error message when the resources query fails",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "Resources should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "StudentStatus — shows ErrorCard with retry when the applications query fails",
+  withErrorCleanup(async () => {
+    renderPage(createElement(StudentStatus), { auth: AUTH_STUDENT });
+    assert.ok(
+      (await screen.findAllByText("신청현황 API에 연결할 수 없습니다.")).length >= 1,
+      "StudentStatus should show a helpful error message when the applications query fails",
+    );
+    assert.ok(
+      (await screen.findAllByText("채용·연계 이력을 불러오지 못했습니다.")).length >= 1,
+      "StudentStatus should show an error message when the employment-links query fails",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 2,
+      "StudentStatus should show retry buttons for both failed queries",
+    );
+  }),
+);

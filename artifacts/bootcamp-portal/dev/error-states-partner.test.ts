@@ -25,6 +25,7 @@ import {
 
 import PartnerApplication from "../src/pages/partner/application.tsx";
 import PartnerDashboard from "../src/pages/partner/dashboard.tsx";
+import PartnerEmployment from "../src/pages/partner/employment.tsx";
 import PartnerEvaluation from "../src/pages/partner/evaluation.tsx";
 import PartnerProject from "../src/pages/partner/project.tsx";
 import PartnerSurvey from "../src/pages/partner/survey.tsx";
@@ -104,6 +105,25 @@ test(
     assert.ok(
       screen.queryAllByText("다시 시도").length >= 1,
       "PartnerSurvey should show a retry button on error",
+    );
+  }),
+);
+
+test(
+  "PartnerEmployment — shows ErrorCard with retry when its queries fail",
+  withErrorCleanup(async () => {
+    renderPage(createElement(PartnerEmployment), { auth: AUTH_PARTNER });
+    assert.ok(
+      (await screen.findAllByText("API에 연결할 수 없습니다.")).length >= 1,
+      "PartnerEmployment should show a helpful error message when its queries fail",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "PartnerEmployment should show a retry button on error",
+    );
+    assert.ok(
+      !screen.queryByText("데이터를 불러오는 중입니다."),
+      "PartnerEmployment should not remain in loading state after its queries fail",
     );
   }),
 );
