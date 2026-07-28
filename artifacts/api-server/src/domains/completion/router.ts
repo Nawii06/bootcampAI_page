@@ -225,30 +225,83 @@ router.delete(
 
 // ─── Public portfolio view (no auth) ─────────────────────────────────────────
 
-// Per-IP rate limit: the endpoint is unauthenticated, so throttle anonymous
+// Per-IP rate limiting: the endpoint is unauthenticated, so throttle anonymous
 // token guessing (brute force) and protect the DB from being hammered.
-const publicPortfolioRateLimiter = rateLimit({
+//
+// Two tiers so one flooded shared network (campus/company NAT) doesn't lock
+// out legitimate viewers of a valid link:
+//  - Strict limiter (PUBLIC_PORTFOLIO_RATE_LIMIT/min) counts only *failed*
+//    requests (invalid/revoked tokens). Successful views of a valid link do
+//    not consume the brute-force budget.
+//  - Generous ceiling (10x the strict limit) counts every request purely to
+//    protect the DB from being hammered by a single IP.
+const rateLimitedBody = {
+  code: "RATE_LIMITED",
+  message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+};
+
+// Strict brute-force guard: counts only *failed* token lookups per IP.
+// Implemented in the handler (not as pre-request middleware) so a request
+// with a valid token is never blocked by someone else's guessing spree on
+// the same shared IP — only the guesses themselves burn the budget.
+const guessWindowMs = 60_000;
+const failedGuesses = new Map<string, { count: number; resetAt: number }>();
+
+function guessBudgetExceeded(ip: string): boolean {
+  const now = Date.now();
+  const entry = failedGuesses.get(ip);
+  if (!entry || entry.resetAt <= now) return false;
+  return entry.count >= env.PUBLIC_PORTFOLIO_RATE_LIMIT;
+}
+
+function recordFailedGuess(ip: string): void {
+  const now = Date.now();
+  const entry = failedGuesses.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    failedGuesses.set(ip, { count: 1, resetAt: now + guessWindowMs });
+    return;
+  }
+  entry.count += 1;
+}
+
+// Periodically drop expired windows so the map can't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of failedGuesses) {
+    if (entry.resetAt <= now) failedGuesses.delete(ip);
+  }
+}, guessWindowMs).unref();
+
+const publicPortfolioCeilingLimiter = rateLimit({
   windowMs: 60_000,
-  limit: env.PUBLIC_PORTFOLIO_RATE_LIMIT,
+  limit: env.PUBLIC_PORTFOLIO_RATE_LIMIT * 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  message: {
-    code: "RATE_LIMITED",
-    message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
-  },
+  message: rateLimitedBody,
 });
 
 router.get(
   "/v1/public/portfolio/:token",
-  publicPortfolioRateLimiter,
+  publicPortfolioCeilingLimiter,
   async (req, res, next) => {
     try {
+      const ip = req.ip ?? "unknown";
       const token = String(req.params.token ?? "");
       if (!token || token.length > 150) {
+        recordFailedGuess(ip);
         throw new ApiError(400, "INVALID_TOKEN", "유효하지 않은 토큰입니다.");
       }
       const [record] = await getExperientialRecordByToken(token);
       if (!record) {
+        // Only failed lookups burn the guess budget, so a visitor with a
+        // valid link is never blocked by guessing from the same shared IP.
+        // The DB itself is protected by the ceiling limiter above.
+        if (guessBudgetExceeded(ip)) {
+          res.setHeader("Retry-After", "60");
+          res.status(429).json(rateLimitedBody);
+          return;
+        }
+        recordFailedGuess(ip);
         throw new ApiError(
           404,
           "PORTFOLIO_NOT_FOUND",

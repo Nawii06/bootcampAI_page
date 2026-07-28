@@ -5,9 +5,11 @@
  * prevent brute-force guessing of share tokens. The limit is configurable via
  * PUBLIC_PORTFOLIO_RATE_LIMIT; we set it low here so the test stays fast.
  *
- * Covers:
- *  - a legitimate single visit succeeds (200 for a valid token)
- *  - repeated requests beyond the limit get 429 with a RATE_LIMITED code
+ * Two-tier semantics (so a flooded shared NAT can't lock out real visitors):
+ *  - valid-token views do NOT consume the strict brute-force budget
+ *  - invalid guesses beyond the limit get 429 with a RATE_LIMITED code
+ *  - a valid link still works even after invalid guesses were throttled
+ *  - a generous overall ceiling (10x) still caps a single IP entirely
  */
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
@@ -112,30 +114,51 @@ after(async () => {
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-test("throttles repeated public portfolio requests from one client with 429", async () => {
-  const limit = 5;
+const limit = 5;
+let requestCount = 0;
 
-  // Legitimate visits within the limit succeed.
+function visit(token: string) {
+  requestCount += 1;
+  return fetch(`${baseUrl}/api/v1/public/portfolio/${token}`);
+}
+
+test("valid-token views beyond the strict limit still succeed", async () => {
+  // More requests than the strict brute-force limit, all with a valid token:
+  // none of them count against the guess budget, so all succeed.
+  for (let i = 0; i < limit + 3; i++) {
+    const res = await visit(shareToken);
+    assert.equal(res.status, 200, `valid view ${i + 1} should be 200`);
+  }
+});
+
+test("invalid token guesses beyond the limit get 429 RATE_LIMITED", async () => {
+  // Failed lookups consume the strict budget.
   for (let i = 0; i < limit; i++) {
-    const res = await fetch(`${baseUrl}/api/v1/public/portfolio/${shareToken}`);
-    assert.equal(res.status, 200, `request ${i + 1} within the limit should be 200`);
+    const res = await visit(`guess-${randomUUID()}`);
+    assert.equal(res.status, 404, `guess ${i + 1} within the limit should be 404`);
   }
 
-  // The next request from the same client is throttled.
-  const throttled = await fetch(
-    `${baseUrl}/api/v1/public/portfolio/${shareToken}`,
-  );
+  const throttled = await visit(`guess-${randomUUID()}`);
   assert.equal(throttled.status, 429);
   const body = (await throttled.json()) as { code?: string };
   assert.equal(body.code, "RATE_LIMITED");
   assert.ok(throttled.headers.get("retry-after"), "Retry-After header is set");
 });
 
-test("guessing invalid tokens is also throttled (does not bypass the limiter)", async () => {
-  // The limiter counts per IP regardless of token validity, so the client is
-  // already over the limit from the previous test's requests.
-  const res = await fetch(
-    `${baseUrl}/api/v1/public/portfolio/guess-${randomUUID()}`,
-  );
-  assert.equal(res.status, 429);
+test("a valid link still works after invalid guesses were throttled", async () => {
+  const res = await visit(shareToken);
+  assert.equal(res.status, 200);
+});
+
+test("the generous overall ceiling still caps a single IP entirely", async () => {
+  const ceiling = limit * 10;
+  // Exhaust the remaining ceiling budget with valid-token views.
+  while (requestCount < ceiling) {
+    const res = await visit(shareToken);
+    assert.equal(res.status, 200, `view ${requestCount} under the ceiling should be 200`);
+  }
+  const throttled = await visit(shareToken);
+  assert.equal(throttled.status, 429, "requests beyond the ceiling are throttled");
+  const body = (await throttled.json()) as { code?: string };
+  assert.equal(body.code, "RATE_LIMITED");
 });

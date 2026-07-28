@@ -245,6 +245,45 @@ test(
   }),
 );
 
+test("PublicPortfolio — shows the throttled UI with retry on an API 429", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (): Promise<Response> =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({ code: "RATE_LIMITED", message: "요청이 너무 많습니다." }),
+        {
+          status: 429,
+          statusText: "Too Many Requests",
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+  try {
+    renderPublicPortfolioAt("tok-throttled");
+    assert.ok(
+      await screen.findByText("요청이 많아 잠시 후 다시 시도해주세요"),
+      "PublicPortfolio should show the throttled UI on an API 429",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "PublicPortfolio should show a retry button when throttled",
+    );
+    assert.equal(
+      screen.queryByText("포트폴리오를 불러오지 못했습니다."),
+      null,
+      "PublicPortfolio must NOT show the generic ErrorCard when throttled",
+    );
+    assert.equal(
+      screen.queryByText("포트폴리오를 찾을 수 없습니다"),
+      null,
+      "PublicPortfolio must NOT show the not-found UI when throttled",
+    );
+  } finally {
+    cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("PublicPortfolio — shows the not-found UI (no retry) on an API 404", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (): Promise<Response> =>

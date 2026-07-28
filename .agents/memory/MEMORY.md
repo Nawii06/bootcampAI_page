@@ -1,1 +1,2 @@
 - [Bootcamp portal page tests](portal-page-tests.md) — shared test helpers in dev/page-test-utils.ts; happy-dom needs a ResizeObserver shim for Radix; no mock.module() in this runtime.
+- [Rate limiting valid links vs. guesses](rate-limit-valid-vs-guess.md) — skipSuccessfulRequests still pre-blocks valid tokens once tripped; count failures in the handler instead.

@@ -9,9 +9,10 @@ import { PublicPortfolioResponseSchema } from "@workspace/api-zod";
 import { Layout } from "../../components/Layout";
 import { ErrorCard } from "../../components/ErrorCard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, AlertCircle } from "lucide-react";
+import { ExternalLink, AlertCircle, Clock } from "lucide-react";
 
 /** True when the API explicitly said the link is gone (revoked/expired/private). */
 function isNotFoundError(error: unknown): boolean {
@@ -19,6 +20,11 @@ function isNotFoundError(error: unknown): boolean {
     error instanceof ApiError &&
     (error.status === 404 || error.status === 410 || error.status === 403)
   );
+}
+
+/** True when the API throttled the request (HTTP 429). */
+function isRateLimitedError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 429;
 }
 
 export default function PublicPortfolio() {
@@ -64,8 +70,33 @@ export default function PublicPortfolio() {
           </Card>
         )}
 
+        {/* Throttled — too many requests from this network right now */}
+        {isError && isRateLimitedError(error) && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+              <Clock className="h-10 w-10 text-muted-foreground" />
+              <p className="text-lg font-medium">
+                요청이 많아 잠시 후 다시 시도해주세요
+              </p>
+              <p className="text-sm text-muted-foreground">
+                현재 네트워크에서 요청이 몰리고 있습니다. 링크는 유효하니 잠시
+                후 다시 시도해주세요.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => refetch()}
+                disabled={isRefetching}
+              >
+                다시 시도
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Network / API failure — the link may still be valid, offer retry */}
-        {isError && !isNotFoundError(error) && (
+        {isError && !isNotFoundError(error) && !isRateLimitedError(error) && (
           <ErrorCard
             message="포트폴리오를 불러오지 못했습니다."
             onRetry={() => refetch()}
