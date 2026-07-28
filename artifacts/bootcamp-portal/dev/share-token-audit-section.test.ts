@@ -12,7 +12,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
-import { screen, cleanup } from "@testing-library/react";
+import { screen, cleanup, fireEvent } from "@testing-library/react";
 
 import { renderPage, AUTH_ADMIN } from "./page-test-utils.ts";
 import AdminAuditLogs from "../src/pages/admin/audit-logs.tsx";
@@ -109,6 +109,62 @@ test(
     assert.ok(
       screen.queryAllByText("rec-abc").length >= 2,
       "record id shown for both events",
+    );
+  }),
+);
+
+/**
+ * Stub fetch with paging: each action returns `pageSize` items per page up
+ * to `totalPerAction`, so the section must expose a "load more" control.
+ */
+function installPagedShareTokenFetch(totalPerAction: number): void {
+  globalThis.fetch = async (input: RequestInfo | URL): Promise<Response> => {
+    const url = new URL(String(input), "http://localhost");
+    const action = url.searchParams.get("action") ?? "";
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const pageSize = Number(url.searchParams.get("pageSize") ?? "100");
+    const start = (page - 1) * pageSize;
+    const count = Math.max(0, Math.min(pageSize, totalPerAction - start));
+    const data = Array.from({ length: count }, (_v, i) =>
+      auditItem({
+        id: `00000000-0000-4000-8000-${action === "REVOKE_SHARE_TOKEN" ? "9" : "1"}${String(start + i).padStart(11, "0")}`,
+        action,
+        actorDisplayName: `행위자-${action}-${start + i}`,
+        occurredAt: new Date(
+          Date.UTC(2026, 6, 1, 0, 0, 0) - (start + i) * 60000,
+        ).toISOString(),
+      }),
+    );
+    return jsonResponse({
+      data,
+      meta: { page, pageSize, total: totalPerAction },
+    });
+  };
+}
+
+test(
+  "AdminAuditLogs — share-link section pages through more than 100 events per action",
+  withFetchCleanup(async () => {
+    installPagedShareTokenFetch(150);
+    renderPage(createElement(AdminAuditLogs), { auth: AUTH_ADMIN });
+
+    const loadMore = await screen.findByText("이력 더 보기");
+    assert.ok(loadMore, "load-more button visible when more pages exist");
+    assert.ok(
+      await screen.findByText(/총 300건 중 200건 표시/),
+      "total reflects all events, shown count reflects loaded rows",
+    );
+
+    fireEvent.click(loadMore);
+
+    assert.ok(
+      await screen.findByText(/총 300건 중 300건 표시/),
+      "after loading the last page, all events are reachable",
+    );
+    assert.equal(
+      screen.queryByText("이력 더 보기"),
+      null,
+      "load-more button disappears when everything is loaded",
     );
   }),
 );

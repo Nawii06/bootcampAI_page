@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { contractFetch, customFetch } from "@workspace/api-client-react";
 import {
   AuditLogListResponseSchema,
@@ -22,12 +22,14 @@ const SHARE_TOKEN_ACTION_LABELS: Record<string, string> = {
   REVOKE_SHARE_TOKEN: "링크 회수",
 };
 
-function shareTokenQueryString(action: string, recordId: string) {
+const SHARE_TOKEN_PAGE_SIZE = 100;
+
+function shareTokenQueryString(action: string, recordId: string, page: number) {
   const params = new URLSearchParams({
     resourceType: "EXPERIENTIAL_RECORD",
     action,
-    page: "1",
-    pageSize: "100",
+    page: String(page),
+    pageSize: String(SHARE_TOKEN_PAGE_SIZE),
   });
   if (recordId) params.set("resourceId", recordId);
   return params.toString();
@@ -109,29 +111,55 @@ export default function AdminAuditLogs() {
   const [shareRecordIdInput, setShareRecordIdInput] = useState("");
   const [shareRecordId, setShareRecordId] = useState("");
 
-  const shareTokenLogs = useQuery({
+  const shareTokenLogs = useInfiniteQuery({
     queryKey: ["audit-logs", "share-token", shareRecordId],
-    queryFn: async () => {
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
       const responses = await Promise.all(
         SHARE_TOKEN_ACTIONS.map((tokenAction) =>
           contractFetch(
             AuditLogListResponseSchema,
-            `/api/v1/audit-logs?${shareTokenQueryString(tokenAction, shareRecordId)}`,
+            `/api/v1/audit-logs?${shareTokenQueryString(tokenAction, shareRecordId, pageParam)}`,
             { credentials: "include" },
           ),
         ),
       );
-      const merged = responses.flatMap((response) => response.data);
-      merged.sort(
-        (a, b) =>
-          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
-      );
       return {
-        data: merged,
-        total: responses.reduce((sum, response) => sum + response.meta.total, 0),
+        page: pageParam,
+        items: responses.flatMap((response) => response.data),
+        total: responses.reduce(
+          (sum, response) => sum + response.meta.total,
+          0,
+        ),
+        hasMore: responses.some(
+          (response) =>
+            response.meta.page * response.meta.pageSize < response.meta.total,
+        ),
       };
     },
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.page + 1 : undefined,
   });
+
+  const shareTokenRows = useMemo(() => {
+    const pages = shareTokenLogs.data?.pages ?? [];
+    const seen = new Set<string>();
+    const merged: AuditLogItem[] = [];
+    for (const page of pages) {
+      for (const item of page.items) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        merged.push(item);
+      }
+    }
+    merged.sort(
+      (a, b) =>
+        new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+    );
+    return merged;
+  }, [shareTokenLogs.data]);
+
+  const shareTokenTotal = shareTokenLogs.data?.pages[0]?.total ?? 0;
 
   const shareTokenColumns: ColumnDef<AuditLogItem>[] = [
     {
@@ -249,18 +277,29 @@ export default function AdminAuditLogs() {
             isRetrying={shareTokenLogs.isFetching}
           />
         )}
-        {shareTokenLogs.isSuccess && shareTokenLogs.data.data.length === 0 && (
+        {shareTokenLogs.isSuccess && shareTokenRows.length === 0 && (
           <p className="mb-4 text-sm text-muted-foreground">
             공유 링크 발급·회수 이력이 없습니다.
           </p>
         )}
-        <DataTable
-          data={shareTokenLogs.data?.data ?? []}
-          columns={shareTokenColumns}
-        />
+        <DataTable data={shareTokenRows} columns={shareTokenColumns} />
+        {shareTokenLogs.hasNextPage && (
+          <div className="mt-3">
+            <Button
+              variant="outline"
+              disabled={shareTokenLogs.isFetchingNextPage}
+              onClick={() => shareTokenLogs.fetchNextPage()}
+            >
+              {shareTokenLogs.isFetchingNextPage
+                ? "불러오는 중..."
+                : "이력 더 보기"}
+            </Button>
+          </div>
+        )}
         <p className="mt-3 text-xs text-muted-foreground">
-          총 {shareTokenLogs.data?.total ?? 0}건 · 발급(GENERATE_SHARE_TOKEN)과
-          회수(REVOKE_SHARE_TOKEN) 기록을 최신순으로 표시합니다.
+          총 {shareTokenTotal}건 중 {shareTokenRows.length}건 표시 ·
+          발급(GENERATE_SHARE_TOKEN)과 회수(REVOKE_SHARE_TOKEN) 기록을 최신순으로
+          표시합니다.
         </p>
       </div>
     </PortalLayout>
