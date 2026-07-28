@@ -274,6 +274,37 @@ test(
 );
 
 test(
+  "대표 지정 — picker promotes the chosen non-primary contact via PATCH",
+  withDialogFetch(async () => {
+    renderPartners();
+
+    // Only 감마 (two contacts) shows the 대표 지정 button.
+    assert.equal(screen.getAllByText("대표 지정").length, 1);
+    fireEvent.click(screen.getAllByText("대표 지정")[0]!);
+    assert.ok(
+      await screen.findByText(/대표 담당자로 지정할 담당자를 선택해 주세요/),
+      "primary picker should open",
+    );
+
+    // Current primary is preselected and marked; confirm is disabled for it.
+    assert.ok(screen.getByText(/이대표.*\(현재 대표\)/));
+    const confirmButtons = screen.getAllByText("대표 지정");
+    const confirm = confirmButtons[confirmButtons.length - 1]!.closest("button")!;
+    assert.ok(confirm.hasAttribute("disabled"), "confirm disabled while current primary selected");
+    assert.equal(mutationCalls.length, 0);
+
+    // Pick the non-primary contact and confirm → PATCH .../primary.
+    fireEvent.click(screen.getByDisplayValue("ct3"));
+    assert.ok(await screen.findByText("최부담당 담당자를 대표 담당자로 지정합니다."));
+    fireEvent.click(confirm);
+    await waitFor(() => assert.equal(mutationCalls.length, 1));
+    const call = mutationCalls[0]!;
+    assert.equal(call.method, "PATCH");
+    assert.ok(call.url.includes("/api/v1/company-contacts/ct3/primary"));
+  }),
+);
+
+test(
   "전문가 활성 관리 — picker names the selected expert and toggles only that expert",
   withDialogFetch(async () => {
     renderPartners();

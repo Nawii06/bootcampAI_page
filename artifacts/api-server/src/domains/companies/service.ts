@@ -68,7 +68,44 @@ export function archiveCompanyContact(id: string, actorId: string, requestId: st
       actorUserId: actorId, action: "ARCHIVE", resourceType: "COMPANY_CONTACT",
       resourceId: id, requestId, before: current, after: archived,
     });
+    // If the archived contact was the primary, promote the oldest remaining
+    // active contact so the company keeps a 대표 담당자.
+    if (current.isPrimary) {
+      const remaining = await tx.select().from(companyContacts)
+        .where(and(eq(companyContacts.companyId, current.companyId), isNull(companyContacts.deletedAt)))
+        .orderBy(companyContacts.createdAt).limit(1).for("update");
+      const successor = remaining[0];
+      if (successor) {
+        const [promoted] = await tx.update(companyContacts).set({ isPrimary: true })
+          .where(eq(companyContacts.id, successor.id)).returning();
+        await tx.insert(auditLogs).values({
+          actorUserId: actorId, action: "UPDATE", resourceType: "COMPANY_CONTACT",
+          resourceId: successor.id, requestId, before: successor, after: promoted,
+          changedFields: ["isPrimary"],
+        });
+      }
+    }
     return archived;
+  });
+}
+
+export function setPrimaryCompanyContact(id: string, actorId: string, requestId: string) {
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(companyContacts)
+      .where(and(eq(companyContacts.id, id), isNull(companyContacts.deletedAt))).for("update");
+    if (!current) throw new ApiError(404, "COMPANY_CONTACT_NOT_FOUND", "기업 담당자를 찾을 수 없습니다.");
+    if (current.isPrimary) return current;
+    await tx.update(companyContacts).set({ isPrimary: false }).where(
+      and(eq(companyContacts.companyId, current.companyId), isNull(companyContacts.deletedAt)),
+    );
+    const [updated] = await tx.update(companyContacts).set({ isPrimary: true })
+      .where(eq(companyContacts.id, id)).returning();
+    await tx.insert(auditLogs).values({
+      actorUserId: actorId, action: "UPDATE", resourceType: "COMPANY_CONTACT",
+      resourceId: id, requestId, before: current, after: updated,
+      changedFields: ["isPrimary"],
+    });
+    return updated;
   });
 }
 

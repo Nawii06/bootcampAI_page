@@ -27,6 +27,7 @@ import {
   upsertCompanyCommitment,
   archiveCompanyContact,
   createCompanyContact,
+  setPrimaryCompanyContact,
   createCompanyExpert,
   updateCompanyExpertStatus,
   updateCompanyMaster,
@@ -65,6 +66,13 @@ router.delete("/v1/company-contacts/:id", requireAuth, requireRoles("COMPANY_STA
   try {
     const { id } = CompanyIdParamsSchema.parse(req.params);
     res.json(await archiveCompanyContact(id, req.auth!.id, String(req.id)));
+  } catch (error) { next(error); }
+});
+
+router.patch("/v1/company-contacts/:id/primary", requireAuth, requireRoles("COMPANY_STAFF"), async (req, res, next) => {
+  try {
+    const { id } = CompanyIdParamsSchema.parse(req.params);
+    res.json(await setPrimaryCompanyContact(id, req.auth!.id, String(req.id)));
   } catch (error) { next(error); }
 });
 

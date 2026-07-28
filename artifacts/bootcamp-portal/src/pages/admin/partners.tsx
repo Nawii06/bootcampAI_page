@@ -65,6 +65,9 @@ export default function AdminPartners() {
   // 담당자 보관: which company's contacts we're choosing from + the chosen contact.
   const [archiveContactCompany, setArchiveContactCompany] = useState<Company | null>(null);
   const [archiveContactId, setArchiveContactId] = useState("");
+  // 대표 담당자 지정: which company's contacts we're choosing from + the chosen contact.
+  const [primaryContactCompany, setPrimaryContactCompany] = useState<Company | null>(null);
+  const [primaryContactId, setPrimaryContactId] = useState("");
   // 전문가 활성/비활성: which company's experts we're choosing from + the chosen expert.
   const [toggleExpertCompany, setToggleExpertCompany] = useState<Company | null>(null);
   const [toggleExpertId, setToggleExpertId] = useState("");
@@ -235,6 +238,18 @@ export default function AdminPartners() {
     setArchiveContactCompany(null);
     setArchiveContactId("");
   };
+  const selectedPrimaryContact =
+    primaryContactCompany?.companyContacts.find((c) => c.id === primaryContactId) ?? null;
+  const confirmSetPrimaryContact = () => {
+    if (!selectedPrimaryContact || selectedPrimaryContact.isPrimary) return;
+    companyMutation.reset();
+    companyMutation.mutate({
+      url: `/api/v1/company-contacts/${selectedPrimaryContact.id}/primary`,
+      method: "PATCH",
+    });
+    setPrimaryContactCompany(null);
+    setPrimaryContactId("");
+  };
   const selectedToggleExpert =
     toggleExpertCompany?.companyExperts.find((e) => e.id === toggleExpertId) ?? null;
   const confirmToggleExpert = () => {
@@ -367,6 +382,21 @@ export default function AdminPartners() {
               }}
             >
               담당자 보관
+            </Button>
+          )}
+          {row.companyContacts.length > 1 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={companyMutation.isPending}
+              onClick={() => {
+                companyMutation.reset();
+                const current = row.companyContacts.find((c) => c.isPrimary);
+                setPrimaryContactId(current?.id ?? row.companyContacts[0]!.id);
+                setPrimaryContactCompany(row);
+              }}
+            >
+              대표 지정
             </Button>
           )}
           {row.companyExperts.length > 0 && (
@@ -702,9 +732,16 @@ export default function AdminPartners() {
                 </label>
               ))}
               {selectedArchiveContact && (
-                <p className="text-sm text-muted-foreground">
-                  {selectedArchiveContact.name} 담당자를 보관 처리합니다.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {selectedArchiveContact.name} 담당자를 보관 처리합니다.
+                  </p>
+                  {selectedArchiveContact.isPrimary && (
+                    <p className="text-sm text-muted-foreground">
+                      대표 담당자이므로 남은 담당자 중 가장 먼저 등록된 담당자가 대표로 지정됩니다.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -715,6 +752,59 @@ export default function AdminPartners() {
               onClick={confirmArchiveContact}
             >
               보관
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={primaryContactCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPrimaryContactCompany(null);
+            setPrimaryContactId("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>대표 담당자 지정</AlertDialogTitle>
+            <AlertDialogDescription>
+              {primaryContactCompany?.name} 기업의 대표 담당자로 지정할 담당자를 선택해 주세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2" role="radiogroup" aria-label="대표 담당자 선택">
+            {primaryContactCompany?.companyContacts.map((contact) => (
+              <label
+                key={contact.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm has-[:checked]:border-primary"
+              >
+                <input
+                  type="radio"
+                  name="primary-contact"
+                  value={contact.id}
+                  checked={primaryContactId === contact.id}
+                  onChange={() => setPrimaryContactId(contact.id)}
+                />
+                <span>
+                  {contact.name}
+                  {contact.email ? ` · ${contact.email}` : ""}
+                  {contact.isPrimary ? " (현재 대표)" : ""}
+                </span>
+              </label>
+            ))}
+            {selectedPrimaryContact && !selectedPrimaryContact.isPrimary && (
+              <p className="text-sm text-muted-foreground">
+                {selectedPrimaryContact.name} 담당자를 대표 담당자로 지정합니다.
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!selectedPrimaryContact || selectedPrimaryContact.isPrimary}
+              onClick={confirmSetPrimaryContact}
+            >
+              대표 지정
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
