@@ -13,6 +13,8 @@ import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { useHighlightParam } from "@/hooks/useHighlightParam";
+import { resourceHighlightLink } from "@/lib/resource-links";
+import { Link } from "wouter";
 
 const SHARE_TOKEN_ACTIONS = [
   "GENERATE_SHARE_TOKEN",
@@ -222,7 +224,20 @@ export default function AdminAuditLogs() {
     {
       key: "resourceId",
       header: "리소스 ID",
-      cell: (row) => row.resourceId ?? "-",
+      cell: (row) => {
+        if (!row.resourceId) return "-";
+        const link = resourceHighlightLink(row.resourceType, row.resourceId);
+        if (!link) return row.resourceId;
+        return (
+          <Link
+            href={link}
+            className="text-primary underline-offset-2 hover:underline"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {row.resourceId}
+          </Link>
+        );
+      },
     },
     { key: "requestId", header: "요청 ID" },
     {
