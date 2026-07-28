@@ -296,6 +296,18 @@ test(
     assert.equal(nameInput.value, "임시 저장된 교과목");
     assert.equal(creditsInput.value, "5");
 
+    // Independence: restoring the course draft must NOT touch the offering
+    // section's own 학점 input.
+    const offeringCreditsInput = container.querySelector<HTMLInputElement>(
+      'input[placeholder="학점"]',
+    );
+    assert.ok(offeringCreditsInput, "offering 학점 input should render");
+    assert.equal(
+      offeringCreditsInput.value,
+      "3",
+      "offering 학점 must stay at its default when the course draft restores credits",
+    );
+
     await sleep(DEBOUNCE_WAIT_MS);
     assert.ok(
       localStorage.getItem(storageKey),
@@ -313,6 +325,11 @@ test(
     assert.equal(codeInput.value, "", "course code should return to its default");
     assert.equal(nameInput.value, "", "course name should return to its default");
     assert.equal(creditsInput.value, "3", "credits should return to its default");
+    assert.equal(
+      offeringCreditsInput.value,
+      "3",
+      "offering 학점 must be untouched by the course draft reset",
+    );
   }),
 );
 
@@ -391,6 +408,7 @@ test(
       sectionCode: "03",
       capacity: "45",
       instructorName: "임시 저장된 교수",
+      offeringCredits: "6",
       editingOfferingId: "",
     });
 
@@ -414,6 +432,20 @@ test(
     assert.equal(capacityInput.value, "45");
     assert.equal(instructorInput.value, "임시 저장된 교수");
 
+    const offeringCreditsInput = container.querySelector<HTMLInputElement>(
+      'input[placeholder="학점"]',
+    );
+    const courseCreditsInput = container.querySelector<HTMLInputElement>(
+      'input[placeholder="기본학점"]',
+    );
+    assert.ok(offeringCreditsInput && courseCreditsInput, "credits inputs should render");
+    assert.equal(offeringCreditsInput.value, "6", "offering 학점 should restore from its own draft");
+    assert.equal(
+      courseCreditsInput.value,
+      "3",
+      "course 기본학점 must stay at its default when the offering draft restores credits",
+    );
+
     await sleep(DEBOUNCE_WAIT_MS);
     assert.ok(
       localStorage.getItem(storageKey),
@@ -431,6 +463,12 @@ test(
     assert.equal(sectionInput.value, "01", "section code should return to its default");
     assert.equal(capacityInput.value, "30", "capacity should return to its default");
     assert.equal(instructorInput.value, "", "instructor should return to its default");
+    assert.equal(offeringCreditsInput.value, "3", "offering 학점 should return to its default");
+    assert.equal(
+      courseCreditsInput.value,
+      "3",
+      "course 기본학점 must be untouched by the offering draft reset",
+    );
   }),
 );
 

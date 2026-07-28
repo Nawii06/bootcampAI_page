@@ -38,6 +38,7 @@ export default function AdminAcademics() {
   const [selectedTermId, setSelectedTermId] = useState("");
   const [editingOfferingId, setEditingOfferingId] = useState("");
   const [sectionCode, setSectionCode] = useState("01");
+  const [offeringCredits, setOfferingCredits] = useState("3");
   const [capacity, setCapacity] = useState("30");
   const [instructorName, setInstructorName] = useState("");
   const [curriculumCode, setCurriculumCode] = useState("");
@@ -99,9 +100,10 @@ export default function AdminAcademics() {
 
   const { clearDraft: clearOfferingDraft } = useFormDraft(
     "admin/academics/offering",
-    { sectionCode, capacity, instructorName, editingOfferingId },
+    { sectionCode, capacity, instructorName, offeringCredits, editingOfferingId },
     (draft) => {
       if (draft.sectionCode) setSectionCode(draft.sectionCode);
+      if (draft.offeringCredits) setOfferingCredits(draft.offeringCredits);
       if (draft.capacity) setCapacity(draft.capacity);
       if (draft.instructorName) setInstructorName(draft.instructorName);
       if (draft.editingOfferingId) setEditingOfferingId(draft.editingOfferingId);
@@ -122,7 +124,7 @@ export default function AdminAcademics() {
             onClick={() => {
               clear();
               setSectionCode("01"); setCapacity("30"); setInstructorName("");
-              setEditingOfferingId("");
+              setOfferingCredits("3"); setEditingOfferingId("");
             }}
           >
             초기화
@@ -281,13 +283,13 @@ export default function AdminAcademics() {
       method: editingOfferingId ? "PATCH" : "POST",
       body: JSON.stringify({
         ...(editingOfferingId ? {} : { courseMasterId: selectedCourseId, businessYearId: yearId }),
-        termId: selectedTermId, sectionCode, credits: Number(credits),
+        termId: selectedTermId, sectionCode, credits: Number(offeringCredits),
         capacity: Number(capacity), instructorName: instructorName || undefined,
       }),
     }),
     onSuccess: () => {
       clearOfferingDraft();
-      setEditingOfferingId(""); setSectionCode("01"); setCapacity("30"); setInstructorName("");
+      setEditingOfferingId(""); setSectionCode("01"); setCapacity("30"); setInstructorName(""); setOfferingCredits("3");
       queryClient.invalidateQueries({ queryKey: ["admin", "course-offerings"] });
     },
   });
@@ -394,7 +396,7 @@ export default function AdminAcademics() {
             <Input value={sectionCode} onChange={(e) => setSectionCode(e.target.value)} placeholder="분반" />
             <Input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="정원" />
             <Input value={instructorName} onChange={(e) => setInstructorName(e.target.value)} placeholder="담당교수" />
-            <Input type="number" min="0" value={credits} onChange={(e) => setCredits(e.target.value)} placeholder="학점" />
+            <Input type="number" min="0" value={offeringCredits} onChange={(e) => setOfferingCredits(e.target.value)} placeholder="학점" />
             <Button className="sm:col-span-2" disabled={!yearId || !selectedCourseId || !selectedTermId || !sectionCode || Number(capacity) < 1 || createOffering.isPending} onClick={() => createOffering.mutate()}>
               {editingOfferingId ? "개설정보 저장" : "개설"}
             </Button>
@@ -405,7 +407,7 @@ export default function AdminAcademics() {
               <Button size="sm" variant="outline" onClick={() => {
                 setEditingOfferingId(row.id); setSelectedCourseId(row.courseMasterId);
                 setSelectedTermId(row.termId); setSectionCode(row.sectionCode);
-                setCredits(String(row.credits)); setCapacity(String(row.capacity ?? 30));
+                setOfferingCredits(String(row.credits)); setCapacity(String(row.capacity ?? 30));
                 setInstructorName(row.instructorName ?? "");
               }}>수정</Button>
               <Button size="sm" variant="destructive" onClick={() => changeAcademic.mutate({ url: `/api/v1/course-offerings/${row.id}`, method: "DELETE" })}>보관</Button>
