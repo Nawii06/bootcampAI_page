@@ -32,6 +32,7 @@ const EnvironmentSchema = z.object({
     .min(60)
     .max(900)
     .default(120),
+  PUBLIC_PORTFOLIO_RATE_LIMIT: z.coerce.number().int().min(1).default(30),
   METRICS_ENABLED: z.enum(["true", "false"]).default("false"),
   METRICS_TOKEN: optionalNonEmptyString,
 });

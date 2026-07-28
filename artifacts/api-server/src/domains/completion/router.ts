@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { rateLimit } from "express-rate-limit";
+import { env } from "../../config/env";
 import {
   CompletionAssessmentQuerySchema,
   CompletionCalculationRequestSchema,
@@ -223,34 +225,51 @@ router.delete(
 
 // ─── Public portfolio view (no auth) ─────────────────────────────────────────
 
-router.get("/v1/public/portfolio/:token", async (req, res, next) => {
-  try {
-    const { token } = req.params;
-    if (!token || token.length > 150) {
-      throw new ApiError(400, "INVALID_TOKEN", "유효하지 않은 토큰입니다.");
-    }
-    const [record] = await getExperientialRecordByToken(token);
-    if (!record) {
-      throw new ApiError(
-        404,
-        "PORTFOLIO_NOT_FOUND",
-        "포트폴리오를 찾을 수 없거나 비공개 상태입니다.",
-      );
-    }
-    const ev = record.evidence as Record<string, unknown>;
-    res.json({
-      title: record.title,
-      summary: typeof ev.summary === "string" ? ev.summary : "",
-      techStack: Array.isArray(ev.techStack) ? ev.techStack : [],
-      outputLinks: Array.isArray(ev.outputLinks) ? ev.outputLinks : [],
-      createdAt:
-        record.createdAt instanceof Date
-          ? record.createdAt.toISOString()
-          : String(record.createdAt),
-    });
-  } catch (error) {
-    next(error);
-  }
+// Per-IP rate limit: the endpoint is unauthenticated, so throttle anonymous
+// token guessing (brute force) and protect the DB from being hammered.
+const publicPortfolioRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: env.PUBLIC_PORTFOLIO_RATE_LIMIT,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    code: "RATE_LIMITED",
+    message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+  },
 });
+
+router.get(
+  "/v1/public/portfolio/:token",
+  publicPortfolioRateLimiter,
+  async (req, res, next) => {
+    try {
+      const token = String(req.params.token ?? "");
+      if (!token || token.length > 150) {
+        throw new ApiError(400, "INVALID_TOKEN", "유효하지 않은 토큰입니다.");
+      }
+      const [record] = await getExperientialRecordByToken(token);
+      if (!record) {
+        throw new ApiError(
+          404,
+          "PORTFOLIO_NOT_FOUND",
+          "포트폴리오를 찾을 수 없거나 비공개 상태입니다.",
+        );
+      }
+      const ev = record.evidence as Record<string, unknown>;
+      res.json({
+        title: record.title,
+        summary: typeof ev.summary === "string" ? ev.summary : "",
+        techStack: Array.isArray(ev.techStack) ? ev.techStack : [],
+        outputLinks: Array.isArray(ev.outputLinks) ? ev.outputLinks : [],
+        createdAt:
+          record.createdAt instanceof Date
+            ? record.createdAt.toISOString()
+            : String(record.createdAt),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;
