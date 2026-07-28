@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 interface BudgetSummary {
   allocated: number;
@@ -83,6 +84,9 @@ export default function AdminBudget() {
         <LoadingCard message="예산 집행현황을 불러오는 중입니다." />
       ) : (
       <>
+      {years.isSuccess && years.data.data.length === 0 && (
+        <NoActiveYearNotice className="mb-6" />
+      )}
       <div className="grid gap-4 md:grid-cols-5">
         {cards.map(([label, value]) => (
           <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-xl font-bold">{value}</p></CardContent></Card>

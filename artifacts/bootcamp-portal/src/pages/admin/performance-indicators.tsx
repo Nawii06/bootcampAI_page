@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { useHighlightParam } from "@/hooks/useHighlightParam";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string; description?: string }
 
@@ -72,6 +73,9 @@ export default function AdminPerformanceIndicators() {
         <LoadingCard message="성과지표 목록을 불러오는 중입니다." />
       ) : (
         <>
+      {years.isSuccess && years.data.data.length === 0 && (
+        <NoActiveYearNotice className="mb-6" />
+      )}
       {years.isError && (
         <ErrorCard
           className="mb-6"

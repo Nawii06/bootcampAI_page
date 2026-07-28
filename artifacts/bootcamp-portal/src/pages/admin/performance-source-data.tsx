@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { useHighlightParam } from "@/hooks/useHighlightParam";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 export default function AdminPerformanceSourceData() {
   const highlightId = useHighlightParam();
@@ -49,6 +50,9 @@ export default function AdminPerformanceSourceData() {
         <LoadingCard message="원천데이터 현황을 불러오는 중입니다." />
       ) : (
         <>
+          {years.isSuccess && years.data.data.length === 0 && (
+            <NoActiveYearNotice className="mb-6" />
+          )}
           {years.isError && (
             <ErrorCard
               message="사업연도 정보를 불러오지 못했습니다."

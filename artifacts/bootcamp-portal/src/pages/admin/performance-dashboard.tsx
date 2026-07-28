@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { useHighlightParam } from "@/hooks/useHighlightParam";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string }
 interface Row extends Indicator { target?: number; actual?: number; rate?: number; status?: string }
@@ -65,6 +66,9 @@ export default function AdminPerformanceDashboard() {
         <LoadingCard message="성과관리 현황을 불러오는 중입니다." />
       ) : (
         <>
+          {years.isSuccess && years.data.data.length === 0 && (
+            <NoActiveYearNotice className="mb-6" />
+          )}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
             <StatCard label="성과지표" value={`${rows.length}개`} />
             <StatCard label="실적 입력" value={`${measured.length}개`} />

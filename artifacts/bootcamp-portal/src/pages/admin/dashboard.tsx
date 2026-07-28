@@ -11,6 +11,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
 import { ErrorCard } from "@/components/ErrorCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -82,6 +83,10 @@ export default function AdminDashboard() {
         title="운영 대시보드"
         description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 기준 운영 현황`}
       />
+
+      {years.isSuccess && years.data.data.length === 0 && (
+        <NoActiveYearNotice className="mb-6" />
+      )}
 
       {/* ── Skeleton stat cards ── */}
       {isLoading && (

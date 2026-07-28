@@ -26,6 +26,7 @@ const PAGES_DIR = join(ROOT, "src", "pages");
 /** Test files that lock in the no-open-period notice pattern. */
 const NOTICE_TEST_FILES = [
   "no-open-period-notices.test.ts",
+  "no-open-period-admin-notices.test.ts",
   "project-empty-state.test.ts",
   "survey-empty-state.test.ts",
 ];
@@ -39,14 +40,6 @@ const NOTICE_TEST_FILES = [
  */
 const EXCLUDED_PAGES = new Map<string, string>([
   ["admin/course-imports.tsx", "admin import tooling — fetches active years inside mutations, no submission form"],
-  ["admin/dashboard.tsx", "admin overview — read-only, no submission form"],
-  ["admin/budget.tsx", "admin management screen, not a partner/student submission form"],
-  ["admin/evaluation.tsx", "admin management screen, not a partner/student submission form"],
-  ["admin/performance-dashboard.tsx", "admin reporting — read-only"],
-  ["admin/performance-export.tsx", "admin export tooling, not a submission form"],
-  ["admin/performance-indicators.tsx", "admin management screen"],
-  ["admin/performance-results.tsx", "admin management screen"],
-  ["admin/performance-source-data.tsx", "admin management screen"],
 ]);
 
 // Matches the query key or the raw endpoint, so pages that inline the

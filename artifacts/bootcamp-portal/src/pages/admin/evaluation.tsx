@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 export default function AdminEvaluation() {
   const queryClient = useQueryClient();
@@ -74,6 +75,9 @@ export default function AdminEvaluation() {
         <LoadingCard message="성과 자체평가 데이터를 불러오는 중입니다." />
       ) : (
       <>
+      {years.isSuccess && years.data.data.length === 0 && (
+        <NoActiveYearNotice className="mb-6" />
+      )}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">

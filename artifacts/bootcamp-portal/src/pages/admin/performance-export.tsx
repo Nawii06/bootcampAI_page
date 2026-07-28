@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -55,6 +56,9 @@ export default function AdminPerformanceExport() {
         <LoadingCard className="max-w-xl" message="내보내기 정보를 불러오는 중입니다." />
       ) : (
         <>
+          {years.isSuccess && years.data.data.length === 0 && (
+            <NoActiveYearNotice className="mb-6 max-w-xl" />
+          )}
           {years.isError && (
             <ErrorCard
               className="mb-6 max-w-xl"
