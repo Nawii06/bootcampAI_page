@@ -1,2 +1,3 @@
 - [Bootcamp portal page tests](portal-page-tests.md) — shared test helpers in dev/page-test-utils.ts; happy-dom needs a ResizeObserver shim for Radix; no mock.module() in this runtime.
+- [Stale dist in composite TS packages](api-zod-stale-dist.md) — tsc resolves @workspace/* types via referenced projects' dist; run `npx tsc -b` in the lib package when types contradict source.
 - [Rate limiting valid links vs. guesses](rate-limit-valid-vs-guess.md) — skipSuccessfulRequests still pre-blocks valid tokens once tripped; count failures in the handler instead.
