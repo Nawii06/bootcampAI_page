@@ -74,6 +74,7 @@ export default function PartnerProject() {
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
   });
   const yearId = years.data?.data[0]?.id;
+  const noOpenPeriod = years.isSuccess && years.data.data.length === 0;
   const projects = useQuery({
     queryKey: ["partner", "company-participations", yearId, "PROJECT"],
     enabled: Boolean(yearId),
@@ -115,6 +116,11 @@ export default function PartnerProject() {
       <SectionHeader title="산업체 프로젝트 제안" description="PBL·캡스톤디자인에 활용할 산업체 문제를 제안합니다." />
       <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
         <Card><CardContent className="pt-6"><form className="space-y-4" onSubmit={submit}>
+          {noOpenPeriod && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+              현재 진행 중인 프로젝트 제안 기간이 없습니다. 제안 기간이 열리면 제출할 수 있습니다.
+            </p>
+          )}
           <FormField label="과제명" required><Input value={title} onChange={(event) => setTitle(event.target.value)} /></FormField>
           <FormField label="트랙"><select className="h-10 w-full rounded-md border bg-background px-3" value={track} onChange={(event) => setTrack(event.target.value)}><option value="autonomous">자율주행</option><option value="aviation">항공 모빌리티</option><option value="railway">철도 모빌리티</option><option value="infra">스마트 인프라</option></select></FormField>
           <FormField label="문제 정의" required><Textarea rows={4} value={problem} onChange={(event) => setProblem(event.target.value)} /></FormField>
@@ -165,6 +171,14 @@ export default function PartnerProject() {
                   </CardContent>
                 </Card>
               ))}
+          {!years.isLoading && !projects.isLoading && !years.isError && !projects.isError &&
+            (yearId === undefined || (projects.data?.data ?? []).length === 0) && (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  {noOpenPeriod ? "현재 진행 중인 프로젝트 제안 기간이 없습니다." : "제안한 프로젝트가 없습니다."}
+                </CardContent>
+              </Card>
+            )}
         </div>
       </div>
     </PortalLayout>
