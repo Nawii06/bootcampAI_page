@@ -5,10 +5,14 @@
  *   - LoadingCard component itself
  *   - RoleGuard (withRoleGuard HOC) — session loading
  *   - PortalLayout              — session loading
- *   - Public pages: Curriculum, Resources
- *   - Student pages: Status
- *   - Partner pages: Employment
- *   - Admin pages:  Benefits, Content
+ *   - Public pages: Curriculum, Resources, Portfolio
+ *   - Student pages: Status, Portfolio
+ *   - Partner pages: Employment, Dashboard, Project, Survey
+ *   - Admin pages:  Benefits, Content, Dashboard, Employment, Partners
+ *
+ * Remaining pages under src/pages/ intentionally have no loading-state test:
+ * they render no query-driven LoadingCard/Skeleton (static pages, or pages
+ * that render empty tables/zero counts while loading).
  *
  * ## ⚠️ Adding a new page? This file must be extended.
  *
@@ -64,6 +68,16 @@ import StudentStatus from "../src/pages/student/status.tsx";
 import PartnerEmployment from "../src/pages/partner/employment.tsx";
 import AdminBenefits from "../src/pages/admin/benefits.tsx";
 import AdminContent from "../src/pages/admin/content.tsx";
+import PublicPortfolio from "../src/pages/public/portfolio.tsx";
+import StudentPortfolio from "../src/pages/student/portfolio.tsx";
+import PartnerDashboard from "../src/pages/partner/dashboard.tsx";
+import PartnerProject from "../src/pages/partner/project.tsx";
+import PartnerSurvey from "../src/pages/partner/survey.tsx";
+import AdminDashboard from "../src/pages/admin/dashboard.tsx";
+import AdminEmployment from "../src/pages/admin/employment.tsx";
+import AdminPartners from "../src/pages/admin/partners.tsx";
+import { Route, Router } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
 
 // ─── LoadingCard component ────────────────────────────────────────────────────
 
@@ -546,6 +560,317 @@ test(
     assert.ok(
       screen.queryByText("다시 시도"),
       "AdminContent should show a retry button on error",
+    );
+  }),
+);
+
+// ─── Public portfolio page ────────────────────────────────────────────────────
+// Reads :token via wouter useParams, so tests mount it inside a memory Router.
+
+function renderPortfolioAt(token: string, queryData: Array<{ queryKey: unknown[]; data: unknown }> = []) {
+  const { hook } = memoryLocation({ path: `/portfolio/${token}` });
+  return renderPage(
+    createElement(
+      Router,
+      { hook },
+      createElement(Route, { path: "/portfolio/:token" }, createElement(PublicPortfolio)),
+    ),
+    { auth: AUTH_ADMIN, queryData },
+  );
+}
+
+test(
+  "PublicPortfolio — shows skeletons while the portfolio query is loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPortfolioAt("tok-1");
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "PublicPortfolio should show skeletons while the portfolio query is loading",
+    );
+  }),
+);
+
+test(
+  "PublicPortfolio — hides skeletons once the portfolio is loaded",
+  withCleanup(() => {
+    const { container } = renderPortfolioAt("tok-1", [
+      {
+        queryKey: ["public", "portfolio", "tok-1"],
+        data: {
+          title: "테스트 포트폴리오",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          summary: "요약",
+          techStack: [],
+          outputLinks: [],
+          evidence: { shareToken: "tok-1" },
+        },
+      },
+    ]);
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "PublicPortfolio should have no skeletons once the portfolio is loaded",
+    );
+    assert.ok(
+      screen.queryByText("테스트 포트폴리오"),
+      "PublicPortfolio should render the portfolio title once loaded",
+    );
+  }),
+);
+
+// ─── Student portfolio page ───────────────────────────────────────────────────
+
+test(
+  "StudentPortfolio — shows skeletons while queries are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(StudentPortfolio), {
+      auth: AUTH_STUDENT,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "StudentPortfolio should show skeletons while data is loading",
+    );
+  }),
+);
+
+test(
+  "StudentPortfolio — hides skeletons once queries are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(StudentPortfolio), {
+      auth: AUTH_STUDENT,
+      queryData: [
+        // Empty years → records query stays disabled (isLoading=false).
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+        { queryKey: ["student", "employment-links", "usr-student"], data: { data: [] } },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "StudentPortfolio should have no skeletons once queries are loaded",
+    );
+  }),
+);
+
+// ─── Partner dashboard page ───────────────────────────────────────────────────
+
+test(
+  "PartnerDashboard — shows skeletons while participations are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(PartnerDashboard), {
+      auth: AUTH_ADMIN,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "PartnerDashboard should show skeletons while participations are loading",
+    );
+  }),
+);
+
+test(
+  "PartnerDashboard — hides skeletons once participations are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(PartnerDashboard), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["partner", "company-participations"],
+          data: { data: [], company: { name: "테스트기업" } },
+        },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "PartnerDashboard should have no skeletons once participations are loaded",
+    );
+  }),
+);
+
+// ─── Partner project page ─────────────────────────────────────────────────────
+// The projects skeleton only shows once a business year is known (the projects
+// query is disabled until then), so the loading-state test pre-loads years.
+
+test(
+  "PartnerProject — shows skeletons while projects are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(PartnerProject), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["reference", "business-years", "active"],
+          data: { data: [{ id: "year-1", name: "2026" }] },
+        },
+      ],
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "PartnerProject should show skeletons while projects are loading",
+    );
+  }),
+);
+
+test(
+  "PartnerProject — hides skeletons once projects are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(PartnerProject), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["reference", "business-years", "active"],
+          data: { data: [{ id: "year-1", name: "2026" }] },
+        },
+        {
+          queryKey: ["partner", "company-participations", "year-1", "PROJECT"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "PartnerProject should have no skeletons once projects are loaded",
+    );
+  }),
+);
+
+// ─── Partner survey page ──────────────────────────────────────────────────────
+
+test(
+  "PartnerSurvey — shows skeletons while years/surveys are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(PartnerSurvey), {
+      auth: AUTH_ADMIN,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "PartnerSurvey should show skeletons while years/surveys are loading",
+    );
+  }),
+);
+
+test(
+  "PartnerSurvey — hides skeletons once years and surveys are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(PartnerSurvey), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["reference", "business-years", "active"],
+          data: { data: [{ id: "year-1", name: "2026" }] },
+        },
+        {
+          queryKey: ["partner", "company-participations", "year-1", "DEMAND_SURVEY"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "PartnerSurvey should have no skeletons once years and surveys are loaded",
+    );
+  }),
+);
+
+// ─── Admin dashboard page ─────────────────────────────────────────────────────
+
+test(
+  "AdminDashboard — shows skeleton stat cards while queries are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(AdminDashboard), {
+      auth: AUTH_ADMIN,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "AdminDashboard should show skeleton stat cards while data is loading",
+    );
+  }),
+);
+
+test(
+  "AdminDashboard — hides skeletons once queries are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(AdminDashboard), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → programs/assessments/budget queries stay disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+        { queryKey: ["admin", "program-applications"], data: { data: [] } },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "AdminDashboard should have no skeletons once queries are loaded",
+    );
+  }),
+);
+
+// ─── Admin employment page ────────────────────────────────────────────────────
+
+test(
+  "AdminEmployment — shows skeletons while participations are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(AdminEmployment), {
+      auth: AUTH_ADMIN,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "AdminEmployment should show skeletons while participations are loading",
+    );
+  }),
+);
+
+test(
+  "AdminEmployment — hides skeletons once participations are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(AdminEmployment), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "company-participations"], data: { data: [] } },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "AdminEmployment should have no skeletons once participations are loaded",
+    );
+  }),
+);
+
+// ─── Admin partners page ──────────────────────────────────────────────────────
+
+test(
+  "AdminPartners — shows skeletons while company applications are loading",
+  withLoadingCleanup(() => {
+    const { container } = renderPage(createElement(AdminPartners), {
+      auth: AUTH_ADMIN,
+    });
+    assert.ok(
+      container.querySelectorAll(".animate-pulse").length > 0,
+      "AdminPartners should show skeletons while company applications are loading",
+    );
+  }),
+);
+
+test(
+  "AdminPartners — hides skeletons once applications and companies are loaded",
+  withCleanup(() => {
+    const { container } = renderPage(createElement(AdminPartners), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "companies"], data: { data: [] } },
+        {
+          queryKey: ["admin", "company-applications"],
+          data: { data: [], commitments: [] },
+        },
+      ],
+    });
+    assert.equal(
+      container.querySelectorAll(".animate-pulse").length,
+      0,
+      "AdminPartners should have no skeletons once applications and companies are loaded",
     );
   }),
 );
