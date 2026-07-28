@@ -4,18 +4,27 @@
  */
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { contractFetch } from "@workspace/api-client-react";
+import { contractFetch, ApiError } from "@workspace/api-client-react";
 import { PublicPortfolioResponseSchema } from "@workspace/api-zod";
 import { Layout } from "../../components/Layout";
+import { ErrorCard } from "../../components/ErrorCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, AlertCircle } from "lucide-react";
 
+/** True when the API explicitly said the link is gone (revoked/expired/private). */
+function isNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 404 || error.status === 410 || error.status === 403)
+  );
+}
+
 export default function PublicPortfolio() {
   const { token } = useParams<{ token: string }>();
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ["public", "portfolio", token],
     queryFn: () =>
       contractFetch(
@@ -42,8 +51,8 @@ export default function PublicPortfolio() {
           </div>
         )}
 
-        {/* Not found / error */}
-        {isError && (
+        {/* Not found — the link is revoked, expired, or private */}
+        {isError && isNotFoundError(error) && (
           <Card>
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
               <AlertCircle className="h-10 w-10 text-muted-foreground" />
@@ -53,6 +62,15 @@ export default function PublicPortfolio() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Network / API failure — the link may still be valid, offer retry */}
+        {isError && !isNotFoundError(error) && (
+          <ErrorCard
+            message="포트폴리오를 불러오지 못했습니다."
+            onRetry={() => refetch()}
+            isRetrying={isRefetching}
+          />
         )}
 
         {/* Portfolio content */}

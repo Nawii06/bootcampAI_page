@@ -11,11 +11,9 @@
  *   - src/pages/student/dashboard.tsx
  *   - src/pages/student/learning.tsx
  *   - src/pages/student/portfolio.tsx
- *
- * Skipped (see report): src/pages/public/portfolio.tsx — its only query is
- * gated by the `:token` route param and it renders a purposeful "not found"
- * UI (expired/private link) without a retry affordance, so it does not fit
- * the ErrorCard-with-retry assertion contract.
+ *   - src/pages/public/portfolio.tsx (mounted inside a memory Router so its
+ *     `:token`-gated query runs; network failures show ErrorCard with retry,
+ *     while API 404/410/403 shows the purposeful "not found" UI)
  *
  * Each test installs an immediately-rejecting fetch (withErrorCleanup) so every
  * useQuery (retry: 0) lands in isError, then asserts a meaningful error message
@@ -53,6 +51,10 @@ import StudentCompletion from "../src/pages/student/completion.tsx";
 import StudentDashboard from "../src/pages/student/dashboard.tsx";
 import StudentLearning from "../src/pages/student/learning.tsx";
 import StudentPortfolio from "../src/pages/student/portfolio.tsx";
+import PublicPortfolio from "../src/pages/public/portfolio.tsx";
+import { Route, Router } from "wouter";
+import { memoryLocation } from "wouter/memory-location";
+import { cleanup } from "@testing-library/react";
 
 // ─── public/home ──────────────────────────────────────────────────────────────
 test(
@@ -200,3 +202,69 @@ test(
     );
   }),
 );
+
+// ─── public/portfolio ───────────────────────────────────────────────────────
+// Reads :token via wouter useParams, so tests mount it inside a memory Router.
+
+function renderPublicPortfolioAt(token: string) {
+  const { hook } = memoryLocation({ path: `/portfolio/${token}` });
+  return renderPage(
+    createElement(
+      Router,
+      { hook },
+      createElement(
+        Route,
+        { path: "/portfolio/:token" },
+        createElement(PublicPortfolio),
+      ),
+    ),
+    { auth: AUTH_ADMIN },
+  );
+}
+
+test(
+  "PublicPortfolio — shows ErrorCard with retry on a network failure",
+  withErrorCleanup(async () => {
+    renderPublicPortfolioAt("tok-network-fail");
+    assert.ok(
+      await screen.findByText("포트폴리오를 불러오지 못했습니다."),
+      "PublicPortfolio should show a helpful error message on network failure",
+    );
+    assert.ok(
+      screen.queryAllByText("다시 시도").length >= 1,
+      "PublicPortfolio should show a retry button on network failure",
+    );
+    assert.equal(
+      screen.queryByText("포트폴리오를 찾을 수 없습니다"),
+      null,
+      "PublicPortfolio must NOT show the not-found UI on a network failure",
+    );
+  }),
+);
+
+test("PublicPortfolio — shows the not-found UI (no retry) on an API 404", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (): Promise<Response> =>
+    Promise.resolve(
+      new Response(JSON.stringify({ error: { message: "link revoked" } }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  try {
+    renderPublicPortfolioAt("tok-revoked");
+    assert.ok(
+      await screen.findByText("포트폴리오를 찾을 수 없습니다"),
+      "PublicPortfolio should show the not-found UI on an API 404",
+    );
+    assert.equal(
+      screen.queryAllByText("다시 시도").length,
+      0,
+      "PublicPortfolio must NOT show a retry button when the link is gone",
+    );
+  } finally {
+    cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
