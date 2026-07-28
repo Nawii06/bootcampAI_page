@@ -18,22 +18,11 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { EXCLUDED_PAGES } from "./excluded-pages";
 
 const DEV_DIR = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(DEV_DIR, "..");
 const PAGES_DIR = join(ROOT, "src", "pages");
-
-/**
- * Pages that intentionally have no loading-state test because they do not
- * fire a data query on mount. Paths are relative to src/pages/.
- * Keep in sync with dev/error-states-coverage.test.ts.
- */
-const EXCLUDED_PAGES = new Set<string>([
-  "login.tsx", // form only — no on-mount query
-  "not-found.tsx", // static 404 page
-  "public/intro.tsx", // static content page
-  "admin/course-imports.tsx", // mutation-only, no on-load query
-]);
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -76,7 +65,7 @@ test("every data-driven page has a loading-state test (TESTING.md rule)", () => 
     `These data-driven pages (useQuery on mount) have no loading-state test in dev/loading-spinner-states.test.ts.\n` +
       `Add a loading-state + loaded-state test asserting a LoadingCard message (or Skeleton rows) while the\n` +
       `on-mount query is in flight and gone once data resolves (see dev/TESTING.md), or add the page to\n` +
-      `EXCLUDED_PAGES in dev/loading-spinner-coverage.test.ts if it genuinely has no on-mount query:\n  - ${uncovered.join("\n  - ")}`,
+      `EXCLUDED_PAGES in dev/excluded-pages.ts if it genuinely has no on-mount query:\n  - ${uncovered.join("\n  - ")}`,
   );
 
   // Guard the exclusion list itself: entries must still exist as pages.

@@ -17,21 +17,11 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { EXCLUDED_PAGES } from "./excluded-pages";
 
 const DEV_DIR = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(DEV_DIR, "..");
 const PAGES_DIR = join(ROOT, "src", "pages");
-
-/**
- * Pages that intentionally have no error-state test because they do not
- * fire a data query on mount. Paths are relative to src/pages/.
- */
-const EXCLUDED_PAGES = new Set<string>([
-  "login.tsx", // form only — no on-mount query
-  "not-found.tsx", // static 404 page
-  "public/intro.tsx", // static content page
-  "admin/course-imports.tsx", // mutation-only, no on-load query
-]);
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -78,7 +68,7 @@ test("every data-driven page has an error-state test (TESTING.md rule)", () => {
     [],
     `These data-driven pages (useQuery on mount) have no error-state test in dev/error-states-*.test.ts.\n` +
       `Add a test asserting an ErrorCard message + "다시 시도" retry button when the on-mount query fails\n` +
-      `(see dev/TESTING.md), or add the page to EXCLUDED_PAGES in dev/error-states-coverage.test.ts if it\n` +
+      `(see dev/TESTING.md), or add the page to EXCLUDED_PAGES in dev/excluded-pages.ts if it\n` +
       `genuinely has no on-mount query:\n  - ${uncovered.join("\n  - ")}`,
   );
 
