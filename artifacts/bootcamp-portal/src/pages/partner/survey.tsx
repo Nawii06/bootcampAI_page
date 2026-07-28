@@ -28,6 +28,7 @@ export default function PartnerSurvey() {
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
   });
   const yearId = years.data?.data[0]?.id;
+  const noOpenPeriod = years.isSuccess && years.data.data.length === 0;
   const surveys = useQuery({
     queryKey: ["partner", "company-participations", yearId, "DEMAND_SURVEY"],
     enabled: Boolean(yearId),
@@ -71,6 +72,11 @@ export default function PartnerSurvey() {
       <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
         <Card><CardContent className="pt-6">
           <form className="space-y-5" onSubmit={submit}>
+            {noOpenPeriod && (
+              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                현재 진행 중인 수요조사 기간이 없습니다. 수요조사 기간이 열리면 제출할 수 있습니다.
+              </p>
+            )}
             <FormField label="필요 기술" required><Input value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, ROS2, 컴퓨터비전" /></FormField>
             <FormField label="산학 프로젝트 주제"><textarea className="min-h-24 w-full rounded-md border bg-background p-3 text-sm" value={topics} onChange={(event) => setTopics(event.target.value)} placeholder="한 줄에 하나의 주제" /></FormField>
             <FormField label="예상 필요인원"><Input type="number" min={0} value={headcount} onChange={(event) => setHeadcount(Number(event.target.value))} /></FormField>
@@ -114,7 +120,7 @@ export default function PartnerSurvey() {
             (yearId === undefined || (surveys.data?.data ?? []).length === 0) && (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  등록된 수요조사가 없습니다.
+                  {noOpenPeriod ? "현재 진행 중인 수요조사 기간이 없습니다." : "등록된 수요조사가 없습니다."}
                 </CardContent>
               </Card>
             )}
