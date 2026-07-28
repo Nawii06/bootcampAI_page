@@ -208,6 +208,90 @@ test(
   }),
 );
 
+// ─── 3. Malformed / unsafe redirect values fall back to defaultRoute ─────────
+
+async function loginAndExpectFallback(searchPath: string, rejected: string) {
+  const restoreFetch = stubIdentityFetch();
+  try {
+    const memory = renderAt(
+      createElement(Login),
+      makeAuth({
+        user: null,
+        isLoading: false,
+        loginWithFakeIdentity: async () => makeUser({ defaultRoute: "/student/home" }),
+      }),
+      "/login",
+      searchPath,
+    );
+
+    const loginButton = await screen.findByText("가상 로그인");
+    fireEvent.click(loginButton);
+
+    await waitFor(() => {
+      assert.ok(
+        memory.history.includes("/student/home"),
+        `expected fallback to /student/home, history: ${memory.history.join(", ")}`,
+      );
+    });
+    // Ignore the initial /login?redirect=... entry — it necessarily contains
+    // the raw param; only post-login navigations must avoid the rejected target.
+    const navigations = memory.history.filter((entry) => !entry.startsWith("/login"));
+    assert.ok(
+      !navigations.some((entry) => entry.includes(rejected)),
+      `history must not contain the rejected redirect target: ${memory.history.join(", ")}`,
+    );
+  } finally {
+    restoreFetch();
+  }
+}
+
+test(
+  "Login — a malformed redirect (bad percent-encoding) falls back to defaultRoute",
+  withCleanup(async () => {
+    await loginAndExpectFallback("redirect=%E0%A4%A", "%E0%A4%A");
+  }),
+);
+
+test(
+  "Login — an absolute external redirect URL is ignored, falls back to defaultRoute",
+  withCleanup(async () => {
+    await loginAndExpectFallback(
+      `redirect=${encodeURIComponent("https://evil.example/phish")}`,
+      "evil.example",
+    );
+  }),
+);
+
+test(
+  "Login — a protocol-relative redirect (//evil.example) is ignored",
+  withCleanup(async () => {
+    await loginAndExpectFallback(
+      `redirect=${encodeURIComponent("//evil.example")}`,
+      "evil.example",
+    );
+  }),
+);
+
+test(
+  "Login — a javascript: scheme redirect is ignored",
+  withCleanup(async () => {
+    await loginAndExpectFallback(
+      `redirect=${encodeURIComponent("javascript:alert(1)")}`,
+      "javascript:",
+    );
+  }),
+);
+
+test(
+  "Login — a backslash-prefixed redirect (/\\evil.example) is ignored",
+  withCleanup(async () => {
+    await loginAndExpectFallback(
+      `redirect=${encodeURIComponent("/\\evil.example")}`,
+      "evil.example",
+    );
+  }),
+);
+
 test(
   "Login — an already-authenticated visitor is sent to the redirect target immediately",
   withCleanup(async () => {

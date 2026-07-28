@@ -26,7 +26,16 @@ export default function Login() {
   const redirectAfterLogin = (() => {
     try {
       const raw = new URLSearchParams(search).get("redirect");
-      return raw ? decodeURIComponent(raw) : null;
+      if (!raw) return null;
+      const decoded = decodeURIComponent(raw);
+      // Only honor same-app paths: must start with "/" but not "//" (a
+      // protocol-relative URL) and contain no backslashes (some browsers
+      // normalize "\" to "/"). Anything else (absolute URLs, schemes like
+      // javascript:, etc.) falls back to the user's default route.
+      if (!decoded.startsWith("/") || decoded.startsWith("//") || decoded.includes("\\")) {
+        return null;
+      }
+      return decoded;
     } catch {
       return null;
     }
