@@ -1,40 +1,9 @@
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  inArray,
-  lte,
-  type SQL,
-} from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { auditLogs, users } from "@workspace/db/schema";
 import type { AuditLogQuery } from "@workspace/api-zod";
+import { conditionsFor } from "./query-conditions";
 import { csvCell, maskAuditValue, maskIpAddress } from "./sanitizer";
-
-function conditionsFor(filters: AuditLogQuery) {
-  const conditions: SQL[] = [];
-  if (filters.startAt) {
-    conditions.push(gte(auditLogs.occurredAt, new Date(filters.startAt)));
-  }
-  if (filters.endAt) {
-    conditions.push(lte(auditLogs.occurredAt, new Date(filters.endAt)));
-  }
-  if (filters.actorUserId) {
-    conditions.push(eq(auditLogs.actorUserId, filters.actorUserId));
-  }
-  if (filters.action?.length) {
-    conditions.push(inArray(auditLogs.action, filters.action));
-  }
-  if (filters.resourceType) {
-    conditions.push(eq(auditLogs.resourceType, filters.resourceType));
-  }
-  if (filters.resourceId) {
-    conditions.push(eq(auditLogs.resourceId, filters.resourceId));
-  }
-  return conditions.length ? and(...conditions) : undefined;
-}
 
 export async function listAuditLogs(filters: AuditLogQuery) {
   const where = conditionsFor(filters);
