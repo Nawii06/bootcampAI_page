@@ -6,4 +6,5 @@ description: Conventions and environment quirks for loading/error-state page tes
 - Shared page-test helpers (fetch stubs, mock auth, renderPage, cleanup wrappers, DOM shims) are centralized in the portal's `dev/page-test-utils.ts`; new test files must import it (its import side-effects install required global shims) rather than redefining helpers.
 - **Why:** `mock.module()` is unavailable in the node:test + happy-dom runtime, so tests rely on AuthContext injection, fetch stubbing, and `setQueryData`.
 - happy-dom lacks `ResizeObserver`; Radix primitives (react-use-size) throw on mount. A no-op ResizeObserver shim is needed in test setup for pages using such components.
+- happy-dom also doesn't expose `NodeFilter` or `HTMLInputElement`/`HTMLSelectElement`/etc. as bare globals; Radix Dialog's focus scope needs them. Shim `NodeFilter` constants and copy the HTML element classes from `window` onto `globalThis` in the test file before rendering dialog-bearing pages.
 - **How to apply:** when adding page tests, follow `dev/TESTING.md`; error-state tests assert an ErrorCard message + "다시 시도" retry button via a rejecting fetch stub with retry: 0.

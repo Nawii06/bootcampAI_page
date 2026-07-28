@@ -18,6 +18,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -50,6 +68,21 @@ export default function AdminPartners() {
   const [companyDescription, setCompanyDescription] = useState("");
   const [companyWebsite, setCompanyWebsite] = useState("");
   const [companyIsActive, setCompanyIsActive] = useState(true);
+
+  // Dialog state for quick actions (담당자 추가 / 전문가 추가 / 담당자 보관).
+  const [contactDialogCompany, setContactDialogCompany] = useState<Company | null>(null);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactErrors, setContactErrors] = useState<{ name?: string; email?: string }>({});
+  const [expertDialogCompany, setExpertDialogCompany] = useState<Company | null>(null);
+  const [expertName, setExpertName] = useState("");
+  const [expertSpecialty, setExpertSpecialty] = useState("");
+  const [expertErrors, setExpertErrors] = useState<{ name?: string; specialty?: string }>({});
+  const [archiveContactTarget, setArchiveContactTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
+
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const resetCompanyForm = () => {
     setEditingCompanyId("");
@@ -162,6 +195,56 @@ export default function AdminPartners() {
       },
     );
   };
+  const submitContact = () => {
+    if (!contactDialogCompany) return;
+    const name = contactName.trim();
+    const email = contactEmail.trim();
+    const errors: { name?: string; email?: string } = {};
+    if (!name) errors.name = "담당자 이름을 입력해 주세요.";
+    if (!email) errors.email = "이메일을 입력해 주세요.";
+    else if (!EMAIL_PATTERN.test(email)) errors.email = "올바른 이메일 형식이 아닙니다.";
+    setContactErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    companyMutation.reset();
+    companyMutation.mutate(
+      {
+        url: `/api/v1/companies/${contactDialogCompany.id}/contacts`,
+        body: {
+          name,
+          email,
+          isPrimary: contactDialogCompany.companyContacts.length === 0,
+        },
+      },
+      { onSuccess: () => setContactDialogCompany(null) },
+    );
+  };
+  const submitExpert = () => {
+    if (!expertDialogCompany) return;
+    const name = expertName.trim();
+    const specialty = expertSpecialty.trim();
+    const errors: { name?: string; specialty?: string } = {};
+    if (!name) errors.name = "전문가 이름을 입력해 주세요.";
+    if (!specialty) errors.specialty = "전문 분야를 입력해 주세요.";
+    setExpertErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    companyMutation.reset();
+    companyMutation.mutate(
+      {
+        url: `/api/v1/companies/${expertDialogCompany.id}/experts`,
+        body: { name, specialty, profile: {} },
+      },
+      { onSuccess: () => setExpertDialogCompany(null) },
+    );
+  };
+  const confirmArchiveContact = () => {
+    if (!archiveContactTarget) return;
+    companyMutation.reset();
+    companyMutation.mutate({
+      url: `/api/v1/company-contacts/${archiveContactTarget.id}`,
+      method: "DELETE",
+    });
+    setArchiveContactTarget(null);
+  };
   const columns: ColumnDef<Company>[] = [
     {
       key: "name",
@@ -247,14 +330,11 @@ export default function AdminPartners() {
             variant="outline"
             disabled={companyMutation.isPending}
             onClick={() => {
-              const name = window.prompt("추가할 담당자 이름을 입력하세요.");
-              const email = name ? window.prompt("담당자 이메일을 입력하세요.") : null;
-              if (!name || !email) return;
               companyMutation.reset();
-              companyMutation.mutate({
-                url: `/api/v1/companies/${row.id}/contacts`,
-                body: { name, email, isPrimary: row.companyContacts.length === 0 },
-              });
+              setContactName("");
+              setContactEmail("");
+              setContactErrors({});
+              setContactDialogCompany(row);
             }}
           >
             담당자 추가
@@ -264,14 +344,11 @@ export default function AdminPartners() {
             variant="outline"
             disabled={companyMutation.isPending}
             onClick={() => {
-              const name = window.prompt("추가할 전문가 이름을 입력하세요.");
-              const specialty = name ? window.prompt("전문 분야를 입력하세요.") : null;
-              if (!name || !specialty) return;
               companyMutation.reset();
-              companyMutation.mutate({
-                url: `/api/v1/companies/${row.id}/experts`,
-                body: { name, specialty, profile: {} },
-              });
+              setExpertName("");
+              setExpertSpecialty("");
+              setExpertErrors({});
+              setExpertDialogCompany(row);
             }}
           >
             전문가 추가
@@ -282,13 +359,10 @@ export default function AdminPartners() {
               variant="outline"
               disabled={companyMutation.isPending}
               onClick={() => {
-                if (window.confirm(`${row.companyContacts[0]!.name} 담당자를 보관 처리하시겠습니까?`)) {
-                  companyMutation.reset();
-                  companyMutation.mutate({
-                    url: `/api/v1/company-contacts/${row.companyContacts[0]!.id}`,
-                    method: "DELETE",
-                  });
-                }
+                setArchiveContactTarget({
+                  id: row.companyContacts[0]!.id,
+                  name: row.companyContacts[0]!.name,
+                });
               }}
             >
               담당자 보관
@@ -463,6 +537,153 @@ export default function AdminPartners() {
         highlightId={highlightId}
         highlightMissingMessage="해당 기업을 찾을 수 없습니다."
       />
+      <Dialog
+        open={contactDialogCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) setContactDialogCompany(null);
+        }}
+      >
+        <DialogContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitContact();
+            }}
+            className="grid gap-4"
+          >
+            <DialogHeader>
+              <DialogTitle>담당자 추가</DialogTitle>
+              <DialogDescription>
+                {contactDialogCompany?.name} 기업의 담당자를 추가합니다.
+                {contactDialogCompany?.companyContacts.length === 0 &&
+                  " 첫 담당자는 대표 담당자로 지정됩니다."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label htmlFor="contact-name">이름</Label>
+              <Input
+                id="contact-name"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                placeholder="담당자 이름"
+              />
+              {contactErrors.name && (
+                <p className="text-sm text-destructive">{contactErrors.name}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="contact-email">이메일</Label>
+              <Input
+                id="contact-email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="name@example.com"
+              />
+              {contactErrors.email && (
+                <p className="text-sm text-destructive">{contactErrors.email}</p>
+              )}
+            </div>
+            {contactDialogCompany !== null && companyMutation.isError && (
+              <p className="text-sm text-destructive">{companyMutation.error?.message}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={companyMutation.isPending}
+                onClick={() => setContactDialogCompany(null)}
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={companyMutation.isPending}>
+                추가
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={expertDialogCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) setExpertDialogCompany(null);
+        }}
+      >
+        <DialogContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitExpert();
+            }}
+            className="grid gap-4"
+          >
+            <DialogHeader>
+              <DialogTitle>전문가 추가</DialogTitle>
+              <DialogDescription>
+                {expertDialogCompany?.name} 기업의 전문가를 추가합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label htmlFor="expert-name">이름</Label>
+              <Input
+                id="expert-name"
+                value={expertName}
+                onChange={(e) => setExpertName(e.target.value)}
+                placeholder="전문가 이름"
+              />
+              {expertErrors.name && (
+                <p className="text-sm text-destructive">{expertErrors.name}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="expert-specialty">전문 분야</Label>
+              <Input
+                id="expert-specialty"
+                value={expertSpecialty}
+                onChange={(e) => setExpertSpecialty(e.target.value)}
+                placeholder="예: 클라우드 아키텍처"
+              />
+              {expertErrors.specialty && (
+                <p className="text-sm text-destructive">{expertErrors.specialty}</p>
+              )}
+            </div>
+            {expertDialogCompany !== null && companyMutation.isError && (
+              <p className="text-sm text-destructive">{companyMutation.error?.message}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={companyMutation.isPending}
+                onClick={() => setExpertDialogCompany(null)}
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={companyMutation.isPending}>
+                추가
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={archiveContactTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setArchiveContactTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>담당자 보관</AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveContactTarget?.name} 담당자를 보관 처리하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmArchiveContact}>보관</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 }
