@@ -141,6 +141,7 @@ export default function AdminPartners() {
   }
   const saveCompanyEdit = () => {
     if (!editingCompanyId || !companyName.trim() || !companyType.trim()) return;
+    companyMutation.reset();
     companyMutation.mutate(
       {
         url: `/api/v1/companies/${editingCompanyId}`,
@@ -230,11 +231,14 @@ export default function AdminPartners() {
             size="sm"
             variant="outline"
             disabled={companyMutation.isPending}
-            onClick={() => companyMutation.mutate({
-              url: `/api/v1/companies/${row.id}`,
-              method: "PATCH",
-              body: { isPublic: !row.isPublic },
-            })}
+            onClick={() => {
+              companyMutation.reset();
+              companyMutation.mutate({
+                url: `/api/v1/companies/${row.id}`,
+                method: "PATCH",
+                body: { isPublic: !row.isPublic },
+              });
+            }}
           >
             {row.isPublic ? "공개 해제" : "공개"}
           </Button>
@@ -246,6 +250,7 @@ export default function AdminPartners() {
               const name = window.prompt("추가할 담당자 이름을 입력하세요.");
               const email = name ? window.prompt("담당자 이메일을 입력하세요.") : null;
               if (!name || !email) return;
+              companyMutation.reset();
               companyMutation.mutate({
                 url: `/api/v1/companies/${row.id}/contacts`,
                 body: { name, email, isPrimary: row.companyContacts.length === 0 },
@@ -262,6 +267,7 @@ export default function AdminPartners() {
               const name = window.prompt("추가할 전문가 이름을 입력하세요.");
               const specialty = name ? window.prompt("전문 분야를 입력하세요.") : null;
               if (!name || !specialty) return;
+              companyMutation.reset();
               companyMutation.mutate({
                 url: `/api/v1/companies/${row.id}/experts`,
                 body: { name, specialty, profile: {} },
@@ -277,6 +283,7 @@ export default function AdminPartners() {
               disabled={companyMutation.isPending}
               onClick={() => {
                 if (window.confirm(`${row.companyContacts[0]!.name} 담당자를 보관 처리하시겠습니까?`)) {
+                  companyMutation.reset();
                   companyMutation.mutate({
                     url: `/api/v1/company-contacts/${row.companyContacts[0]!.id}`,
                     method: "DELETE",
@@ -292,11 +299,14 @@ export default function AdminPartners() {
               size="sm"
               variant="outline"
               disabled={companyMutation.isPending}
-              onClick={() => companyMutation.mutate({
-                url: `/api/v1/company-experts/${row.companyExperts[0]!.id}/status`,
-                method: "PATCH",
-                body: { isActive: !(row.companyExperts[0]!.isActive ?? true) },
-              })}
+              onClick={() => {
+                companyMutation.reset();
+                companyMutation.mutate({
+                  url: `/api/v1/company-experts/${row.companyExperts[0]!.id}/status`,
+                  method: "PATCH",
+                  body: { isActive: !(row.companyExperts[0]!.isActive ?? true) },
+                });
+              }}
             >
               {(row.companyExperts[0]!.isActive ?? true) ? "전문가 비활성" : "전문가 활성"}
             </Button>
