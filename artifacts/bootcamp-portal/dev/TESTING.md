@@ -36,6 +36,22 @@ query fails. This rule is enforced automatically:
 `error-states-*.test.ts` file. Pages with no on-mount query are listed in
 its `EXCLUDED_PAGES` set (with a reason).
 
+## No-open-period notices on submission forms
+
+Any page that gates submission on the active business-years query
+(`["reference", "business-years", "active"]` /
+`/api/v1/reference/business-years?active=true`) must show an explicit
+`role="status"` "no open period" notice when the query returns zero
+years — **never just a disabled submit button**. Lock the behaviour in
+with a pair of tests (zero years → notice shown; active year → notice
+absent) in `dev/no-open-period-notices.test.ts` (pattern examples:
+`dev/project-empty-state.test.ts`, `dev/survey-empty-state.test.ts`).
+This is enforced automatically: `dev/no-open-period-coverage.test.ts`
+scans `src/pages/` for the active business-years query and fails if a
+page using it is neither referenced by a notice test file nor listed
+(with a reason) in its `EXCLUDED_PAGES` map — admin, non-submission
+screens only.
+
 ## The pattern (3 techniques)
 
 `mock.module()` is not available in this runtime, so the suite uses:
