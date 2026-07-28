@@ -10,6 +10,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function AdminCompletion() {
   const assessments = useQuery({
@@ -79,12 +80,16 @@ export default function AdminCompletion() {
           isRetrying={assessments.isFetching}
         />
       )}
-      <DataTable
-        data={assessments.data?.data ?? []}
-        columns={columns}
-        filterKey="studentName"
-        filterPlaceholder="학생명 검색"
-      />
+      {assessments.isLoading ? (
+        <LoadingCard message="이수 평가 결과를 불러오는 중입니다." />
+      ) : (
+        <DataTable
+          data={assessments.data?.data ?? []}
+          columns={columns}
+          filterKey="studentName"
+          filterPlaceholder="학생명 검색"
+        />
+      )}
     </PortalLayout>
   );
 }

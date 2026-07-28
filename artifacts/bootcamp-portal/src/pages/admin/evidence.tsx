@@ -13,6 +13,7 @@ import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
@@ -93,7 +94,11 @@ export default function AdminEvidence() {
           isRetrying={files.isFetching}
         />
       )}
+      {files.isLoading ? (
+        <LoadingCard message="증빙자료 목록을 불러오는 중입니다." />
+      ) : (
       <DataTable data={files.data?.data ?? []} columns={columns} />
+      )}
       <div className="mt-6 space-y-2">
         {(files.data?.data ?? []).map((file) => (
           <div key={file.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3 text-sm">

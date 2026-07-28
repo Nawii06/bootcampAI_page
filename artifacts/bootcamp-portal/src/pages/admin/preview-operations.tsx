@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const roleSections: Record<string, Array<keyof OperationsResponse["operations"]>> = {
   BENEFIT_STAFF: ["benefitPolicies"],
@@ -71,6 +72,10 @@ export default function AdminPreviewOperations() {
           isRetrying={operations.isFetching}
         />
       )}
+      {operations.isLoading ? (
+        <LoadingCard message="역할별 업무현황을 불러오는 중입니다." />
+      ) : (
+      <>
       <div className="grid gap-5 xl:grid-cols-2">
         {sections.map((section) => (
           <Card key={section}>
@@ -109,6 +114,8 @@ export default function AdminPreviewOperations() {
             {!operations.data?.auditLogs.length && <p className="text-sm text-muted-foreground">기록된 가상 감사로그가 없습니다.</p>}
           </CardContent>
         </Card>
+      )}
+      </>
       )}
     </PortalLayout>
   );

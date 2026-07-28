@@ -11,6 +11,7 @@ import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string; description?: string }
 
@@ -65,6 +66,10 @@ export default function AdminPerformanceIndicators() {
   return (
     <PortalLayout>
       <SectionHeader title="성과지표·목표 관리" description="지표 정의와 사업연도별 목표 버전을 관리합니다." />
+      {years.isLoading || overview.isLoading ? (
+        <LoadingCard message="성과지표 목록을 불러오는 중입니다." />
+      ) : (
+        <>
       {years.isError && (
         <ErrorCard
           className="mb-6"
@@ -88,6 +93,8 @@ export default function AdminPerformanceIndicators() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </PortalLayout>
   );
 }

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function AdminEvaluation() {
   const queryClient = useQueryClient();
@@ -69,6 +70,10 @@ export default function AdminEvaluation() {
           className="mb-6"
         />
       )}
+      {years.isLoading ? (
+        <LoadingCard message="성과 자체평가 데이터를 불러오는 중입니다." />
+      ) : (
+      <>
       <Card className="mb-6">
         <CardContent className="pt-6">
           <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
@@ -90,6 +95,8 @@ export default function AdminEvaluation() {
           </CardContent></Card>
         ))}
       </div>
+      </>
+      )}
     </PortalLayout>
   );
 }

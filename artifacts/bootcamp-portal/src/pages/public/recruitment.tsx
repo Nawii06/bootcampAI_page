@@ -6,6 +6,7 @@ import { Layout } from "../../components/Layout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function Recruitment() {
   const programs = useQuery({
@@ -20,6 +21,10 @@ export default function Recruitment() {
     <Layout>
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <SectionHeader title="학생모집" description="현재 신청 가능한 교육 프로그램과 회차입니다." />
+        {programs.isLoading ? (
+          <LoadingCard message="모집 프로그램을 불러오는 중입니다." />
+        ) : (
+        <>
                 {programs.isError && (
           <ErrorCard
             message="모집 API에 연결할 수 없습니다."
@@ -45,6 +50,8 @@ export default function Recruitment() {
           ))}
         </div>
         {sessions.length === 0 && !programs.isLoading && <p className="text-center text-muted-foreground">현재 모집 중인 프로그램이 없습니다.</p>}
+        </>
+        )}
       </div>
     </Layout>
   );

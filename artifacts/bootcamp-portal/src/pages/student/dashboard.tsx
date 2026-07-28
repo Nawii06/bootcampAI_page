@@ -8,6 +8,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function StudentDashboard() {
@@ -32,6 +33,7 @@ export default function StudentDashboard() {
   });
   const latest = assessments.data?.data[0];
   const selected = applications.data?.data.filter((item) => item.status === "SELECTED").length ?? 0;
+  const isLoading = applications.isLoading || assessments.isLoading;
   return (
     <PortalLayout>
       <SectionHeader title="학생 대시보드" description={`${user?.name ?? "학생"}님의 프로그램·이수 현황입니다.`} />
@@ -46,12 +48,16 @@ export default function StudentDashboard() {
           isRetrying={applications.isFetching || assessments.isFetching}
         />
       )}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard label="전체 신청" value={applications.data?.data.length ?? 0} />
-        <StatCard label="선발 프로그램" value={selected} />
-        <StatCard label="이수 진행률" value={`${Number(latest?.progressRate ?? 0)}%`} />
-        <StatCard label="부족요건" value={latest?.missing.length ?? 0} />
-      </div>
+      {isLoading ? (
+        <LoadingCard message="대시보드 현황을 불러오는 중입니다." />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-4">
+          <StatCard label="전체 신청" value={applications.data?.data.length ?? 0} />
+          <StatCard label="선발 프로그램" value={selected} />
+          <StatCard label="이수 진행률" value={`${Number(latest?.progressRate ?? 0)}%`} />
+          <StatCard label="부족요건" value={latest?.missing.length ?? 0} />
+        </div>
+      )}
     </PortalLayout>
   );
 }

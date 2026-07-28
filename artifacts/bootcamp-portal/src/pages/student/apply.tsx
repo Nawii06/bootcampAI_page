@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function StudentApply() {
@@ -106,6 +107,9 @@ export default function StudentApply() {
     <PortalLayout>
       <SectionHeader title="프로그램 신청" description="신청기간과 자격요건은 서버에서 검증됩니다." />
       <PrivacyWarningNotice />
+      {programs.isLoading ? (
+        <LoadingCard message="신청 가능한 프로그램을 불러오는 중입니다." />
+      ) : (
       <Card className="max-w-2xl">
         <CardContent className="pt-6">
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -139,6 +143,7 @@ export default function StudentApply() {
           </form>
         </CardContent>
       </Card>
+      )}
     </PortalLayout>
   );
 }

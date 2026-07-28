@@ -8,6 +8,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const money = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -64,7 +65,11 @@ export default function AdminBudgetLog() {
           isRetrying={history.isFetching}
         />
       )}
-      <DataTable data={history.data?.data ?? []} columns={columns} />
+      {history.isLoading ? (
+        <LoadingCard message="예산 변경이력을 불러오는 중입니다." />
+      ) : (
+        <DataTable data={history.data?.data ?? []} columns={columns} />
+      )}
     </PortalLayout>
   );
 }

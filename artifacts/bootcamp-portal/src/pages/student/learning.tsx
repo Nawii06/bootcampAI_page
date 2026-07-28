@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const api = <T,>(url: string, options?: RequestInit) =>
   customFetch<T>(url, { responseType: "json", credentials: "include", ...options });
@@ -62,6 +63,8 @@ export default function StudentLearning() {
           isRetrying={applications.isFetching}
         />
       )}
+      {applications.isLoading && <LoadingCard message="학습 정보를 불러오는 중입니다." />}
+      {!applications.isLoading && <>
       <select className="mb-6 h-10 w-full rounded-md border bg-background px-3 text-sm" value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
         {selected.map((row) => <option key={row.id} value={row.sessionId}>{row.programName} · {row.sessionName}</option>)}
       </select>
@@ -99,6 +102,7 @@ export default function StudentLearning() {
           </div>
         </section>
       </div>
+      </>}
             {learning.isError && (
         <ErrorCard
           message="학습 콘텐츠를 불러오지 못했습니다."

@@ -12,6 +12,7 @@ import {
 import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -347,6 +348,9 @@ export default function AdminAcademics() {
           className="mb-6"
         />
       )}
+      {years.isLoading || courses.isLoading ? (
+        <LoadingCard message="학사·교육과정 정보를 불러오는 중입니다." />
+      ) : (
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-lg border bg-card p-5">
           <h3 className="font-semibold">교과목 마스터</h3>
@@ -467,6 +471,7 @@ export default function AdminAcademics() {
           ])} />
         </section>
       </div>
+      )}
       {mutationError && <p className="mt-4 text-sm text-destructive">{mutationError.message}</p>}
     </PortalLayout>
   );

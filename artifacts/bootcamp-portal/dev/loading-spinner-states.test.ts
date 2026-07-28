@@ -10,9 +10,9 @@
  *   - Partner pages: Employment, Dashboard, Project, Survey
  *   - Admin pages:  Benefits, Content, Dashboard, Employment, Partners
  *
- * Remaining pages under src/pages/ intentionally have no loading-state test:
- * they render no query-driven LoadingCard/Skeleton (static pages, or pages
- * that render empty tables/zero counts while loading).
+ * ...and every other query-driven page under src/pages/ (admin, partner,
+ * public, student). The only pages without a loading-state test are fully
+ * static ones with no on-mount query (e.g. public/intro).
  *
  * ## ⚠️ Adding a new page? This file must be extended.
  *
@@ -49,6 +49,7 @@ import {
   AUTH_LOADING,
   AUTH_ADMIN,
   AUTH_STUDENT,
+  AUTH_PARTNER,
   renderPage,
   withLoadingCleanup,
   withErrorCleanup,
@@ -76,6 +77,34 @@ import PartnerSurvey from "../src/pages/partner/survey.tsx";
 import AdminDashboard from "../src/pages/admin/dashboard.tsx";
 import AdminEmployment from "../src/pages/admin/employment.tsx";
 import AdminPartners from "../src/pages/admin/partners.tsx";
+import AdminPerformanceDashboard from "../src/pages/admin/performance-dashboard.tsx";
+import AdminPerformanceEvidence from "../src/pages/admin/performance-evidence.tsx";
+import AdminPerformanceExport from "../src/pages/admin/performance-export.tsx";
+import AdminPerformanceIndicators from "../src/pages/admin/performance-indicators.tsx";
+import AdminPerformanceResults from "../src/pages/admin/performance-results.tsx";
+import AdminPerformanceSourceData from "../src/pages/admin/performance-source-data.tsx";
+import AdminAcademics from "../src/pages/admin/academics.tsx";
+import AdminApplications from "../src/pages/admin/applications.tsx";
+import AdminAuditLogs from "../src/pages/admin/audit-logs.tsx";
+import AdminBudgetLog from "../src/pages/admin/budget-log.tsx";
+import AdminBudget from "../src/pages/admin/budget.tsx";
+import AdminCompletion from "../src/pages/admin/completion.tsx";
+import AdminEvaluation from "../src/pages/admin/evaluation.tsx";
+import AdminEvidence from "../src/pages/admin/evidence.tsx";
+import AdminPreviewOperations from "../src/pages/admin/preview-operations.tsx";
+import AdminProgramOperations from "../src/pages/admin/program-operations.tsx";
+import AdminPrograms from "../src/pages/admin/programs.tsx";
+import AdminSettings from "../src/pages/admin/settings.tsx";
+import PartnerApplication from "../src/pages/partner/application.tsx";
+import PartnerEvaluation from "../src/pages/partner/evaluation.tsx";
+import Home from "../src/pages/public/home.tsx";
+import Partners from "../src/pages/public/partners.tsx";
+import Performance from "../src/pages/public/performance.tsx";
+import Recruitment from "../src/pages/public/recruitment.tsx";
+import StudentApply from "../src/pages/student/apply.tsx";
+import StudentCompletion from "../src/pages/student/completion.tsx";
+import StudentDashboard from "../src/pages/student/dashboard.tsx";
+import StudentLearning from "../src/pages/student/learning.tsx";
 import { Route, Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 
@@ -871,6 +900,934 @@ test(
       container.querySelectorAll(".animate-pulse").length,
       0,
       "AdminPartners should have no skeletons once applications and companies are loaded",
+    );
+  }),
+);
+
+// ─── Admin performance dashboard page ─────────────────────────────────────────
+
+test(
+  "AdminPerformanceDashboard — shows LoadingCard while performance data is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceDashboard), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("성과관리 현황을 불러오는 중입니다."),
+      "AdminPerformanceDashboard should show LoadingCard while performance data is loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceDashboard — hides LoadingCard once performance data is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceDashboard), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId undefined → overview query stays disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("성과관리 현황을 불러오는 중입니다."),
+      "AdminPerformanceDashboard should hide LoadingCard once performance data is loaded",
+    );
+  }),
+);
+
+// ─── Admin performance evidence page ──────────────────────────────────────────
+
+test(
+  "AdminPerformanceEvidence — shows LoadingCard while stored files are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceEvidence), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("증빙자료 목록을 불러오는 중입니다."),
+      "AdminPerformanceEvidence should show LoadingCard while stored files are loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceEvidence — hides LoadingCard once stored files are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceEvidence), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "stored-files"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("증빙자료 목록을 불러오는 중입니다."),
+      "AdminPerformanceEvidence should hide LoadingCard once stored files are loaded",
+    );
+  }),
+);
+
+// ─── Admin performance export page ────────────────────────────────────────────
+
+test(
+  "AdminPerformanceExport — shows LoadingCard while export data is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceExport), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("내보내기 정보를 불러오는 중입니다."),
+      "AdminPerformanceExport should show LoadingCard while export data is loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceExport — hides LoadingCard once export data is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceExport), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → year.id undefined → overview query stays disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("내보내기 정보를 불러오는 중입니다."),
+      "AdminPerformanceExport should hide LoadingCard once export data is loaded",
+    );
+  }),
+);
+
+// ─── Admin performance indicators page ────────────────────────────────────────
+
+test(
+  "AdminPerformanceIndicators — shows LoadingCard while indicators are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceIndicators), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("성과지표 목록을 불러오는 중입니다."),
+      "AdminPerformanceIndicators should show LoadingCard while indicators are loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceIndicators — hides LoadingCard once indicators are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceIndicators), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId undefined → overview query stays disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("성과지표 목록을 불러오는 중입니다."),
+      "AdminPerformanceIndicators should hide LoadingCard once indicators are loaded",
+    );
+  }),
+);
+
+// ─── Admin performance results page ───────────────────────────────────────────
+
+test(
+  "AdminPerformanceResults — shows LoadingCard while results are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceResults), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("성과실적을 불러오는 중입니다."),
+      "AdminPerformanceResults should show LoadingCard while results are loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceResults — hides LoadingCard once results are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceResults), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId undefined → overview query stays disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+        // stored-files query is enabled because AUTH_ADMIN has SYSTEM_ADMIN
+        // (canEdit=true), so it must be pre-loaded too.
+        {
+          queryKey: ["admin", "stored-files", "performance-result-link"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("성과실적을 불러오는 중입니다."),
+      "AdminPerformanceResults should hide LoadingCard once results are loaded",
+    );
+  }),
+);
+
+// ─── Admin performance source-data page ───────────────────────────────────────
+
+test(
+  "AdminPerformanceSourceData — shows LoadingCard while source data is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPerformanceSourceData), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("원천데이터 현황을 불러오는 중입니다."),
+      "AdminPerformanceSourceData should show LoadingCard while source data is loading",
+    );
+  }),
+);
+
+test(
+  "AdminPerformanceSourceData — hides LoadingCard once source data is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPerformanceSourceData), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId undefined → source-summary query stays disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("원천데이터 현황을 불러오는 중입니다."),
+      "AdminPerformanceSourceData should hide LoadingCard once source data is loaded",
+    );
+  }),
+);
+
+test(
+  "AdminAcademics — shows LoadingCard while years/courses are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminAcademics), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("학사·교육과정 정보를 불러오는 중입니다."),
+      "AdminAcademics should show LoadingCard while years/courses are loading",
+    );
+  }),
+);
+
+test(
+  "AdminAcademics — hides LoadingCard once years and courses are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminAcademics), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId=undefined → terms/offerings/curricula stay disabled.
+        { queryKey: ["reference", "business-years"], data: { data: [] } },
+        { queryKey: ["admin", "courses"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("학사·교육과정 정보를 불러오는 중입니다."),
+      "AdminAcademics should hide LoadingCard once years and courses are loaded",
+    );
+  }),
+);
+
+// ─── Admin applications page ──────────────────────────────────────────────────
+// On-mount query: ["admin","program-applications"].
+
+test(
+  "AdminApplications — shows LoadingCard while applications are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminApplications), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("신청·선발 목록을 불러오는 중입니다."),
+      "AdminApplications should show LoadingCard while applications are loading",
+    );
+  }),
+);
+
+test(
+  "AdminApplications — hides LoadingCard once applications are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminApplications), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "program-applications"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("신청·선발 목록을 불러오는 중입니다."),
+      "AdminApplications should hide LoadingCard once applications are loaded",
+    );
+  }),
+);
+
+// ─── Admin audit-logs page ────────────────────────────────────────────────────
+// Two on-mount queries share the "감사로그를 불러오는 중입니다." message:
+//   - logs:           ["audit-logs", filters]  (filters built from date range)
+//   - shareTokenLogs: ["audit-logs", "share-token", ""]  (empty recordId)
+// The `filters` object is computed at mount from asRange(dateInput(7),
+// dateInput(0)); we replicate that computation deterministically here so the
+// pre-loaded queryKey matches exactly.
+
+function auditFiltersKey() {
+  const dateInput = (daysAgo: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date.toISOString().slice(0, 10);
+  };
+  const asRange = (startDate: string, endDate: string) => ({
+    startAt: new Date(`${startDate}T00:00:00`).toISOString(),
+    endAt: new Date(`${endDate}T23:59:59.999`).toISOString(),
+  });
+  return { ...asRange(dateInput(7), dateInput(0)), action: "", resourceType: "" };
+}
+
+test(
+  "AdminAuditLogs — shows LoadingCard while audit-log queries are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminAuditLogs), { auth: AUTH_ADMIN });
+    // Both the main-log section and the share-link section render the same
+    // LoadingCard message while their queries are in flight, so use
+    // queryAllByText to avoid a "multiple elements" error.
+    assert.ok(
+      screen.queryAllByText("감사로그를 불러오는 중입니다.").length > 0,
+      "AdminAuditLogs should show LoadingCard while audit-log queries are loading",
+    );
+  }),
+);
+
+test(
+  "AdminAuditLogs — hides LoadingCard once audit-log queries are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminAuditLogs), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["audit-logs", auditFiltersKey()],
+          data: { data: [], meta: { page: 1, pageSize: 100, total: 0 } },
+        },
+        {
+          // Infinite query — cache shape is { pages, pageParams }.
+          queryKey: ["audit-logs", "share-token", ""],
+          data: {
+            pages: [{ page: 1, items: [], total: 0, hasMore: false }],
+            pageParams: [1],
+          },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("감사로그를 불러오는 중입니다."),
+      "AdminAuditLogs should hide LoadingCard once audit-log queries are loaded",
+    );
+  }),
+);
+
+// ─── Admin budget-log page ────────────────────────────────────────────────────
+// On-mount query: ["admin","budget-change-history"].
+
+test(
+  "AdminBudgetLog — shows LoadingCard while change-history is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminBudgetLog), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("예산 변경이력을 불러오는 중입니다."),
+      "AdminBudgetLog should show LoadingCard while change-history is loading",
+    );
+  }),
+);
+
+test(
+  "AdminBudgetLog — hides LoadingCard once change-history is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminBudgetLog), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "budget-change-history"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("예산 변경이력을 불러오는 중입니다."),
+      "AdminBudgetLog should hide LoadingCard once change-history is loaded",
+    );
+  }),
+);
+
+// ─── Admin budget page ────────────────────────────────────────────────────────
+// On-mount queries: ["reference","business-years","active"] (years) and
+// ["admin","files","budget-picker"] (files). summary/operations are gated
+// behind yearId and are ignored for the loading condition.
+
+test(
+  "AdminBudget — shows LoadingCard while years/files are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminBudget), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("예산 집행현황을 불러오는 중입니다."),
+      "AdminBudget should show LoadingCard while years/files are loading",
+    );
+  }),
+);
+
+test(
+  "AdminBudget — hides LoadingCard once years and files are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminBudget), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        // Empty years → yearId=undefined → summary/operations stay disabled.
+        { queryKey: ["reference", "business-years", "active"], data: { data: [] } },
+        { queryKey: ["admin", "files", "budget-picker"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("예산 집행현황을 불러오는 중입니다."),
+      "AdminBudget should hide LoadingCard once years and files are loaded",
+    );
+  }),
+);
+
+// ─── Admin completion page ────────────────────────────────────────────────────
+// On-mount query: ["admin","completion-assessments"].
+
+test(
+  "AdminCompletion — shows LoadingCard while assessments are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminCompletion), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("이수 평가 결과를 불러오는 중입니다."),
+      "AdminCompletion should show LoadingCard while assessments are loading",
+    );
+  }),
+);
+
+test(
+  "AdminCompletion — hides LoadingCard once assessments are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminCompletion), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "completion-assessments"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("이수 평가 결과를 불러오는 중입니다."),
+      "AdminCompletion should hide LoadingCard once assessments are loaded",
+    );
+  }),
+);
+
+test(
+  "AdminEvaluation — shows LoadingCard while business-years query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminEvaluation), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("성과 자체평가 데이터를 불러오는 중입니다."),
+      "AdminEvaluation should show LoadingCard while the business-years query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminEvaluation — hides LoadingCard once business-years is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminEvaluation), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["reference", "business-years", "active"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("성과 자체평가 데이터를 불러오는 중입니다."),
+      "AdminEvaluation should hide LoadingCard once business-years is loaded",
+    );
+  }),
+);
+
+// ─── Admin evidence page ──────────────────────────────────────────────────────
+// On-mount query: files ["admin", "stored-files"].
+// relationships ["admin", "file-relationships", selectedId] is gated (enabled).
+
+test(
+  "AdminEvidence — shows LoadingCard while stored-files query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminEvidence), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("증빙자료 목록을 불러오는 중입니다."),
+      "AdminEvidence should show LoadingCard while the stored-files query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminEvidence — hides LoadingCard once stored-files are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminEvidence), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "stored-files"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("증빙자료 목록을 불러오는 중입니다."),
+      "AdminEvidence should hide LoadingCard once stored-files are loaded",
+    );
+  }),
+);
+
+// ─── Admin preview-operations page ────────────────────────────────────────────
+// On-mount query: operations ["fake-data", "operations"].
+
+test(
+  "AdminPreviewOperations — shows LoadingCard while operations query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPreviewOperations), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("역할별 업무현황을 불러오는 중입니다."),
+      "AdminPreviewOperations should show LoadingCard while the operations query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminPreviewOperations — hides LoadingCard once operations are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPreviewOperations), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["fake-data", "operations"],
+          data: {
+            role: "SYSTEM_ADMIN",
+            operations: {
+              benefitPolicies: [],
+              companyApplications: [],
+              contentWorkflow: [],
+              reviewQueue: [],
+            },
+            auditLogs: [],
+          },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("역할별 업무현황을 불러오는 중입니다."),
+      "AdminPreviewOperations should hide LoadingCard once operations are loaded",
+    );
+  }),
+);
+
+// ─── Admin program-operations page ──────────────────────────────────────────
+// On-mount query: programs ["admin", "programs", "operations"].
+// operations ["admin", "program-operations", sessionId] is gated (enabled).
+
+test(
+  "AdminProgramOperations — shows LoadingCard while programs query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminProgramOperations), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("프로그램 운영 정보를 불러오는 중입니다."),
+      "AdminProgramOperations should show LoadingCard while the programs query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminProgramOperations — hides LoadingCard once programs are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminProgramOperations), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["admin", "programs", "operations"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("프로그램 운영 정보를 불러오는 중입니다."),
+      "AdminProgramOperations should hide LoadingCard once programs are loaded",
+    );
+  }),
+);
+
+// ─── Admin programs page ──────────────────────────────────────────────────────
+// On-mount query: programs ["admin", "programs"].
+
+test(
+  "AdminPrograms — shows LoadingCard while programs query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminPrograms), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("프로그램 목록을 불러오는 중입니다."),
+      "AdminPrograms should show LoadingCard while the programs query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminPrograms — hides LoadingCard once programs are loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminPrograms), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["admin", "programs"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("프로그램 목록을 불러오는 중입니다."),
+      "AdminPrograms should hide LoadingCard once programs are loaded",
+    );
+  }),
+);
+
+// ─── Admin settings page ──────────────────────────────────────────────────────
+// On-mount query: status ["system", "status"].
+
+test(
+  "AdminSettings — shows LoadingCard while system-status query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(AdminSettings), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("시스템 설정 상태를 불러오는 중입니다."),
+      "AdminSettings should show LoadingCard while the system-status query is loading",
+    );
+  }),
+);
+
+test(
+  "AdminSettings — hides LoadingCard once system status is loaded",
+  withCleanup(() => {
+    renderPage(createElement(AdminSettings), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["system", "status"],
+          data: {
+            database: "CONNECTED",
+            fileStorageConfigured: false,
+            malwareScanningConfigured: false,
+            externalImportAllowlistConfigured: false,
+            environment: "development",
+            ssoConfigured: false,
+            mockAuthEnabled: true,
+          },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("시스템 설정 상태를 불러오는 중입니다."),
+      "AdminSettings should hide LoadingCard once system status is loaded",
+    );
+  }),
+);
+
+// ─── Partner application page ─────────────────────────────────────────────────
+
+test(
+  "PartnerApplication — shows LoadingCard while company applications are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(PartnerApplication), { auth: AUTH_PARTNER });
+    assert.ok(
+      screen.queryByText("참여기업 신청 내역을 불러오는 중입니다."),
+      "PartnerApplication should show LoadingCard while company applications are loading",
+    );
+  }),
+);
+
+test(
+  "PartnerApplication — hides LoadingCard once company applications are loaded",
+  withCleanup(() => {
+    renderPage(createElement(PartnerApplication), {
+      auth: AUTH_PARTNER,
+      queryData: [
+        {
+          queryKey: ["partner", "company-applications"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("참여기업 신청 내역을 불러오는 중입니다."),
+      "PartnerApplication should hide LoadingCard once company applications are loaded",
+    );
+  }),
+);
+
+// ─── Partner evaluation page ──────────────────────────────────────────────────
+
+test(
+  "PartnerEvaluation — shows LoadingCard while years/portfolios are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(PartnerEvaluation), { auth: AUTH_PARTNER });
+    assert.ok(
+      screen.queryByText("학생 프로젝트 목록을 불러오는 중입니다."),
+      "PartnerEvaluation should show LoadingCard while years/portfolios are loading",
+    );
+  }),
+);
+
+test(
+  "PartnerEvaluation — hides LoadingCard once years and portfolios are loaded",
+  withCleanup(() => {
+    renderPage(createElement(PartnerEvaluation), {
+      auth: AUTH_PARTNER,
+      queryData: [
+        {
+          queryKey: ["reference", "business-years", "active"],
+          data: { data: [] },
+        },
+        {
+          queryKey: ["partner", "portfolio-candidates"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("학생 프로젝트 목록을 불러오는 중입니다."),
+      "PartnerEvaluation should hide LoadingCard once years and portfolios are loaded",
+    );
+  }),
+);
+
+// ─── Public home page ─────────────────────────────────────────────────────────
+
+test(
+  "Home — shows LoadingCard while programs/companies/results are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(Home), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("공개 포털 현황을 불러오는 중입니다."),
+      "Home should show LoadingCard while public portal data is loading",
+    );
+  }),
+);
+
+test(
+  "Home — hides LoadingCard once all public portal queries are loaded",
+  withCleanup(() => {
+    renderPage(createElement(Home), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["public", "home", "programs"], data: { data: [] } },
+        { queryKey: ["public", "home", "companies"], data: { data: [] } },
+        { queryKey: ["public", "home", "results"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("공개 포털 현황을 불러오는 중입니다."),
+      "Home should hide LoadingCard once all public portal queries are loaded",
+    );
+  }),
+);
+
+// ─── Public partners page ─────────────────────────────────────────────────────
+
+test(
+  "Partners — shows LoadingCard while companies query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(Partners), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("참여기업 정보를 불러오는 중입니다."),
+      "Partners should show LoadingCard while the companies query is loading",
+    );
+  }),
+);
+
+test(
+  "Partners — hides LoadingCard once companies are loaded",
+  withCleanup(() => {
+    renderPage(createElement(Partners), {
+      auth: AUTH_ADMIN,
+      queryData: [{ queryKey: ["public", "companies"], data: { data: [] } }],
+    });
+    assert.ok(
+      !screen.queryByText("참여기업 정보를 불러오는 중입니다."),
+      "Partners should hide LoadingCard once companies are loaded",
+    );
+  }),
+);
+
+// ─── Public performance page ──────────────────────────────────────────────────
+
+test(
+  "Performance — shows LoadingCard while results/news are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(Performance), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("성과와 소식을 불러오는 중입니다."),
+      "Performance should show LoadingCard while results/news are loading",
+    );
+  }),
+);
+
+test(
+  "Performance — hides LoadingCard once results and news are loaded",
+  withCleanup(() => {
+    renderPage(createElement(Performance), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        {
+          queryKey: ["public", "performance-results"],
+          data: { data: [] },
+        },
+        {
+          queryKey: ["public", "content", "NEWS"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("성과와 소식을 불러오는 중입니다."),
+      "Performance should hide LoadingCard once results and news are loaded",
+    );
+  }),
+);
+
+// ─── Public recruitment page ──────────────────────────────────────────────────
+
+test(
+  "Recruitment — shows LoadingCard while the programs query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(Recruitment), { auth: AUTH_ADMIN });
+    assert.ok(
+      screen.queryByText("모집 프로그램을 불러오는 중입니다."),
+      "Recruitment should show LoadingCard while the programs query is loading",
+    );
+  }),
+);
+
+test(
+  "Recruitment — hides LoadingCard once programs are loaded",
+  withCleanup(() => {
+    renderPage(createElement(Recruitment), {
+      auth: AUTH_ADMIN,
+      queryData: [
+        { queryKey: ["public", "programs", "open"], data: { data: [] } },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("모집 프로그램을 불러오는 중입니다."),
+      "Recruitment should hide LoadingCard once programs are loaded",
+    );
+  }),
+);
+
+// ─── Student apply page ───────────────────────────────────────────────────────
+
+test(
+  "StudentApply — shows LoadingCard while open programs query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(StudentApply), { auth: AUTH_STUDENT });
+    assert.ok(
+      screen.queryByText("신청 가능한 프로그램을 불러오는 중입니다."),
+      "StudentApply should show LoadingCard while the open programs query is loading",
+    );
+  }),
+);
+
+test(
+  "StudentApply — hides LoadingCard once open programs are loaded",
+  withCleanup(() => {
+    renderPage(createElement(StudentApply), {
+      auth: AUTH_STUDENT,
+      queryData: [{ queryKey: ["programs", "open"], data: { data: [] } }],
+    });
+    assert.ok(
+      !screen.queryByText("신청 가능한 프로그램을 불러오는 중입니다."),
+      "StudentApply should hide LoadingCard once open programs are loaded",
+    );
+  }),
+);
+
+// ─── Student completion page ──────────────────────────────────────────────────
+
+test(
+  "StudentCompletion — shows LoadingCard while completion assessments are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(StudentCompletion), { auth: AUTH_STUDENT });
+    assert.ok(
+      screen.queryByText("이수현황을 불러오는 중입니다."),
+      "StudentCompletion should show LoadingCard while the completion assessments query is loading",
+    );
+  }),
+);
+
+test(
+  "StudentCompletion — hides LoadingCard once completion assessments are loaded",
+  withCleanup(() => {
+    renderPage(createElement(StudentCompletion), {
+      auth: AUTH_STUDENT,
+      queryData: [
+        {
+          queryKey: ["completion-assessments", "usr-student"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("이수현황을 불러오는 중입니다."),
+      "StudentCompletion should hide LoadingCard once completion assessments are loaded",
+    );
+  }),
+);
+
+// ─── Student dashboard page ───────────────────────────────────────────────────
+
+test(
+  "StudentDashboard — shows LoadingCard while dashboard queries are loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(StudentDashboard), { auth: AUTH_STUDENT });
+    assert.ok(
+      screen.queryByText("대시보드 현황을 불러오는 중입니다."),
+      "StudentDashboard should show LoadingCard while its queries are loading",
+    );
+  }),
+);
+
+test(
+  "StudentDashboard — hides LoadingCard once dashboard queries are loaded",
+  withCleanup(() => {
+    renderPage(createElement(StudentDashboard), {
+      auth: AUTH_STUDENT,
+      queryData: [
+        {
+          queryKey: ["student-dashboard-applications", "usr-student"],
+          data: { data: [] },
+        },
+        {
+          queryKey: ["student-dashboard-completion", "usr-student"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("대시보드 현황을 불러오는 중입니다."),
+      "StudentDashboard should hide LoadingCard once its queries are loaded",
+    );
+  }),
+);
+
+// ─── Student learning page ────────────────────────────────────────────────────
+// The program-learning query is gated behind a selected sessionId, so only the
+// on-mount applications query drives the loading state.
+
+test(
+  "StudentLearning — shows LoadingCard while applications query is loading",
+  withLoadingCleanup(() => {
+    renderPage(createElement(StudentLearning), { auth: AUTH_STUDENT });
+    assert.ok(
+      screen.queryByText("학습 정보를 불러오는 중입니다."),
+      "StudentLearning should show LoadingCard while the applications query is loading",
+    );
+  }),
+);
+
+test(
+  "StudentLearning — hides LoadingCard once applications are loaded",
+  withCleanup(() => {
+    renderPage(createElement(StudentLearning), {
+      auth: AUTH_STUDENT,
+      queryData: [
+        {
+          queryKey: ["student", "learning-applications", "usr-student"],
+          data: { data: [] },
+        },
+      ],
+    });
+    assert.ok(
+      !screen.queryByText("학습 정보를 불러오는 중입니다."),
+      "StudentLearning should hide LoadingCard once applications are loaded",
     );
   }),
 );

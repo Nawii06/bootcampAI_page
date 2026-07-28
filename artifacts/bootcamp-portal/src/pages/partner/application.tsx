@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 declare const __FAKE_DATA_SET__: string | null;
 
@@ -76,6 +77,10 @@ export default function PartnerApplication() {
   return (
     <PortalLayout>
       <SectionHeader title="참여기업 신청" description="기업 기본정보와 담당자, 희망 참여분야를 제출하고 보완요청을 확인합니다." />
+      {applications.isLoading ? (
+        <LoadingCard message="참여기업 신청 내역을 불러오는 중입니다." />
+      ) : (
+        <>
       {editable?.supplementRequest && (
         <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">보완요청</p>
@@ -120,6 +125,8 @@ export default function PartnerApplication() {
         />
       )}
       {mutation.isError && <p className="mt-4 text-sm text-destructive">{mutation.error?.message}</p>}
+        </>
+      )}
     </PortalLayout>
   );
 }

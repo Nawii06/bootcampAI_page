@@ -6,6 +6,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 function Status({ ready, readyLabel = "설정됨" }: { ready: boolean; readyLabel?: string }) {
   return <Badge variant={ready ? "default" : "secondary"}>{ready ? readyLabel : "미설정"}</Badge>;
@@ -22,6 +23,9 @@ export default function AdminSettings() {
   return (
     <PortalLayout>
       <SectionHeader title="시스템 설정 상태" description="비밀값을 노출하지 않고 운영환경의 필수 연동 설정 여부를 확인합니다." />
+      {status.isLoading ? (
+        <LoadingCard message="시스템 설정 상태를 불러오는 중입니다." />
+      ) : (
       <div className="grid gap-6 md:grid-cols-2">
         <Card><CardHeader><CardTitle className="text-lg">핵심 인프라</CardTitle></CardHeader><CardContent className="space-y-4">
           <div className="flex justify-between"><span>PostgreSQL</span><Status ready={data?.database === "CONNECTED"} readyLabel="연결됨" /></div>
@@ -38,6 +42,7 @@ export default function AdminSettings() {
           </p>
         </CardContent></Card>
       </div>
+      )}
             {status.isError && (
         <ErrorCard
           message="시스템 상태를 조회하지 못했습니다. SYSTEM_ADMIN 또는 AUDITOR 권한을 확인해 주세요."

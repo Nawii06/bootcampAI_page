@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function PartnerEvaluation() {
   const queryClient = useQueryClient();
@@ -58,6 +59,10 @@ export default function PartnerEvaluation() {
         title="학생 프로젝트 평가"
         description="공개에 동의한 학생 프로젝트만 열람하고 기업 피드백을 기록합니다."
       />
+      {years.isLoading || portfolios.isLoading ? (
+        <LoadingCard message="학생 프로젝트 목록을 불러오는 중입니다." />
+      ) : (
+        <>
       <div className="grid gap-6 lg:grid-cols-2">
         {(portfolios.data?.data ?? []).map((portfolio) => (
           <Card key={portfolio.id}>
@@ -110,6 +115,8 @@ export default function PartnerEvaluation() {
         />
       )}
       {submit.isError && <p className="mt-4 text-destructive">피드백 저장에 실패했습니다.</p>}
+        </>
+      )}
     </PortalLayout>
   );
 }

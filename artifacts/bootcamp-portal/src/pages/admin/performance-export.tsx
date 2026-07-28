@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -50,21 +51,27 @@ export default function AdminPerformanceExport() {
   return (
     <PortalLayout>
       <SectionHeader title="성과자료 내보내기" description="현재 DB에 저장된 목표·실적·공개상태를 CSV로 내보냅니다." />
-      {years.isError && (
-        <ErrorCard
-          className="mb-6 max-w-xl"
-          message="사업연도 정보를 불러오지 못했습니다."
-          onRetry={() => years.refetch()}
-          isRetrying={years.isFetching}
-        />
+      {years.isLoading || overview.isLoading ? (
+        <LoadingCard className="max-w-xl" message="내보내기 정보를 불러오는 중입니다." />
+      ) : (
+        <>
+          {years.isError && (
+            <ErrorCard
+              className="mb-6 max-w-xl"
+              message="사업연도 정보를 불러오지 못했습니다."
+              onRetry={() => years.refetch()}
+              isRetrying={years.isFetching}
+            />
+          )}
+          <Card className="max-w-xl"><CardContent className="p-6">
+            <h2 className="font-semibold">{year?.name ?? "활성 사업연도"}</h2>
+            <p className="my-3 text-sm text-muted-foreground">
+              개인정보를 포함하지 않는 성과지표 집계자료입니다. 외부 제출 전 승인상태와 산정근거를 다시 확인하세요.
+            </p>
+            <Button onClick={download} disabled={!overview.data || overview.isLoading}>성과 집계 CSV 다운로드</Button>
+          </CardContent></Card>
+        </>
       )}
-      <Card className="max-w-xl"><CardContent className="p-6">
-        <h2 className="font-semibold">{year?.name ?? "활성 사업연도"}</h2>
-        <p className="my-3 text-sm text-muted-foreground">
-          개인정보를 포함하지 않는 성과지표 집계자료입니다. 외부 제출 전 승인상태와 산정근거를 다시 확인하세요.
-        </p>
-        <Button onClick={download} disabled={!overview.data || overview.isLoading}>성과 집계 CSV 다운로드</Button>
-      </CardContent></Card>
     </PortalLayout>
   );
 }

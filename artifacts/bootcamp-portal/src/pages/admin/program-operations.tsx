@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -119,6 +120,10 @@ export default function AdminProgramOperations() {
   return (
     <PortalLayout>
       <SectionHeader title="프로그램 운영" description="회차별 신청자, 출석, 과제, 만족도와 이수확정을 통합 관리합니다." />
+      {programs.isLoading ? (
+        <LoadingCard message="프로그램 운영 정보를 불러오는 중입니다." />
+      ) : (
+      <>
       <div className="mb-6 grid gap-3 rounded-lg border bg-card p-5 md:grid-cols-[1fr_1fr_auto]">
         <select className="h-10 rounded-md border bg-background px-3 text-sm" value={sessionId} onChange={(e) => { setSessionId(e.target.value); setParticipantId(""); }}>
           {sessions.map((session) => <option key={session.id} value={session.id}>{session.label}</option>)}
@@ -168,6 +173,8 @@ export default function AdminProgramOperations() {
         />
       )}
       {mutate.isError && <p className="mt-4 text-sm text-destructive">{mutate.error?.message}</p>}
+      </>
+      )}
     </PortalLayout>
   );
 }

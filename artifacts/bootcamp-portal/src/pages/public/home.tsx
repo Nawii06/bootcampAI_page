@@ -11,6 +11,7 @@ import { Layout } from "../../components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function Home() {
   const programs = useQuery({
@@ -36,6 +37,10 @@ export default function Home() {
         </div>
       </section>
       <section className="container mx-auto max-w-6xl px-4 py-12">
+        {programs.isLoading || companies.isLoading || results.isLoading ? (
+          <LoadingCard message="공개 포털 현황을 불러오는 중입니다." />
+        ) : (
+        <>
         {(programs.isError || companies.isError || results.isError) && (
           <ErrorCard
             className="mb-8"
@@ -61,6 +66,8 @@ export default function Home() {
             <Card key={program.id}><CardContent className="p-6"><h3 className="font-bold">{program.name}</h3>{program.description && <p className="mt-2 text-sm text-muted-foreground">{program.description}</p>}</CardContent></Card>
           ))}
         </div>
+        </>
+        )}
       </section>
     </Layout>
   );

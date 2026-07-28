@@ -8,6 +8,7 @@ import { Layout } from "../../components/Layout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function Performance() {
   const results = useQuery({
@@ -27,6 +28,10 @@ export default function Performance() {
     <Layout>
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <SectionHeader title="성과·소식" description="검토와 공개 승인을 완료한 성과만 제공합니다." />
+        {results.isLoading || news.isLoading ? (
+          <LoadingCard message="성과와 소식을 불러오는 중입니다." />
+        ) : (
+        <>
         <h2 className="mb-4 text-xl font-bold">주요 성과</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {results.data?.data.map((result) => (
@@ -55,6 +60,8 @@ export default function Performance() {
             onRetry={() => { results.refetch(); news.refetch(); }}
             isRetrying={results.isFetching || news.isFetching}
           />
+        )}
+        </>
         )}
       </div>
     </Layout>

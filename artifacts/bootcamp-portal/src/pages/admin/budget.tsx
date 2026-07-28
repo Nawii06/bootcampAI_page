@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 interface BudgetSummary {
   allocated: number;
@@ -78,6 +79,10 @@ export default function AdminBudget() {
   return (
     <PortalLayout>
       <SectionHeader title="예산 집행현황" description={years.data?.data[0]?.name ?? "활성 사업연도"} />
+      {years.isLoading || files.isLoading ? (
+        <LoadingCard message="예산 집행현황을 불러오는 중입니다." />
+      ) : (
+      <>
       <div className="grid gap-4 md:grid-cols-5">
         {cards.map(([label, value]) => (
           <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-xl font-bold">{value}</p></CardContent></Card>
@@ -164,6 +169,8 @@ export default function AdminBudget() {
           })}
         </div>
       </section>
+      </>
+      )}
             {(years.isError || summary.isError || files.isError) && (
         <ErrorCard
           message="예산 또는 증빙파일 API에 연결할 수 없습니다."

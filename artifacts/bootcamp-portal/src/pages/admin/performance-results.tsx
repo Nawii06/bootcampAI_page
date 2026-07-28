@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 type Result = Overview["results"][number];
 
@@ -125,6 +126,10 @@ export default function AdminPerformanceResults() {
   return (
     <PortalLayout>
       <SectionHeader title="연도별 성과실적" description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 실적과 산정근거 snapshot을 저장합니다.`} />
+      {years.isLoading || overview.isLoading || files.isLoading ? (
+        <LoadingCard message="성과실적을 불러오는 중입니다." />
+      ) : (
+        <>
       {years.isError && (
         <ErrorCard
           className="mb-6"
@@ -157,6 +162,8 @@ export default function AdminPerformanceResults() {
       </div>}
       {(save.isError || workflow.isError || calculate.isError) && <p className="mb-4 text-destructive">{(save.error ?? workflow.error ?? calculate.error)?.message}</p>}
       <DataTable data={overview.data?.results ?? []} columns={columns} />
+        </>
+      )}
     </PortalLayout>
   );
 }

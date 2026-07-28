@@ -10,6 +10,7 @@ import { StatCard } from "@/components/StatCard";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string }
 interface Row extends Indicator { target?: number; actual?: number; rate?: number; status?: string }
@@ -54,30 +55,37 @@ export default function AdminPerformanceDashboard() {
     { key: "rate", header: "달성률", cell: (row) => row.rate === undefined ? "-" : `${row.rate}%` },
     { key: "status", header: "공개상태", cell: (row) => <Badge variant={row.status === "PUBLISHED" ? "default" : "secondary"}>{row.status ?? "미입력"}</Badge> },
   ];
+  const isLoading = years.isLoading || overview.isLoading;
   return (
     <PortalLayout>
       <SectionHeader title="성과관리 대시보드" description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 목표·실적 현황`} />
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <StatCard label="성과지표" value={`${rows.length}개`} />
-        <StatCard label="실적 입력" value={`${measured.length}개`} />
-        <StatCard label="공개 승인" value={`${rows.filter((row) => row.status === "PUBLISHED").length}개`} />
-        <StatCard label="달성률 70% 미만" value={`${risk}개`} color={risk ? "text-destructive" : ""} />
-      </div>
-            {years.isError && (
-        <ErrorCard
-          message="사업연도 정보를 불러오지 못했습니다."
-          onRetry={() => years.refetch()}
-          isRetrying={years.isFetching}
-        />
+      {isLoading ? (
+        <LoadingCard message="성과관리 현황을 불러오는 중입니다." />
+      ) : (
+        <>
+          <div className="mb-6 grid gap-4 md:grid-cols-4">
+            <StatCard label="성과지표" value={`${rows.length}개`} />
+            <StatCard label="실적 입력" value={`${measured.length}개`} />
+            <StatCard label="공개 승인" value={`${rows.filter((row) => row.status === "PUBLISHED").length}개`} />
+            <StatCard label="달성률 70% 미만" value={`${risk}개`} color={risk ? "text-destructive" : ""} />
+          </div>
+          {years.isError && (
+            <ErrorCard
+              message="사업연도 정보를 불러오지 못했습니다."
+              onRetry={() => years.refetch()}
+              isRetrying={years.isFetching}
+            />
+          )}
+          {overview.isError && (
+            <ErrorCard
+              message="성과 현황을 불러오지 못했습니다."
+              onRetry={() => overview.refetch()}
+              isRetrying={overview.isFetching}
+            />
+          )}
+          <DataTable data={rows} columns={columns} />
+        </>
       )}
-            {overview.isError && (
-        <ErrorCard
-          message="성과 현황을 불러오지 못했습니다."
-          onRetry={() => overview.refetch()}
-          isRetrying={overview.isFetching}
-        />
-      )}
-      <DataTable data={rows} columns={columns} />
     </PortalLayout>
   );
 }

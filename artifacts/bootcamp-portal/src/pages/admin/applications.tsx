@@ -8,6 +8,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 import { Button } from "@/components/ui/button";
 
 export default function AdminApplications() {
@@ -55,6 +56,8 @@ export default function AdminApplications() {
           onRetry={() => applications.refetch()}
           isRetrying={applications.isFetching}
         />
+      ) : applications.isLoading ? (
+        <LoadingCard message="신청·선발 목록을 불러오는 중입니다." />
       ) : (
         <DataTable
           data={applications.data?.data ?? []}

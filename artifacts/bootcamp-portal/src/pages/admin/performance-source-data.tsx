@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function AdminPerformanceSourceData() {
   const years = useQuery({
@@ -42,21 +43,27 @@ export default function AdminPerformanceSourceData() {
       <p className="mb-4 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
         이 화면은 seed 샘플이 아니라 실제 운영 테이블을 집계합니다. 개인 단위 원천자료는 노출하지 않습니다.
       </p>
-            {years.isError && (
-        <ErrorCard
-          message="사업연도 정보를 불러오지 못했습니다."
-          onRetry={() => years.refetch()}
-          isRetrying={years.isFetching}
-        />
+      {years.isLoading || summary.isLoading ? (
+        <LoadingCard message="원천데이터 현황을 불러오는 중입니다." />
+      ) : (
+        <>
+          {years.isError && (
+            <ErrorCard
+              message="사업연도 정보를 불러오지 못했습니다."
+              onRetry={() => years.refetch()}
+              isRetrying={years.isFetching}
+            />
+          )}
+          {summary.isError && (
+            <ErrorCard
+              message="원천데이터 집계를 불러오지 못했습니다."
+              onRetry={() => summary.refetch()}
+              isRetrying={summary.isFetching}
+            />
+          )}
+          <DataTable data={summary.data?.data ?? []} columns={columns} />
+        </>
       )}
-            {summary.isError && (
-        <ErrorCard
-          message="원천데이터 집계를 불러오지 못했습니다."
-          onRetry={() => summary.refetch()}
-          isRetrying={summary.isFetching}
-        />
-      )}
-      <DataTable data={summary.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );
 }

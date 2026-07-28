@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "../../contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export default function StudentCompletion() {
   const { user } = useAuth();
@@ -27,7 +28,8 @@ export default function StudentCompletion() {
   return (
     <PortalLayout>
       <SectionHeader title="이수현황" description="교육과정 요건을 기준으로 계산된 최신 결과입니다." />
-      {!latest && !assessments.isLoading && <p className="text-muted-foreground">아직 계산된 이수평가가 없습니다.</p>}
+      {assessments.isLoading && <LoadingCard message="이수현황을 불러오는 중입니다." />}
+      {!latest && !assessments.isLoading && !assessments.isError && <p className="text-muted-foreground">아직 계산된 이수평가가 없습니다.</p>}
       {latest && (
         <div className="space-y-6">
           <Card>

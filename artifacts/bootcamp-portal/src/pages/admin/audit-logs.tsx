@@ -11,6 +11,7 @@ import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const SHARE_TOKEN_ACTIONS = [
   "GENERATE_SHARE_TOKEN",
@@ -249,10 +250,16 @@ export default function AdminAuditLogs() {
         />
       )}
       {exportLogs.isError && <p className="mb-4 text-destructive">감사로그를 내보내지 못했습니다.</p>}
-      <DataTable data={logs.data?.data ?? []} columns={columns} />
-      <p className="mt-3 text-xs text-muted-foreground">
-        총 {logs.data?.meta.total ?? 0}건 · 개인정보성 필드와 접속 IP는 서버에서 마스킹됩니다.
-      </p>
+      {logs.isLoading ? (
+        <LoadingCard message="감사로그를 불러오는 중입니다." />
+      ) : (
+        <>
+          <DataTable data={logs.data?.data ?? []} columns={columns} />
+          <p className="mt-3 text-xs text-muted-foreground">
+            총 {logs.data?.meta.total ?? 0}건 · 개인정보성 필드와 접속 IP는 서버에서 마스킹됩니다.
+          </p>
+        </>
+      )}
 
       <div className="mt-10">
         <SectionHeader
@@ -282,25 +289,31 @@ export default function AdminAuditLogs() {
             공유 링크 발급·회수 이력이 없습니다.
           </p>
         )}
-        <DataTable data={shareTokenRows} columns={shareTokenColumns} />
-        {shareTokenLogs.hasNextPage && (
-          <div className="mt-3">
-            <Button
-              variant="outline"
-              disabled={shareTokenLogs.isFetchingNextPage}
-              onClick={() => shareTokenLogs.fetchNextPage()}
-            >
-              {shareTokenLogs.isFetchingNextPage
-                ? "불러오는 중..."
-                : "이력 더 보기"}
-            </Button>
-          </div>
+        {shareTokenLogs.isLoading ? (
+          <LoadingCard message="공유 링크 이력을 불러오는 중입니다." />
+        ) : (
+          <>
+            <DataTable data={shareTokenRows} columns={shareTokenColumns} />
+            {shareTokenLogs.hasNextPage && (
+              <div className="mt-3">
+                <Button
+                  variant="outline"
+                  disabled={shareTokenLogs.isFetchingNextPage}
+                  onClick={() => shareTokenLogs.fetchNextPage()}
+                >
+                  {shareTokenLogs.isFetchingNextPage
+                    ? "불러오는 중..."
+                    : "이력 더 보기"}
+                </Button>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-muted-foreground">
+              총 {shareTokenTotal}건 중 {shareTokenRows.length}건 표시 ·
+              발급(GENERATE_SHARE_TOKEN)과 회수(REVOKE_SHARE_TOKEN) 기록을 최신순으로
+              표시합니다.
+            </p>
+          </>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          총 {shareTokenTotal}건 중 {shareTokenRows.length}건 표시 ·
-          발급(GENERATE_SHARE_TOKEN)과 회수(REVOKE_SHARE_TOKEN) 기록을 최신순으로
-          표시합니다.
-        </p>
       </div>
     </PortalLayout>
   );
