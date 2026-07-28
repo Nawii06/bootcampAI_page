@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
 import { withRoleGuard } from "./components/RoleGuard";
 import NotFound from "@/pages/not-found";
+import { PUBLIC_PORTFOLIO_ROUTE } from "./lib/routes";
 
 // Public Pages
 import Home from "./pages/public/home";
@@ -73,7 +74,7 @@ const adminOverviewRoles = [
   "PERFORMANCE_STAFF", "CONTENT_EDITOR", "REVIEWER", "AUDITOR",
 ];
 
-function Router() {
+export function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
@@ -84,7 +85,7 @@ function Router() {
       <Route path="/public/partners" component={Partners} />
       <Route path="/public/performance" component={Performance} />
       <Route path="/public/resources" component={Resources} />
-      <Route path="/public/portfolio/:token" component={PublicPortfolio} />
+      <Route path={PUBLIC_PORTFOLIO_ROUTE} component={PublicPortfolio} />
       
       <Route path="/login" component={Login} />
 

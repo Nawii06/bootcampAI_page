@@ -33,6 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link2, Unlink } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { publicPortfolioPath } from "../../lib/routes";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -100,7 +101,7 @@ export default function StudentPortfolio() {
         });
       }
       await navigator.clipboard.writeText(
-        `${window.location.origin}/public/portfolio/${token}`,
+        `${window.location.origin}${publicPortfolioPath(token)}`,
       );
       toast({
         title: "링크 복사됨",
