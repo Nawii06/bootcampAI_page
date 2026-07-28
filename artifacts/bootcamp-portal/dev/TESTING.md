@@ -15,7 +15,11 @@ pnpm --filter @workspace/bootcamp-portal run test
 `LoadingCard` (or a Skeleton) must appear while a page's queries are in
 flight and disappear once data resolves. The tests that enforce this only
 cover pages listed in `loading-spinner-states.test.ts` — a new page gets
-zero coverage unless you add it there.
+zero coverage unless you add it there. This rule is enforced automatically:
+`dev/loading-spinner-coverage.test.ts` scans `src/pages/` for pages using
+`useQuery` and fails if any of them is not referenced by
+`loading-spinner-states.test.ts`. Pages with no on-mount query are listed
+in its `EXCLUDED_PAGES` set (with a reason).
 
 ## Where things live
 
