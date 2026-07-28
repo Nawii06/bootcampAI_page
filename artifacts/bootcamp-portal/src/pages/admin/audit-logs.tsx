@@ -12,6 +12,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 
+const SHARE_TOKEN_ACTIONS = [
+  "GENERATE_SHARE_TOKEN",
+  "REVOKE_SHARE_TOKEN",
+] as const;
+
+const SHARE_TOKEN_ACTION_LABELS: Record<string, string> = {
+  GENERATE_SHARE_TOKEN: "링크 발급",
+  REVOKE_SHARE_TOKEN: "링크 회수",
+};
+
+function shareTokenQueryString(action: string, recordId: string) {
+  const params = new URLSearchParams({
+    resourceType: "EXPERIENTIAL_RECORD",
+    action,
+    page: "1",
+    pageSize: "100",
+  });
+  if (recordId) params.set("resourceId", recordId);
+  return params.toString();
+}
+
 function dateInput(daysAgo: number) {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
@@ -85,6 +106,57 @@ export default function AdminAuditLogs() {
     },
   });
 
+  const [shareRecordIdInput, setShareRecordIdInput] = useState("");
+  const [shareRecordId, setShareRecordId] = useState("");
+
+  const shareTokenLogs = useQuery({
+    queryKey: ["audit-logs", "share-token", shareRecordId],
+    queryFn: async () => {
+      const responses = await Promise.all(
+        SHARE_TOKEN_ACTIONS.map((tokenAction) =>
+          contractFetch(
+            AuditLogListResponseSchema,
+            `/api/v1/audit-logs?${shareTokenQueryString(tokenAction, shareRecordId)}`,
+            { credentials: "include" },
+          ),
+        ),
+      );
+      const merged = responses.flatMap((response) => response.data);
+      merged.sort(
+        (a, b) =>
+          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+      );
+      return {
+        data: merged,
+        total: responses.reduce((sum, response) => sum + response.meta.total, 0),
+      };
+    },
+  });
+
+  const shareTokenColumns: ColumnDef<AuditLogItem>[] = [
+    {
+      key: "occurredAt",
+      header: "발생일시",
+      cell: (row) => new Date(row.occurredAt).toLocaleString("ko-KR"),
+    },
+    {
+      key: "actorDisplayName",
+      header: "행위자",
+      cell: (row) => row.actorDisplayName ?? "SYSTEM",
+    },
+    {
+      key: "action",
+      header: "작업",
+      cell: (row) => SHARE_TOKEN_ACTION_LABELS[row.action] ?? row.action,
+    },
+    {
+      key: "resourceId",
+      header: "포트폴리오 ID",
+      cell: (row) => row.resourceId ?? "-",
+    },
+    { key: "requestId", header: "요청 ID" },
+  ];
+
   const columns: ColumnDef<AuditLogItem>[] = [
     {
       key: "occurredAt",
@@ -153,6 +225,44 @@ export default function AdminAuditLogs() {
       <p className="mt-3 text-xs text-muted-foreground">
         총 {logs.data?.meta.total ?? 0}건 · 개인정보성 필드와 접속 IP는 서버에서 마스킹됩니다.
       </p>
+
+      <div className="mt-10">
+        <SectionHeader
+          title="포트폴리오 공유 링크 이력"
+          description="공개 포트폴리오 공유 링크를 누가 언제 발급하거나 회수했는지 확인합니다."
+        />
+        <div className="mb-5 flex flex-col gap-3 rounded-md border p-4 md:flex-row">
+          <Input
+            className="flex-1"
+            placeholder="포트폴리오 ID로 검색(선택)"
+            value={shareRecordIdInput}
+            onChange={(event) => setShareRecordIdInput(event.target.value)}
+          />
+          <Button onClick={() => setShareRecordId(shareRecordIdInput.trim())}>
+            조회
+          </Button>
+        </div>
+        {shareTokenLogs.isError && (
+          <ErrorCard
+            message="공유 링크 이력을 조회하지 못했습니다."
+            onRetry={() => shareTokenLogs.refetch()}
+            isRetrying={shareTokenLogs.isFetching}
+          />
+        )}
+        {shareTokenLogs.isSuccess && shareTokenLogs.data.data.length === 0 && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            공유 링크 발급·회수 이력이 없습니다.
+          </p>
+        )}
+        <DataTable
+          data={shareTokenLogs.data?.data ?? []}
+          columns={shareTokenColumns}
+        />
+        <p className="mt-3 text-xs text-muted-foreground">
+          총 {shareTokenLogs.data?.total ?? 0}건 · 발급(GENERATE_SHARE_TOKEN)과
+          회수(REVOKE_SHARE_TOKEN) 기록을 최신순으로 표시합니다.
+        </p>
+      </div>
     </PortalLayout>
   );
 }
