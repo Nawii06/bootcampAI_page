@@ -46,6 +46,7 @@ const company = (
   id: string,
   name: string,
   contacts: Array<{ id: string; name: string; email?: string; isPrimary?: boolean }> = [],
+  experts: Array<{ id: string; name: string; specialty?: string; isActive?: boolean }> = [],
 ) => ({
   id,
   name,
@@ -56,7 +57,7 @@ const company = (
   isActive: true,
   isPublic: false,
   companyContacts: contacts,
-  companyExperts: [],
+  companyExperts: experts,
   companyParticipations: [],
 });
 
@@ -64,6 +65,18 @@ const COMPANIES = {
   data: [
     company("c1", "알파주식회사"),
     company("c2", "베타주식회사", [{ id: "ct1", name: "김담당", isPrimary: true }]),
+    company(
+      "c3",
+      "감마주식회사",
+      [
+        { id: "ct2", name: "이대표", isPrimary: true },
+        { id: "ct3", name: "최부담당", email: "choi@example.com" },
+      ],
+      [
+        { id: "ex1", name: "정전문", specialty: "AI", isActive: true },
+        { id: "ex2", name: "한전문", specialty: "보안", isActive: false },
+      ],
+    ),
   ],
 };
 const APPLICATIONS = { data: [], commitments: [] };
@@ -204,8 +217,8 @@ test(
   withDialogFetch(async () => {
     renderPartners();
 
-    // Second company (베타) has a contact → 담당자 보관 button exists.
-    fireEvent.click(screen.getByText("담당자 보관"));
+    // Second company (베타) has a single contact → 담당자 보관 button exists.
+    fireEvent.click(screen.getAllByText("담당자 보관")[0]!);
     assert.ok(
       await screen.findByText(/김담당 담당자를 보관 처리하시겠습니까/),
       "confirmation dialog should open",
@@ -220,11 +233,74 @@ test(
     assert.equal(mutationCalls.length, 0, "cancel must not send a request");
 
     // Confirm sends the DELETE.
-    fireEvent.click(screen.getByText("담당자 보관"));
+    fireEvent.click(screen.getAllByText("담당자 보관")[0]!);
     fireEvent.click(await screen.findByText("보관"));
     await waitFor(() => assert.equal(mutationCalls.length, 1));
     const call = mutationCalls[0]!;
     assert.equal(call.method, "DELETE");
     assert.ok(call.url.includes("/api/v1/company-contacts/ct1"));
+  }),
+);
+
+test(
+  "담당자 보관 — multi-contact company shows a picker and archives the chosen contact",
+  withDialogFetch(async () => {
+    renderPartners();
+
+    // Third company (감마) has two contacts → second 담당자 보관 button.
+    fireEvent.click(screen.getAllByText("담당자 보관")[1]!);
+    assert.ok(
+      await screen.findByText(/보관할 담당자를 선택해 주세요/),
+      "picker prompt should be shown for multi-contact companies",
+    );
+
+    // Both contacts are listed; first is preselected and named in the summary.
+    assert.ok(screen.getByDisplayValue("ct2"), "first contact should be listed");
+    assert.ok(screen.getByDisplayValue("ct3"), "second contact should be listed");
+    assert.ok(screen.getByText("이대표 담당자를 보관 처리합니다."));
+
+    // Pick the second contact — the summary names the new selection.
+    fireEvent.click(screen.getByDisplayValue("ct3"));
+    assert.ok(await screen.findByText("최부담당 담당자를 보관 처리합니다."));
+    assert.equal(mutationCalls.length, 0, "selection must not send a request");
+
+    // Confirm deletes the SELECTED contact, not the first.
+    fireEvent.click(screen.getByText("보관"));
+    await waitFor(() => assert.equal(mutationCalls.length, 1));
+    const call = mutationCalls[0]!;
+    assert.equal(call.method, "DELETE");
+    assert.ok(call.url.includes("/api/v1/company-contacts/ct3"));
+  }),
+);
+
+test(
+  "전문가 활성 관리 — picker names the selected expert and toggles only that expert",
+  withDialogFetch(async () => {
+    renderPartners();
+
+    // Only 감마 has experts → single 전문가 활성 관리 button.
+    fireEvent.click(screen.getByText("전문가 활성 관리"));
+    assert.ok(
+      await screen.findByText(/상태를 변경할 전문가를 선택해 주세요/),
+      "picker prompt should be shown for multi-expert companies",
+    );
+    assert.ok(screen.getByDisplayValue("ex1"), "first expert should be listed");
+    assert.ok(screen.getByDisplayValue("ex2"), "second expert should be listed");
+    // First (active) expert preselected → summary and action say 비활성.
+    assert.ok(screen.getByText(/정전문 전문가를\s*비활성 처리합니다\./));
+    assert.ok(screen.getByText("비활성 처리"));
+
+    // Pick the inactive expert — action flips to 활성.
+    fireEvent.click(screen.getByDisplayValue("ex2"));
+    assert.ok(await screen.findByText(/한전문 전문가를\s*활성 처리합니다\./));
+    assert.equal(mutationCalls.length, 0, "opening/selecting must not send a request");
+
+    // Confirm PATCHes the SELECTED expert with the flipped status.
+    fireEvent.click(screen.getByText("활성 처리"));
+    await waitFor(() => assert.equal(mutationCalls.length, 1));
+    const call = mutationCalls[0]!;
+    assert.equal(call.method, "PATCH");
+    assert.ok(call.url.includes("/api/v1/company-experts/ex2/status"));
+    assert.deepEqual(call.body, { isActive: true });
   }),
 );

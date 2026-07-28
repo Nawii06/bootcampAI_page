@@ -62,9 +62,12 @@ export default function AdminPartners() {
   const [expertName, setExpertName] = useState("");
   const [expertSpecialty, setExpertSpecialty] = useState("");
   const [expertErrors, setExpertErrors] = useState<{ name?: string; specialty?: string }>({});
-  const [archiveContactTarget, setArchiveContactTarget] = useState<
-    { id: string; name: string } | null
-  >(null);
+  // 담당자 보관: which company's contacts we're choosing from + the chosen contact.
+  const [archiveContactCompany, setArchiveContactCompany] = useState<Company | null>(null);
+  const [archiveContactId, setArchiveContactId] = useState("");
+  // 전문가 활성/비활성: which company's experts we're choosing from + the chosen expert.
+  const [toggleExpertCompany, setToggleExpertCompany] = useState<Company | null>(null);
+  const [toggleExpertId, setToggleExpertId] = useState("");
 
   const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -220,14 +223,30 @@ export default function AdminPartners() {
       { onSuccess: () => setExpertDialogCompany(null) },
     );
   };
+  const selectedArchiveContact =
+    archiveContactCompany?.companyContacts.find((c) => c.id === archiveContactId) ?? null;
   const confirmArchiveContact = () => {
-    if (!archiveContactTarget) return;
+    if (!selectedArchiveContact) return;
     companyMutation.reset();
     companyMutation.mutate({
-      url: `/api/v1/company-contacts/${archiveContactTarget.id}`,
+      url: `/api/v1/company-contacts/${selectedArchiveContact.id}`,
       method: "DELETE",
     });
-    setArchiveContactTarget(null);
+    setArchiveContactCompany(null);
+    setArchiveContactId("");
+  };
+  const selectedToggleExpert =
+    toggleExpertCompany?.companyExperts.find((e) => e.id === toggleExpertId) ?? null;
+  const confirmToggleExpert = () => {
+    if (!selectedToggleExpert) return;
+    companyMutation.reset();
+    companyMutation.mutate({
+      url: `/api/v1/company-experts/${selectedToggleExpert.id}/status`,
+      method: "PATCH",
+      body: { isActive: !(selectedToggleExpert.isActive ?? true) },
+    });
+    setToggleExpertCompany(null);
+    setToggleExpertId("");
   };
   const columns: ColumnDef<Company>[] = [
     {
@@ -337,36 +356,30 @@ export default function AdminPartners() {
           >
             전문가 추가
           </Button>
-          {row.companyContacts[0] && (
+          {row.companyContacts.length > 0 && (
             <Button
               size="sm"
               variant="outline"
               disabled={companyMutation.isPending}
               onClick={() => {
-                setArchiveContactTarget({
-                  id: row.companyContacts[0]!.id,
-                  name: row.companyContacts[0]!.name,
-                });
+                setArchiveContactId(row.companyContacts[0]!.id);
+                setArchiveContactCompany(row);
               }}
             >
               담당자 보관
             </Button>
           )}
-          {row.companyExperts[0] && (
+          {row.companyExperts.length > 0 && (
             <Button
               size="sm"
               variant="outline"
               disabled={companyMutation.isPending}
               onClick={() => {
-                companyMutation.reset();
-                companyMutation.mutate({
-                  url: `/api/v1/company-experts/${row.companyExperts[0]!.id}/status`,
-                  method: "PATCH",
-                  body: { isActive: !(row.companyExperts[0]!.isActive ?? true) },
-                });
+                setToggleExpertId(row.companyExperts[0]!.id);
+                setToggleExpertCompany(row);
               }}
             >
-              {(row.companyExperts[0]!.isActive ?? true) ? "전문가 비활성" : "전문가 활성"}
+              전문가 활성 관리
             </Button>
           )}
         </div>
@@ -650,21 +663,120 @@ export default function AdminPartners() {
         </DialogContent>
       </Dialog>
       <AlertDialog
-        open={archiveContactTarget !== null}
+        open={archiveContactCompany !== null}
         onOpenChange={(open) => {
-          if (!open) setArchiveContactTarget(null);
+          if (!open) {
+            setArchiveContactCompany(null);
+            setArchiveContactId("");
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>담당자 보관</AlertDialogTitle>
             <AlertDialogDescription>
-              {archiveContactTarget?.name} 담당자를 보관 처리하시겠습니까?
+              {(archiveContactCompany?.companyContacts.length ?? 0) > 1
+                ? `${archiveContactCompany?.name} 기업의 보관할 담당자를 선택해 주세요.`
+                : `${selectedArchiveContact?.name} 담당자를 보관 처리하시겠습니까?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {(archiveContactCompany?.companyContacts.length ?? 0) > 1 && (
+            <div className="grid gap-2" role="radiogroup" aria-label="보관할 담당자 선택">
+              {archiveContactCompany!.companyContacts.map((contact) => (
+                <label
+                  key={contact.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm has-[:checked]:border-primary"
+                >
+                  <input
+                    type="radio"
+                    name="archive-contact"
+                    value={contact.id}
+                    checked={archiveContactId === contact.id}
+                    onChange={() => setArchiveContactId(contact.id)}
+                  />
+                  <span>
+                    {contact.name}
+                    {contact.email ? ` · ${contact.email}` : ""}
+                    {contact.isPrimary ? " (대표)" : ""}
+                  </span>
+                </label>
+              ))}
+              {selectedArchiveContact && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedArchiveContact.name} 담당자를 보관 처리합니다.
+                </p>
+              )}
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmArchiveContact}>보관</AlertDialogAction>
+            <AlertDialogAction
+              disabled={!selectedArchiveContact}
+              onClick={confirmArchiveContact}
+            >
+              보관
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={toggleExpertCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setToggleExpertCompany(null);
+            setToggleExpertId("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>전문가 활성 관리</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(toggleExpertCompany?.companyExperts.length ?? 0) > 1
+                ? `${toggleExpertCompany?.name} 기업의 상태를 변경할 전문가를 선택해 주세요.`
+                : `${selectedToggleExpert?.name} 전문가를 ${
+                    (selectedToggleExpert?.isActive ?? true) ? "비활성" : "활성"
+                  } 처리하시겠습니까?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {(toggleExpertCompany?.companyExperts.length ?? 0) > 1 && (
+            <div className="grid gap-2" role="radiogroup" aria-label="상태를 변경할 전문가 선택">
+              {toggleExpertCompany!.companyExperts.map((expert) => (
+                <label
+                  key={expert.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm has-[:checked]:border-primary"
+                >
+                  <input
+                    type="radio"
+                    name="toggle-expert"
+                    value={expert.id}
+                    checked={toggleExpertId === expert.id}
+                    onChange={() => setToggleExpertId(expert.id)}
+                  />
+                  <span className="flex items-center gap-2">
+                    {expert.name}
+                    <Badge variant={(expert.isActive ?? true) ? "default" : "outline"}>
+                      {(expert.isActive ?? true) ? "활성" : "비활성"}
+                    </Badge>
+                  </span>
+                </label>
+              ))}
+              {selectedToggleExpert && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedToggleExpert.name} 전문가를{" "}
+                  {(selectedToggleExpert.isActive ?? true) ? "비활성" : "활성"} 처리합니다.
+                </p>
+              )}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!selectedToggleExpert}
+              onClick={confirmToggleExpert}
+            >
+              {(selectedToggleExpert?.isActive ?? true) ? "비활성 처리" : "활성 처리"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
