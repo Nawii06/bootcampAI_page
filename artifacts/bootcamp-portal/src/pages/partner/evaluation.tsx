@@ -23,6 +23,7 @@ export default function PartnerEvaluation() {
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
   });
   const yearId = years.data?.data[0]?.id;
+  const noOpenPeriod = years.isSuccess && years.data.data.length === 0;
   const portfolios = useQuery({
     queryKey: ["partner", "portfolio-candidates"],
     queryFn: () => contractFetch(
@@ -63,6 +64,11 @@ export default function PartnerEvaluation() {
         <LoadingCard message="학생 프로젝트 목록을 불러오는 중입니다." />
       ) : (
         <>
+      {noOpenPeriod && (
+        <p className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+          현재 진행 중인 평가 기간이 없습니다. 평가 기간이 열리면 피드백을 저장할 수 있습니다.
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         {(portfolios.data?.data ?? []).map((portfolio) => (
           <Card key={portfolio.id}>

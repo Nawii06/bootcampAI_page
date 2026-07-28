@@ -464,6 +464,11 @@ export default function PartnerEmployment() {
                   {editingId ? "고용 건 수정" : "신규 고용 건 등록"}
                 </h2>
                 <form className="space-y-5" onSubmit={handleSubmit}>
+                  {noActiveYear && (
+                    <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                      현재 운영 중인 사업연도가 없습니다. 사업연도가 열리면 등록할 수 있습니다.
+                    </p>
+                  )}
                   <FormField label="유형" required>
                     <Select
                       value={participationType}

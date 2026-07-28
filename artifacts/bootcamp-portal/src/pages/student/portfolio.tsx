@@ -125,6 +125,7 @@ export default function StudentPortfolio() {
       ),
   });
   const yearId = years.data?.data[0]?.id;
+  const noOpenPeriod = years.isSuccess && years.data.data.length === 0;
   const employmentLinks = useQuery({
     queryKey: ["student", "employment-links", user?.id],
     enabled: Boolean(user?.id),
@@ -193,6 +194,11 @@ export default function StudentPortfolio() {
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={submit} className="space-y-5">
+              {noOpenPeriod && (
+                <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                  현재 진행 중인 포트폴리오 등록 기간이 없습니다. 등록 기간이 열리면 제출할 수 있습니다.
+                </p>
+              )}
               <FormField label="프로젝트명" required>
                 <Input value={title} onChange={(event) => setTitle(event.target.value)} />
               </FormField>
@@ -318,7 +324,9 @@ export default function StudentPortfolio() {
           ))}
           {!records.isLoading && (records.data?.data.length ?? 0) === 0 && (
             <div className="rounded-md border p-10 text-center text-muted-foreground">
-              등록된 프로젝트 포트폴리오가 없습니다.
+              {noOpenPeriod
+                ? "현재 진행 중인 포트폴리오 등록 기간이 없습니다."
+                : "등록된 프로젝트 포트폴리오가 없습니다."}
             </div>
           )}
         </div>
