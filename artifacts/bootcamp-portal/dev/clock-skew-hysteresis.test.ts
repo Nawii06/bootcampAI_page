@@ -1,75 +1,68 @@
 /**
- * Unit tests for the clock-skew warning hysteresis in AuthContext's
+ * Unit tests for the clock-skew warning hysteresis used by AuthContext's
  * refreshSession() offset-calibration branch.
  *
- * The real code computes `offset = serverNow − clientNowBeforeRequest`, then:
+ * These tests import the REAL state machine from src/lib/clock-skew.ts —
+ * the same module AuthContext uses — so any change to the warn/re-arm/
+ * sync-confirm logic is exercised directly (no duplicated simulation).
+ *
+ * Behavior under test:
  *  - warns when |offset| > 60 s (SKEW_WARN_THRESHOLD_MS),
  *  - after a warning, re-warns only when the offset differs from the last
  *    warned value by more than 120 s (SKEW_REARM_DELTA_MS),
  *  - when skew drops back below the threshold after a warning, shows a
  *    one-time "기기 시계가 동기화되었습니다" confirmation and resets the
  *    warned offset so a future drift warns again immediately.
- *
- * This mirrors the branch verbatim as a pure simulation (same pattern as
- * dev/visibility-debounce.test.ts), driven by mocked serverNow/clientNow
- * pairs, so the state machine (warn → re-arm → sync-confirm → warn again)
- * has automated coverage.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const SKEW_WARN_THRESHOLD_MS = 60_000;
-const SKEW_REARM_DELTA_MS = 120_000;
-
-type SkewEvent =
-  | { kind: "warn"; offset: number; minutes: number; direction: "늦습니다" | "앞서 있습니다" }
-  | { kind: "synced" };
-
-/**
- * Pure simulation of the offset-calibration branch of refreshSession().
- * State refs mirror lastWarnedOffsetRef and syncConfirmedRef.
- */
-class ClockSkewMonitor {
-  lastWarnedOffset: number | null = null;
-  syncConfirmed = false;
-  clockOffsetMs = 0;
-
-  /**
-   * Simulates one refreshSession() response carrying `serverNow`, captured
-   * against `clientNowBeforeRequest`.  Returns the toast event fired, if any.
-   */
-  calibrate(serverNow: number, clientNowBeforeRequest: number): SkewEvent | null {
-    const offset = serverNow - clientNowBeforeRequest;
-    this.clockOffsetMs = offset;
-
-    if (Math.abs(offset) > SKEW_WARN_THRESHOLD_MS) {
-      const lastWarned = this.lastWarnedOffset;
-      const shouldWarn =
-        lastWarned === null || Math.abs(offset - lastWarned) > SKEW_REARM_DELTA_MS;
-      if (shouldWarn) {
-        this.lastWarnedOffset = offset;
-        this.syncConfirmed = false;
-        const minutes = Math.round(Math.abs(offset) / 60_000);
-        const direction = offset > 0 ? "늦습니다" : "앞서 있습니다";
-        return { kind: "warn", offset, minutes, direction };
-      }
-      return null;
-    } else if (this.lastWarnedOffset !== null && !this.syncConfirmed) {
-      this.syncConfirmed = true;
-      this.lastWarnedOffset = null;
-      return { kind: "synced" };
-    }
-    return null;
-  }
-}
+import {
+  calibrateClockSkew,
+  createClockSkewState,
+  SKEW_REARM_DELTA_MS,
+  SKEW_WARN_THRESHOLD_MS,
+  type ClockSkewState,
+  type SkewEvent,
+} from "../src/lib/clock-skew";
 
 /** Client clock anchor: an arbitrary epoch-ish base timestamp. */
 const CLIENT_NOW = 1_000_000_000;
+
+/**
+ * Thin harness mirroring how AuthContext drives the state machine: it
+ * computes `offset = serverNow − clientNowBeforeRequest` and calibrates.
+ */
+class ClockSkewMonitor {
+  state: ClockSkewState = createClockSkewState();
+  clockOffsetMs = 0;
+
+  calibrate(serverNow: number, clientNowBeforeRequest: number): SkewEvent | null {
+    const offset = serverNow - clientNowBeforeRequest;
+    this.clockOffsetMs = offset;
+    return calibrateClockSkew(this.state, offset);
+  }
+
+  get lastWarnedOffset() {
+    return this.state.lastWarnedOffset;
+  }
+
+  get syncConfirmed() {
+    return this.state.syncConfirmed;
+  }
+}
 
 /** Helper: run a calibration where the server is `offsetMs` ahead of the client. */
 function refreshWithOffset(monitor: ClockSkewMonitor, offsetMs: number): SkewEvent | null {
   return monitor.calibrate(CLIENT_NOW + offsetMs, CLIENT_NOW);
 }
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+test("exported thresholds match the documented 1-minute warn / 2-minute re-arm", () => {
+  assert.equal(SKEW_WARN_THRESHOLD_MS, 60_000);
+  assert.equal(SKEW_REARM_DELTA_MS, 120_000);
+});
 
 // ─── First warning ───────────────────────────────────────────────────────────
 

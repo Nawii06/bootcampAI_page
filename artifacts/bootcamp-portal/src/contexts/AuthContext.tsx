@@ -14,6 +14,11 @@ import { SessionResponseSchema, type SessionResponse } from "@workspace/api-zod"
 import { toast } from "@/hooks/use-toast";
 import { SessionExpiryWarning } from "@/components/SessionExpiryWarning";
 import { computeSessionSchedule, WARN_BEFORE_MS } from "@/lib/session-schedule";
+import {
+  calibrateClockSkew,
+  createClockSkewState,
+  type ClockSkewState,
+} from "@/lib/clock-skew";
 import type { Role, User } from "../types";
 
 export interface AuthContextType {
@@ -87,18 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const clockOffsetMsRef = useRef<number>(0);
   /**
-   * Offset (ms) recorded at the moment the last clock-skew warning fired,
-   * or null when no warning has fired yet (or after the "synced" reset).
-   * Hysteresis: re-warn only when the current offset differs from this value
-   * by more than SKEW_REARM_DELTA_MS, so gradual drift past the threshold
-   * triggers a new nudge without spamming on every refresh.
+   * Hysteresis state for the clock-skew warning (warn → re-arm →
+   * sync-confirm), managed by the pure `calibrateClockSkew` state machine in
+   * `@/lib/clock-skew` — the same module the unit tests exercise directly.
    */
-  const lastWarnedOffsetRef = useRef<number | null>(null);
-  /**
-   * Guards the one-time "clock is back in sync" confirmation so it only
-   * shows once after a warning, when skew drops back below the threshold.
-   */
-  const syncConfirmedRef = useRef<boolean>(false);
+  const clockSkewStateRef = useRef<ClockSkewState>(createClockSkewState());
   /**
    * Timestamp (Date.now()) set at the *start* of each refreshSession() call.
    * Used to debounce rapid `visibilitychange` events (e.g. fast alt-tab)
@@ -202,40 +200,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clockOffsetMsRef.current = offset;
 
         // Warn when skew exceeds 1 minute so users understand why session
-        // timers may feel off.  Hysteresis: after the first warning, re-warn
-        // only when the offset has changed by more than 2 minutes since the
-        // last warned value — this catches gradual drift over a long-lived
-        // session without spamming on every refresh.
-        const SKEW_WARN_THRESHOLD_MS = 60_000;
-        const SKEW_REARM_DELTA_MS = 120_000;
-        if (Math.abs(offset) > SKEW_WARN_THRESHOLD_MS) {
-          const lastWarned = lastWarnedOffsetRef.current;
-          const shouldWarn =
-            lastWarned === null ||
-            Math.abs(offset - lastWarned) > SKEW_REARM_DELTA_MS;
-          if (shouldWarn) {
-            lastWarnedOffsetRef.current = offset;
-            syncConfirmedRef.current = false;
-            const minutes = Math.round(Math.abs(offset) / 60_000);
-            // offset > 0 → server is ahead → client clock is slow/late
-            // offset < 0 → server is behind → client clock is fast/early
-            const direction = offset > 0 ? "늦습니다" : "앞서 있습니다";
-            toast({
-              title: "기기 시계 동기화 문제",
-              description: `귀하의 기기 시계가 서버 시계보다 약 ${minutes}분 ${direction}. 기기 시계를 동기화하면 세션 오류를 방지할 수 있습니다.`,
-              variant: "destructive",
-              duration: 12_000,
-            });
-          }
-        } else if (
-          lastWarnedOffsetRef.current !== null &&
-          !syncConfirmedRef.current
-        ) {
-          // Skew dropped back below the threshold after a warning — confirm
-          // once that the clock is in sync, and clear the warned offset so a
-          // future drift past the threshold warns again immediately.
-          syncConfirmedRef.current = true;
-          lastWarnedOffsetRef.current = null;
+        // timers may feel off.  The warn/re-arm/sync-confirm hysteresis lives
+        // in the pure `calibrateClockSkew` state machine (unit-tested in
+        // dev/clock-skew-hysteresis.test.ts).
+        const skewEvent = calibrateClockSkew(clockSkewStateRef.current, offset);
+        if (skewEvent?.kind === "warn") {
+          toast({
+            title: "기기 시계 동기화 문제",
+            description: `귀하의 기기 시계가 서버 시계보다 약 ${skewEvent.minutes}분 ${skewEvent.direction}. 기기 시계를 동기화하면 세션 오류를 방지할 수 있습니다.`,
+            variant: "destructive",
+            duration: 12_000,
+          });
+        } else if (skewEvent?.kind === "synced") {
           toast({
             title: "기기 시계가 동기화되었습니다",
             description: "세션 타이머가 정상적으로 작동합니다.",
