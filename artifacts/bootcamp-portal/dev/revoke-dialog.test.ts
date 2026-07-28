@@ -158,6 +158,29 @@ function installRecordingFetch(): void {
   };
 }
 
+/** Same recording stub, but DELETE requests reject (network error). */
+function installFailingDeleteFetch(): void {
+  installRecordingFetch();
+  const recording = globalThis.fetch;
+  globalThis.fetch = (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method === "DELETE") {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      _requests.push({ url, method });
+      return Promise.reject(new TypeError("Failed to fetch"));
+    }
+    return recording(input, init);
+  };
+}
+
 function removeRecordingFetch(): void {
   globalThis.fetch = _originalFetch;
 }
@@ -193,9 +216,12 @@ function renderPortfolio(): void {
   );
 }
 
-function withRevokeTest(fn: () => void | Promise<void>) {
+function withRevokeTest(
+  fn: () => void | Promise<void>,
+  installFetch: () => void = installRecordingFetch,
+) {
   return async () => {
-    installRecordingFetch();
+    installFetch();
     try {
       renderPortfolio();
       await fn();
@@ -306,4 +332,56 @@ test(
       );
     });
   }),
+);
+
+test(
+  "confirming 링크 해제 while the DELETE fails shows the failure toast",
+  withRevokeTest(async () => {
+    fireEvent.click(cardRevokeButton());
+    const dialog = await screen.findByRole("alertdialog");
+
+    fireEvent.click(within(dialog).getByText("링크 해제"));
+
+    await waitFor(() => {
+      assert.equal(
+        deleteRequests().length,
+        1,
+        "confirming should still send the DELETE request",
+      );
+    });
+
+    await screen.findByText("링크 해제 실패");
+    assert.ok(
+      !screen.queryByText("링크 해제됨"),
+      "success toast must not appear when the DELETE fails",
+    );
+  }, installFailingDeleteFetch),
+);
+
+test(
+  "after a failed revoke the card button returns from 해제 중… to 링크 해제",
+  withRevokeTest(async () => {
+    fireEvent.click(cardRevokeButton());
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByText("링크 해제"));
+
+    await screen.findByText("링크 해제 실패");
+
+    await waitFor(() => {
+      const btn = cardRevokeButton();
+      assert.ok(
+        !btn.textContent?.includes("해제 중…"),
+        "button should leave the 해제 중… pending state after failure",
+      );
+      assert.ok(
+        btn.textContent?.includes("링크 해제"),
+        "button should return to its normal label",
+      );
+      assert.equal(
+        (btn as HTMLButtonElement).disabled,
+        false,
+        "button should be re-enabled after failure (revokingId reset)",
+      );
+    });
+  }, installFailingDeleteFetch),
 );
