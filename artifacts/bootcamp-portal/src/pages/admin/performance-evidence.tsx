@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 export default function AdminPerformanceEvidence() {
+  const highlightId = useHighlightParam();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File>();
   const [containsPersonalInfo, setContainsPersonalInfo] = useState(false);
@@ -82,7 +84,12 @@ export default function AdminPerformanceEvidence() {
               isRetrying={files.isFetching}
             />
           )}
-          <DataTable data={files.data?.data ?? []} columns={columns} />
+          <DataTable
+            data={files.data?.data ?? []}
+            columns={columns}
+            highlightId={highlightId}
+            highlightMissingMessage="해당 증빙자료를 찾을 수 없습니다."
+          />
         </>
       )}
     </PortalLayout>

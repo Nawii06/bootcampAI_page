@@ -11,8 +11,10 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 export default function AdminCompletion() {
+  const highlightId = useHighlightParam();
   const assessments = useQuery({
     queryKey: ["admin", "completion-assessments"],
     queryFn: () =>
@@ -88,6 +90,8 @@ export default function AdminCompletion() {
           columns={columns}
           filterKey="studentName"
           filterPlaceholder="학생명 검색"
+          highlightId={highlightId}
+          highlightMissingMessage="해당 이수 평가 결과를 찾을 수 없습니다."
         />
       )}
     </PortalLayout>

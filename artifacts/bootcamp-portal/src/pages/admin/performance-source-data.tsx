@@ -11,8 +11,10 @@ import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 export default function AdminPerformanceSourceData() {
+  const highlightId = useHighlightParam();
   const years = useQuery({
     queryKey: ["reference", "business-years", "active"],
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
@@ -61,7 +63,12 @@ export default function AdminPerformanceSourceData() {
               isRetrying={summary.isFetching}
             />
           )}
-          <DataTable data={summary.data?.data ?? []} columns={columns} />
+          <DataTable
+            data={summary.data?.data ?? []}
+            columns={columns}
+            highlightId={highlightId}
+            highlightMissingMessage="해당 원천데이터 항목을 찾을 수 없습니다."
+          />
         </>
       )}
     </PortalLayout>

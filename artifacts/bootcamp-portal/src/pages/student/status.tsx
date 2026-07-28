@@ -16,6 +16,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import type { ApplicationStatus } from "../../types";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 const PARTICIPATION_LABELS: Record<string, string> = {
   EMPLOYMENT: "채용 연계",
@@ -50,6 +51,7 @@ function formatDateRange(
 }
 
 export default function StudentStatus() {
+  const highlightId = useHighlightParam();
   const { user } = useAuth();
 
   const applications = useQuery({
@@ -137,6 +139,8 @@ export default function StudentStatus() {
         <DataTable
           data={applications.data?.data ?? []}
           columns={columns}
+          highlightId={highlightId}
+          highlightMissingMessage="해당 신청 내역을 찾을 수 없습니다."
         />
       )}
 

@@ -9,6 +9,7 @@ import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 const money = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -17,6 +18,7 @@ const money = new Intl.NumberFormat("ko-KR", {
 });
 
 export default function AdminBudgetLog() {
+  const highlightId = useHighlightParam();
   const history = useQuery({
     queryKey: ["admin", "budget-change-history"],
     queryFn: () =>
@@ -68,7 +70,12 @@ export default function AdminBudgetLog() {
       {history.isLoading ? (
         <LoadingCard message="예산 변경이력을 불러오는 중입니다." />
       ) : (
-        <DataTable data={history.data?.data ?? []} columns={columns} />
+        <DataTable
+          data={history.data?.data ?? []}
+          columns={columns}
+          highlightId={highlightId}
+          highlightMissingMessage="해당 예산 변경이력을 찾을 수 없습니다."
+        />
       )}
     </PortalLayout>
   );

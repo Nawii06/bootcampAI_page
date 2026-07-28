@@ -11,11 +11,13 @@ import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string }
 interface Row extends Indicator { target?: number; actual?: number; rate?: number; status?: string }
 
 export default function AdminPerformanceDashboard() {
+  const highlightId = useHighlightParam();
   const years = useQuery({
     queryKey: ["reference", "business-years", "active"],
     queryFn: () => contractFetch(BusinessYearListResponseSchema, "/api/v1/reference/business-years?active=true"),
@@ -83,7 +85,12 @@ export default function AdminPerformanceDashboard() {
               isRetrying={overview.isFetching}
             />
           )}
-          <DataTable data={rows} columns={columns} />
+          <DataTable
+            data={rows}
+            columns={columns}
+            highlightId={highlightId}
+            highlightMissingMessage="해당 성과지표를 찾을 수 없습니다."
+          />
         </>
       )}
     </PortalLayout>

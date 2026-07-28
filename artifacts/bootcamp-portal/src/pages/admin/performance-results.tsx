@@ -18,10 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 type Result = Overview["results"][number];
 
 export default function AdminPerformanceResults() {
+  const highlightId = useHighlightParam();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [indicatorId, setIndicatorId] = useState("");
@@ -161,7 +163,12 @@ export default function AdminPerformanceResults() {
         </div>
       </div>}
       {(save.isError || workflow.isError || calculate.isError) && <p className="mb-4 text-destructive">{(save.error ?? workflow.error ?? calculate.error)?.message}</p>}
-      <DataTable data={overview.data?.results ?? []} columns={columns} />
+      <DataTable
+        data={overview.data?.results ?? []}
+        columns={columns}
+        highlightId={highlightId}
+        highlightMissingMessage="해당 성과실적을 찾을 수 없습니다."
+      />
         </>
       )}
     </PortalLayout>

@@ -12,10 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string; description?: string }
 
 export default function AdminPerformanceIndicators() {
+  const highlightId = useHighlightParam();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Indicator>();
   const [value, setValue] = useState("");
@@ -79,7 +81,13 @@ export default function AdminPerformanceIndicators() {
         />
       )}
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <DataTable data={overview.data?.indicators ?? []} columns={columns} onRowClick={(row) => setSelected(row)} />
+        <DataTable
+          data={overview.data?.indicators ?? []}
+          columns={columns}
+          onRowClick={(row) => setSelected(row)}
+          highlightId={highlightId}
+          highlightMissingMessage="해당 성과지표를 찾을 수 없습니다."
+        />
         <div className="rounded-md border bg-card p-5">
           <h2 className="font-semibold">목표 새 버전 등록</h2>
           <p className="mb-4 mt-1 text-sm text-muted-foreground">{selected?.name ?? "왼쪽에서 지표를 선택하세요."}</p>

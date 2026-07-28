@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
@@ -21,6 +22,7 @@ function fileSize(bytes: number) {
 }
 
 export default function AdminEvidence() {
+  const highlightId = useHighlightParam();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState("");
@@ -97,7 +99,12 @@ export default function AdminEvidence() {
       {files.isLoading ? (
         <LoadingCard message="증빙자료 목록을 불러오는 중입니다." />
       ) : (
-      <DataTable data={files.data?.data ?? []} columns={columns} />
+      <DataTable
+        data={files.data?.data ?? []}
+        columns={columns}
+        highlightId={highlightId}
+        highlightMissingMessage="해당 증빙자료를 찾을 수 없습니다."
+      />
       )}
       <div className="mt-6 space-y-2">
         {(files.data?.data ?? []).map((file) => (
