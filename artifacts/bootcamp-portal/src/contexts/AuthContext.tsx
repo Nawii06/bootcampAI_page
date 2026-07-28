@@ -19,6 +19,13 @@ import {
   createClockSkewState,
   type ClockSkewState,
 } from "@/lib/clock-skew";
+import {
+  createRefreshDebounceState,
+  markRefreshComplete,
+  markRefreshStart,
+  shouldRefresh,
+  type RefreshDebounceState,
+} from "@/lib/refresh-debounce";
 import type { Role, User } from "../types";
 
 export interface AuthContextType {
@@ -98,22 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const clockSkewStateRef = useRef<ClockSkewState>(createClockSkewState());
   /**
-   * Timestamp (Date.now()) set at the *start* of each refreshSession() call.
-   * Used to debounce rapid `visibilitychange` events (e.g. fast alt-tab)
-   * so at most one refresh fires per VISIBILITY_DEBOUNCE_MS window.
-   * Stamped at request-start (not completion) so bursts during an in-flight
-   * request are suppressed immediately.
+   * In-flight / debounce-window guard state for visibility- and
+   * BFCache-triggered refreshes, managed by the pure helpers in
+   * `@/lib/refresh-debounce` — the same module the unit tests exercise
+   * directly (dev/visibility-debounce.test.ts).
    */
-  const lastRefreshAtRef = useRef<number>(0);
-  /**
-   * True while a refreshSession() call is in flight.
-   * Prevents concurrent visibility events from issuing a second request
-   * before the first one completes, even within the debounce window.
-   */
-  const isRefreshingRef = useRef<boolean>(false);
-
-  /** Minimum gap (ms) between visibility-triggered refreshes. */
-  const VISIBILITY_DEBOUNCE_MS = 2_000;
+  const refreshDebounceRef = useRef<RefreshDebounceState>(
+    createRefreshDebounceState(),
+  );
 
   const forceLogout = useCallback(() => {
     if (!userRef.current) return; // already logged out
@@ -181,8 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshSession = useCallback(async () => {
     // Stamp at request start so the debounce window begins immediately,
     // suppressing bursts that arrive while this request is still in flight.
-    lastRefreshAtRef.current = Date.now();
-    isRefreshingRef.current = true;
+    markRefreshStart(refreshDebounceRef.current, Date.now());
     try {
       // Capture client time BEFORE the request so that serverNow (captured by
       // the server just before it sends the response) is comparable to it.
@@ -231,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       return null;
     } finally {
-      isRefreshingRef.current = false;
+      markRefreshComplete(refreshDebounceRef.current);
     }
   }, []);
 
@@ -324,8 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Reuse the same guards as visibilitychange: BFCache restore and
         // visibility events can fire within milliseconds of each other,
         // which would otherwise trigger two concurrent refreshes.
-        if (isRefreshingRef.current) return;
-        if (Date.now() - lastRefreshAtRef.current < VISIBILITY_DEBOUNCE_MS) return;
+        if (!shouldRefresh(refreshDebounceRef.current, Date.now())) return;
         refreshSession();
       }
     }
@@ -347,13 +344,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState !== "visible" || !userRef.current) return;
-      // Skip if a refresh is already in flight — concurrent visibility events
-      // (fast alt-tab, extension triggers) must not issue a second request.
-      if (isRefreshingRef.current) return;
-      // Skip if a refresh started within the debounce window — bursts of
-      // hide/show events that land after the previous request completed are
-      // suppressed here.
-      if (Date.now() - lastRefreshAtRef.current < VISIBILITY_DEBOUNCE_MS) return;
+      // Skip if a refresh is in flight or one started within the debounce
+      // window — bursts of hide/show events (fast alt-tab, extension
+      // triggers) are suppressed by the pure guard in @/lib/refresh-debounce.
+      if (!shouldRefresh(refreshDebounceRef.current, Date.now())) return;
       refreshSession();
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
