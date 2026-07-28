@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 const SHARE_TOKEN_ACTIONS = [
   "GENERATE_SHARE_TOKEN",
@@ -51,6 +52,8 @@ function asRange(startDate: string, endDate: string) {
 }
 
 export default function AdminAuditLogs() {
+  // Deep links (e.g. from notifications) can highlight a specific log row.
+  const highlightId = useHighlightParam();
   const [startDate, setStartDate] = useState(dateInput(7));
   const [endDate, setEndDate] = useState(dateInput(0));
   const [action, setAction] = useState("");
@@ -271,7 +274,12 @@ export default function AdminAuditLogs() {
         <LoadingCard message="감사로그를 불러오는 중입니다." />
       ) : (
         <>
-          <DataTable data={logRows} columns={columns} />
+          <DataTable
+            data={logRows}
+            columns={columns}
+            highlightId={highlightId}
+            highlightMissingMessage="해당 감사로그를 찾을 수 없습니다."
+          />
           {logs.hasNextPage && (
             <div className="mt-3">
               <Button

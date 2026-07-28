@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 function displayStatus(status: string): ApplicationStatus {
   if (status === "APPROVED" || status === "OPEN") return "selected";
@@ -22,6 +23,8 @@ function displayStatus(status: string): ApplicationStatus {
 }
 
 export default function AdminPrograms() {
+  // Deep links (e.g. from notifications) can highlight a specific program row.
+  const highlightId = useHighlightParam();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Program>();
   const [name, setName] = useState("");
@@ -97,9 +100,15 @@ export default function AdminPrograms() {
           />
         )}
         {!programs.isLoading && !programs.isError && (
-          <DataTable data={programs.data?.data ?? []} columns={columns} onRowClick={(row) => {
-            setSelected(programs.data?.data.find((item) => item.id === row.id));
-          }} />
+          <DataTable
+            data={programs.data?.data ?? []}
+            columns={columns}
+            highlightId={highlightId}
+            highlightMissingMessage="해당 프로그램을 찾을 수 없습니다."
+            onRowClick={(row) => {
+              setSelected(programs.data?.data.find((item) => item.id === row.id));
+            }}
+          />
         )}
         <aside className="space-y-5 rounded-lg border bg-card p-5">
           <h2 className="font-semibold">프로그램 상세 편집</h2>

@@ -10,8 +10,11 @@ import { DataTable, type ColumnDef } from "../../components/DataTable";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
 import { Button } from "@/components/ui/button";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 export default function AdminApplications() {
+  // Deep links (e.g. from notifications) can highlight a specific application row.
+  const highlightId = useHighlightParam();
   const queryClient = useQueryClient();
   const applications = useQuery({
     queryKey: ["admin", "program-applications"],
@@ -63,6 +66,8 @@ export default function AdminApplications() {
           data={applications.data?.data ?? []}
           columns={columns}
           loading={applications.isLoading}
+          highlightId={highlightId}
+          highlightMissingMessage="해당 신청 내역을 찾을 수 없습니다."
         />
       )}
     </PortalLayout>

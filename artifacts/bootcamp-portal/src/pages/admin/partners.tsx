@@ -6,7 +6,7 @@ import {
   CompanyListResponseSchema,
   type CompanyResponse as Company,
 } from "@workspace/api-zod";
-import { Link, useSearch } from "wouter";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PortalLayout } from "../../components/PortalLayout";
@@ -39,27 +39,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
+import { useHighlightParam } from "@/hooks/useHighlightParam";
 
 export default function AdminPartners() {
   // Highlight a company row when navigated back from /admin/employment?highlight=...
-  const search = useSearch();
-  const [highlightId] = useState(
-    () => new URLSearchParams(search).get("highlight") ?? undefined,
-  );
-
-  // Strip ?highlight= from the URL so a refresh or shared link doesn't re-highlight.
-  useEffect(() => {
-    if (!highlightId) return;
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has("highlight")) return;
-    params.delete("highlight");
-    const query = params.toString();
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    );
-  }, [highlightId]);
+  const highlightId = useHighlightParam();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingCompanyId, setEditingCompanyId] = useState("");
