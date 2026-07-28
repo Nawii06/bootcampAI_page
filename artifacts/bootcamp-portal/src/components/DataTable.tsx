@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 
 export interface ColumnDef<T> {
   key: string;
@@ -22,6 +23,8 @@ interface DataTableProps<T> {
   loadingRows?: number;
   /** Row id to scroll to and visually highlight on load (e.g. from a ?highlight= deep link). */
   highlightId?: string;
+  /** Toast message shown when highlightId matches no row at all. */
+  highlightMissingMessage?: string;
 }
 
 export function DataTable<T extends { id: string }>({ 
@@ -34,10 +37,12 @@ export function DataTable<T extends { id: string }>({
   loading = false,
   loadingRows = 5,
   highlightId,
+  highlightMissingMessage = "해당 항목을 찾을 수 없습니다.",
 }: DataTableProps<T>) {
   const [filterValue, setFilterValue] = useState("");
   const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
   const hasScrolledRef = useRef(false);
+  const hasNotifiedMissingRef = useRef(false);
   // Local copy of the highlight so we can fade it out after the admin has seen it.
   const [activeHighlightId, setActiveHighlightId] = useState<string | undefined>(highlightId);
 
@@ -50,12 +55,27 @@ export function DataTable<T extends { id: string }>({
   useEffect(() => {
     if (loading || !highlightId || hasScrolledRef.current) return undefined;
     const el = highlightedRowRef.current;
-    if (!el) return undefined;
+    if (!el) {
+      // The target row isn't rendered. Either the current filter hides it
+      // (clear the filter so the highlight can proceed) or it doesn't exist
+      // in the data at all (tell the admin instead of silently doing nothing).
+      if (hasNotifiedMissingRef.current) return undefined;
+      const existsInData = data.some((row) => row.id === highlightId);
+      if (existsInData) {
+        setFilterValue("");
+        return undefined;
+      }
+      hasNotifiedMissingRef.current = true;
+      setActiveHighlightId(undefined);
+      toast({ description: highlightMissingMessage, variant: "destructive" });
+      return undefined;
+    }
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     hasScrolledRef.current = true;
     const timer = window.setTimeout(() => setActiveHighlightId(undefined), 3000);
     return () => window.clearTimeout(timer);
-  }, [loading, highlightId, data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, highlightId, data, filterValue]);
 
   const filteredData = filterKey && filterValue
     ? data.filter(item => {

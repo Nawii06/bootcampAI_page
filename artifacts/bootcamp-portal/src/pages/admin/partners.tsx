@@ -461,6 +461,7 @@ export default function AdminPartners() {
         filterPlaceholder="기업명 검색"
         loading={companies.isLoading}
         highlightId={highlightId}
+        highlightMissingMessage="해당 기업을 찾을 수 없습니다."
       />
     </PortalLayout>
   );

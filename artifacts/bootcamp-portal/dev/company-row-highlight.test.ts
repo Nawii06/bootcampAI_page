@@ -19,7 +19,7 @@ import { mock } from "node:test";
 import assert from "node:assert/strict";
 import { act } from "react";
 import { createElement } from "react";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DataTable, type ColumnDef } from "../src/components/DataTable.tsx";
 import {
@@ -27,6 +27,24 @@ import {
   type AuthContextType,
 } from "../src/contexts/AuthContext.tsx";
 import AdminPartners from "../src/pages/admin/partners.tsx";
+import { useToast } from "../src/hooks/use-toast.ts";
+
+/**
+ * Probe component that mirrors the toast store into plain DOM nodes so tests
+ * can assert on toast descriptions without mounting the Radix Toaster.
+ */
+function ToastProbe() {
+  const { toasts } = useToast();
+  return createElement(
+    "div",
+    { "data-testid": "toast-probe" },
+    toasts
+      .filter((t) => t.open !== false)
+      .map((t) =>
+        createElement("span", { key: t.id, "data-testid": "toast-description" }, t.description),
+      ),
+  );
+}
 
 // Vite replaces __FAKE_DATA_SET__ at build time; define it before any render.
 (globalThis as Record<string, unknown>).__FAKE_DATA_SET__ = null;
@@ -323,6 +341,126 @@ test("DataTable — highlight scrolls exactly once after loading finishes, not r
     cleanup();
     restoreTimers();
     mock.timers.reset();
+  }
+});
+
+// ─── DataTable: highlightId matching no row ─────────────────────────────────
+
+test("DataTable — highlightId matching no row: no scroll, no highlight, toast shown once", () => {
+  scrollCalls.length = 0;
+  try {
+    const { rerender } = render(
+      createElement(
+        "div",
+        null,
+        createElement(ToastProbe),
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          highlightId: "row-missing",
+        }),
+      ),
+    );
+
+    assert.equal(scrollCalls.length, 0, "no row must be scrolled into view");
+    for (const name of ["가나다 주식회사", "하이라이트 대상"]) {
+      assert.doesNotMatch(
+        findRow(name).className,
+        /bg-primary\/10/,
+        `row "${name}" must not be highlighted`,
+      );
+    }
+
+    const descriptions = screen.getAllByTestId("toast-description");
+    assert.equal(descriptions.length, 1, "exactly one toast must be shown");
+    assert.equal(descriptions[0].textContent, "해당 항목을 찾을 수 없습니다.");
+
+    // A data refresh must not fire a second toast.
+    act(() => {
+      rerender(
+        createElement(
+          "div",
+          null,
+          createElement(ToastProbe),
+          createElement(DataTable<Row>, {
+            data: ROWS.map((r) => ({ ...r })),
+            columns: COLUMNS,
+            highlightId: "row-missing",
+          }),
+        ),
+      );
+    });
+    assert.equal(
+      screen.getAllByTestId("toast-description").length,
+      1,
+      "toast must not be re-fired on data refreshes",
+    );
+    assert.equal(scrollCalls.length, 0, "still no scroll after refresh");
+  } finally {
+    cleanup();
+  }
+});
+
+test("DataTable — custom highlightMissingMessage is used for the toast", () => {
+  scrollCalls.length = 0;
+  try {
+    render(
+      createElement(
+        "div",
+        null,
+        createElement(ToastProbe),
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          highlightId: "row-missing",
+          highlightMissingMessage: "해당 기업을 찾을 수 없습니다.",
+        }),
+      ),
+    );
+    const descriptions = screen.getAllByTestId("toast-description");
+    assert.equal(descriptions[descriptions.length - 1].textContent, "해당 기업을 찾을 수 없습니다.");
+  } finally {
+    cleanup();
+  }
+});
+
+// ─── DataTable: highlight target hidden by the search filter ────────────────
+
+test("DataTable — highlight target hidden by filter: filter is cleared and row highlighted", () => {
+  scrollCalls.length = 0;
+  try {
+    // Mount without a highlight, type a filter that hides row-b.
+    const { rerender } = render(
+      createElement(DataTable<Row>, {
+        data: ROWS,
+        columns: COLUMNS,
+        filterKey: "name" as keyof Row,
+      }),
+    );
+    const input = screen.getByPlaceholderText("검색...") as HTMLInputElement;
+    act(() => {
+      fireEvent.change(input, { target: { value: "가나다" } });
+    });
+    assert.equal(screen.queryByText("하이라이트 대상"), null, "filter must hide row-b");
+
+    // A highlight link for the hidden row arrives.
+    act(() => {
+      rerender(
+        createElement(DataTable<Row>, {
+          data: ROWS,
+          columns: COLUMNS,
+          filterKey: "name" as keyof Row,
+          highlightId: "row-b",
+        }),
+      );
+    });
+
+    assert.equal(input.value, "", "filter must be cleared so the target row is visible");
+    const highlighted = findRow("하이라이트 대상");
+    assert.match(highlighted.className, /bg-primary\/10/, "row must be highlighted after filter reset");
+    assert.equal(scrollCalls.length, 1, "row must be scrolled into view after filter reset");
+  } finally {
+    cleanup();
   }
 });
 
