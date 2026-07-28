@@ -105,7 +105,7 @@ export default function AdminEmployment() {
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin", "company-participations"],
     queryFn: () =>
       contractFetch(
@@ -340,7 +340,13 @@ export default function AdminEmployment() {
           ))}
         </div>
       )}
-      {isError && <ErrorCard message={error instanceof Error ? error.message : undefined} />}
+      {isError && (
+        <ErrorCard
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => refetch()}
+          isRetrying={isFetching}
+        />
+      )}
 
       {/* ── Empty state ── */}
       {!isLoading && !isError && groups.length === 0 && (

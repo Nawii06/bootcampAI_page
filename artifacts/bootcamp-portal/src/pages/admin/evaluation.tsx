@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function AdminEvaluation() {
   const queryClient = useQueryClient();
@@ -60,6 +61,14 @@ export default function AdminEvaluation() {
   return (
     <PortalLayout>
       <SectionHeader title="성과 자체평가" description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 평가 문답과 개선계획을 관리합니다.`} />
+      {(years.isError || reviews.isError) && (
+        <ErrorCard
+          message="성과 자체평가 데이터를 불러오지 못했습니다."
+          onRetry={() => { years.refetch(); reviews.refetch(); }}
+          isRetrying={years.isFetching || reviews.isFetching}
+          className="mb-6"
+        />
+      )}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">

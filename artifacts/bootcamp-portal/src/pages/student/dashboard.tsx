@@ -7,6 +7,7 @@ import {
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatCard } from "../../components/StatCard";
+import { ErrorCard } from "@/components/ErrorCard";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function StudentDashboard() {
@@ -34,6 +35,17 @@ export default function StudentDashboard() {
   return (
     <PortalLayout>
       <SectionHeader title="학생 대시보드" description={`${user?.name ?? "학생"}님의 프로그램·이수 현황입니다.`} />
+      {(applications.isError || assessments.isError) && (
+        <ErrorCard
+          className="mb-4"
+          message="대시보드 정보를 불러오지 못했습니다."
+          onRetry={() => {
+            applications.refetch();
+            assessments.refetch();
+          }}
+          isRetrying={applications.isFetching || assessments.isFetching}
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="전체 신청" value={applications.data?.data.length ?? 0} />
         <StatCard label="선발 프로그램" value={selected} />

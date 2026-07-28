@@ -17,6 +17,17 @@ flight and disappear once data resolves. The tests that enforce this only
 cover pages listed in `loading-spinner-states.test.ts` — a new page gets
 zero coverage unless you add it there.
 
+## Where things live
+
+Shared helpers (fetch stubs, mock auth values, `renderPage`, the
+`withLoadingCleanup` / `withErrorCleanup` / `withCleanup` wrappers and the
+global DOM shims) are exported from `dev/page-test-utils.ts` — import them
+instead of redefining. Error-state tests for pages live in the
+`dev/error-states-*.test.ts` files, grouped by area (public/student,
+partner, admin). Every data-driven page needs an error-state test asserting
+an ErrorCard message plus a "다시 시도" retry button when its on-mount
+query fails.
+
 ## The pattern (3 techniques)
 
 `mock.module()` is not available in this runtime, so the suite uses:

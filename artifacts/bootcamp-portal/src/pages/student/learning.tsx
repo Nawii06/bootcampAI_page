@@ -54,6 +54,14 @@ export default function StudentLearning() {
   return (
     <PortalLayout>
       <SectionHeader title="과제·만족도" description="선발된 프로그램의 과제를 제출하고 만족도 설문에 응답합니다." />
+      {applications.isError && (
+        <ErrorCard
+          className="mb-6"
+          message="신청 프로그램 목록을 불러오지 못했습니다."
+          onRetry={() => applications.refetch()}
+          isRetrying={applications.isFetching}
+        />
+      )}
       <select className="mb-6 h-10 w-full rounded-md border bg-background px-3 text-sm" value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
         {selected.map((row) => <option key={row.id} value={row.sessionId}>{row.programName} · {row.sessionName}</option>)}
       </select>

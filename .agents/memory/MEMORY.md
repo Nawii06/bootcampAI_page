@@ -1,0 +1,1 @@
+- [Bootcamp portal page tests](portal-page-tests.md) — shared test helpers in dev/page-test-utils.ts; happy-dom needs a ResizeObserver shim for Radix; no mock.module() in this runtime.

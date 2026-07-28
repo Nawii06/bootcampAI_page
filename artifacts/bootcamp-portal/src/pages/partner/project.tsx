@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorCard } from "@/components/ErrorCard";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -124,6 +125,20 @@ export default function PartnerProject() {
           {createProject.isError && <p className="text-sm text-destructive">{createProject.error.message}</p>}
         </form></CardContent></Card>
         <div className="space-y-3">
+          {years.isError && (
+            <ErrorCard
+              message="사업연도 정보를 불러오지 못했습니다."
+              onRetry={() => years.refetch()}
+              isRetrying={years.isFetching}
+            />
+          )}
+          {projects.isError && (
+            <ErrorCard
+              message="제안한 프로젝트 목록을 불러오지 못했습니다."
+              onRetry={() => projects.refetch()}
+              isRetrying={projects.isFetching}
+            />
+          )}
           {projects.isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i}>

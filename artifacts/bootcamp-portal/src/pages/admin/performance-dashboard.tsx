@@ -63,6 +63,13 @@ export default function AdminPerformanceDashboard() {
         <StatCard label="공개 승인" value={`${rows.filter((row) => row.status === "PUBLISHED").length}개`} />
         <StatCard label="달성률 70% 미만" value={`${risk}개`} color={risk ? "text-destructive" : ""} />
       </div>
+            {years.isError && (
+        <ErrorCard
+          message="사업연도 정보를 불러오지 못했습니다."
+          onRetry={() => years.refetch()}
+          isRetrying={years.isFetching}
+        />
+      )}
             {overview.isError && (
         <ErrorCard
           message="성과 현황을 불러오지 못했습니다."

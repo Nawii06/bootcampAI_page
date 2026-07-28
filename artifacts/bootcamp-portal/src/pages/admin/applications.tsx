@@ -7,6 +7,7 @@ import {
 import { PortalLayout } from "../../components/PortalLayout";
 import { SectionHeader } from "../../components/SectionHeader";
 import { DataTable, type ColumnDef } from "../../components/DataTable";
+import { ErrorCard } from "@/components/ErrorCard";
 import { Button } from "@/components/ui/button";
 
 export default function AdminApplications() {
@@ -48,11 +49,19 @@ export default function AdminApplications() {
     <PortalLayout>
       <SectionHeader title="신청·선발 관리" description="신청서를 검토하고 선발 상태를 변경합니다." />
       {decision.isError && <p className="mb-3 text-destructive">{decision.error.message}</p>}
-      <DataTable
-        data={applications.data?.data ?? []}
-        columns={columns}
-        loading={applications.isLoading}
-      />
+      {applications.isError ? (
+        <ErrorCard
+          message="신청·선발 목록을 불러오지 못했습니다."
+          onRetry={() => applications.refetch()}
+          isRetrying={applications.isFetching}
+        />
+      ) : (
+        <DataTable
+          data={applications.data?.data ?? []}
+          columns={columns}
+          loading={applications.isLoading}
+        />
+      )}
     </PortalLayout>
   );
 }

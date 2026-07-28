@@ -153,6 +153,13 @@ export default function AdminProgramOperations() {
           <Button className="w-full" disabled={!participantId || mutate.isPending} onClick={confirmCompletion}>선택 학생 이수 계산·확정</Button>
         </OperationCard>
       </div>
+            {programs.isError && (
+        <ErrorCard
+          message="프로그램 목록을 불러오지 못했습니다."
+          onRetry={() => programs.refetch()}
+          isRetrying={programs.isFetching}
+        />
+      )}
             {operations.isError && (
         <ErrorCard
           message={operations.error?.message}

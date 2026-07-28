@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ErrorCard } from "@/components/ErrorCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -338,6 +339,14 @@ export default function AdminAcademics() {
   return (
     <PortalLayout>
       <SectionHeader title="학사·교육과정 관리" description="교과목 마스터, 학기별 개설정보, 교육과정과 이수요건을 DB 기준으로 관리합니다." />
+      {(years.isError || courses.isError) && (
+        <ErrorCard
+          message="학사·교육과정 데이터를 불러오지 못했습니다."
+          onRetry={() => { years.refetch(); courses.refetch(); }}
+          isRetrying={years.isFetching || courses.isFetching}
+          className="mb-6"
+        />
+      )}
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-lg border bg-card p-5">
           <h3 className="font-semibold">교과목 마스터</h3>

@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorCard } from "@/components/ErrorCard";
 
 interface Indicator { id: string; code: string; name: string; category: string; unit: string; description?: string }
 
@@ -64,6 +65,14 @@ export default function AdminPerformanceIndicators() {
   return (
     <PortalLayout>
       <SectionHeader title="성과지표·목표 관리" description="지표 정의와 사업연도별 목표 버전을 관리합니다." />
+      {years.isError && (
+        <ErrorCard
+          className="mb-6"
+          message="사업연도 정보를 불러오지 못했습니다."
+          onRetry={() => years.refetch()}
+          isRetrying={years.isFetching}
+        />
+      )}
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <DataTable data={overview.data?.indicators ?? []} columns={columns} onRowClick={(row) => setSelected(row)} />
         <div className="rounded-md border bg-card p-5">

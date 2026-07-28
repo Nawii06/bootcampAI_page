@@ -10,6 +10,7 @@ import {
 import { Layout } from "../../components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function Home() {
   const programs = useQuery({
@@ -35,6 +36,20 @@ export default function Home() {
         </div>
       </section>
       <section className="container mx-auto max-w-6xl px-4 py-12">
+        {(programs.isError || companies.isError || results.isError) && (
+          <ErrorCard
+            className="mb-8"
+            message="공개 포털 데이터를 불러오지 못했습니다."
+            onRetry={() => {
+              programs.refetch();
+              companies.refetch();
+              results.refetch();
+            }}
+            isRetrying={
+              programs.isFetching || companies.isFetching || results.isFetching
+            }
+          />
+        )}
         <div className="grid gap-4 md:grid-cols-3">
           <Card><CardContent className="p-6"><GraduationCap className="h-7 w-7 text-primary" /><p className="mt-3 text-sm text-muted-foreground">모집 프로그램</p><p className="text-3xl font-bold">{programs.data?.data.length ?? 0}</p></CardContent></Card>
           <Card><CardContent className="p-6"><Building2 className="h-7 w-7 text-primary" /><p className="mt-3 text-sm text-muted-foreground">공개 참여기업</p><p className="text-3xl font-bold">{companies.data?.data.length ?? 0}</p></CardContent></Card>

@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable, type ColumnDef } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorCard } from "@/components/ErrorCard";
 
 export default function AdminPerformanceEvidence() {
   const queryClient = useQueryClient();
@@ -69,6 +70,13 @@ export default function AdminPerformanceEvidence() {
         <Button disabled={!file || upload.isPending} onClick={() => upload.mutate()}>증빙 업로드</Button>
         {upload.isError && <span className="text-sm text-destructive">{upload.error.message}</span>}
       </div>
+      {files.isError && (
+        <ErrorCard
+          message="증빙자료 목록을 불러오지 못했습니다."
+          onRetry={() => files.refetch()}
+          isRetrying={files.isFetching}
+        />
+      )}
       <DataTable data={files.data?.data ?? []} columns={columns} />
     </PortalLayout>
   );

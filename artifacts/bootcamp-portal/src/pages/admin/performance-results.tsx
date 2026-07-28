@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorCard } from "@/components/ErrorCard";
 
 type Result = Overview["results"][number];
 
@@ -124,6 +125,14 @@ export default function AdminPerformanceResults() {
   return (
     <PortalLayout>
       <SectionHeader title="연도별 성과실적" description={`${years.data?.data[0]?.name ?? "활성 사업연도"} 실적과 산정근거 snapshot을 저장합니다.`} />
+      {years.isError && (
+        <ErrorCard
+          className="mb-6"
+          message="사업연도 정보를 불러오지 못했습니다."
+          onRetry={() => years.refetch()}
+          isRetrying={years.isFetching}
+        />
+      )}
       {canEdit && <div className="mb-6 grid gap-3 rounded-md border bg-card p-5 md:grid-cols-[1fr_180px_1fr_auto]">
         <select className="h-10 rounded-md border bg-background px-3" value={indicatorId} onChange={(event) => setIndicatorId(event.target.value)}>
           <option value="">성과지표 선택</option>

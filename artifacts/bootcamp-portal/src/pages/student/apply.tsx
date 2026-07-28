@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ErrorCard } from "@/components/ErrorCard";
 import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function StudentApply() {
@@ -124,7 +125,11 @@ export default function StudentApply() {
               <Textarea rows={6} value={reason} onChange={(event) => setReason(event.target.value)} />
             </FormField>
             {programs.isError && (
-              <p className="text-sm text-destructive">프로그램 API에 연결할 수 없습니다.</p>
+              <ErrorCard
+                message="프로그램 API에 연결할 수 없습니다."
+                onRetry={() => programs.refetch()}
+                isRetrying={programs.isFetching}
+              />
             )}
             <div className="flex justify-end">
               <Button type="submit" disabled={application.isPending || !user}>

@@ -38,8 +38,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, fireEvent } from "@testing-library/react";
+
+// Shared setup + helpers (global DOM shims run on import). See dev/TESTING.md.
+import {
+  AUTH_LOADING,
+  AUTH_ADMIN,
+  AUTH_STUDENT,
+  renderPage,
+  withLoadingCleanup,
+  withErrorCleanup,
+  withCleanup,
+} from "./page-test-utils.ts";
 
 // AuthContext is exported from the source so we can inject mock auth values.
 import { AuthContext } from "../src/contexts/AuthContext.tsx";
@@ -54,226 +64,6 @@ import StudentStatus from "../src/pages/student/status.tsx";
 import PartnerEmployment from "../src/pages/partner/employment.tsx";
 import AdminBenefits from "../src/pages/admin/benefits.tsx";
 import AdminContent from "../src/pages/admin/content.tsx";
-
-// ─── One-time global setup ────────────────────────────────────────────────────
-
-// Vite's `define` normally injects this constant at build time.
-(globalThis as Record<string, unknown>).__FAKE_DATA_SET__ = null;
-
-// wouter (and some Radix UI primitives) call addEventListener / removeEventListener
-// as bare globals, not as window.addEventListener. happy-dom attaches these to
-// its Window object but NOT to Node's globalThis, so we forward them.
-if (!("addEventListener" in globalThis)) {
-  const win = (globalThis as Record<string, unknown>).window as
-    | (Window & typeof globalThis)
-    | undefined;
-  if (win) {
-    (globalThis as Record<string, unknown>).addEventListener = win.addEventListener.bind(win);
-    (globalThis as Record<string, unknown>).removeEventListener = win.removeEventListener.bind(win);
-    (globalThis as Record<string, unknown>).dispatchEvent = win.dispatchEvent.bind(win);
-  }
-}
-
-// useFormDraft reads `sessionStorage` without a `window.` prefix; happy-dom
-// exposes it on the window object but not on Node's globalThis.
-if (!("sessionStorage" in globalThis)) {
-  const _store: Record<string, string> = {};
-  (globalThis as Record<string, unknown>).sessionStorage = {
-    getItem: (k: string) => _store[k] ?? null,
-    setItem: (k: string, v: string) => {
-      _store[k] = v;
-    },
-    removeItem: (k: string) => {
-      delete _store[k];
-    },
-    clear: () => {
-      for (const k of Object.keys(_store)) delete _store[k];
-    },
-    get length() {
-      return Object.keys(_store).length;
-    },
-    key: (i: number) => Object.keys(_store)[i] ?? null,
-  };
-}
-
-// ─── Per-test fetch stub helpers ──────────────────────────────────────────────
-
-/**
- * Tracks reject callbacks for every Promise created by the loading-state stub
- * so they can all be settled in cleanup (allowing the event loop to drain).
- */
-type RejectFn = (reason: Error) => void;
-let _pendingRejects: RejectFn[] = [];
-const _originalFetch = globalThis.fetch;
-
-/** Install a fetch stub that keeps every call pending indefinitely. */
-function installLoadingFetch(): void {
-  _pendingRejects = [];
-  globalThis.fetch = (): Promise<Response> =>
-    new Promise<Response>((_resolve, reject) => {
-      _pendingRejects.push(reject);
-    });
-}
-
-/**
- * Reject all outstanding stub fetch Promises and restore the original fetch.
- * Call this AFTER cleanup() so no React components are mounted when
- * React Query processes the resulting error state.
- */
-function removeLoadingFetch(): void {
-  for (const reject of _pendingRejects) {
-    reject(new Error("test-fetch-cleanup"));
-  }
-  _pendingRejects = [];
-  globalThis.fetch = _originalFetch;
-}
-
-/**
- * Install a fetch stub that rejects immediately, driving every useQuery
- * (with retry: 0) straight into its error state.
- */
-function installErrorFetch(): void {
-  globalThis.fetch = (): Promise<Response> =>
-    Promise.reject(new Error("test-network-failure"));
-}
-
-/** Restore the original fetch after an error-state test. */
-function removeErrorFetch(): void {
-  globalThis.fetch = _originalFetch;
-}
-
-// ─── Mock auth values ─────────────────────────────────────────────────────────
-
-const AUTH_LOADING = {
-  user: null,
-  isLoading: true,
-  logout: async () => {},
-  refreshSession: async () => null as never,
-  loginWithFakeIdentity: async (): Promise<never> => {
-    throw new Error("stub");
-  },
-  hasPermission: (_roles: string[]) => false,
-};
-
-const ADMIN_USER = {
-  id: "usr-admin",
-  accountId: "acc-admin",
-  name: "테스트 관리자",
-  role: "superAdmin" as const,
-  roles: ["SYSTEM_ADMIN"],
-  defaultRoute: "/admin/dashboard",
-};
-
-const AUTH_ADMIN = {
-  user: ADMIN_USER,
-  isLoading: false,
-  logout: async () => {},
-  refreshSession: async () => ADMIN_USER,
-  loginWithFakeIdentity: async () => ADMIN_USER,
-  hasPermission: (roles: string[]) =>
-    ADMIN_USER.roles.some((r) => roles.includes(r)),
-};
-
-const STUDENT_USER = {
-  id: "usr-student",
-  accountId: "acc-student",
-  name: "테스트 학생",
-  role: "student" as const,
-  roles: ["STUDENT"],
-};
-
-const AUTH_STUDENT = {
-  user: STUDENT_USER,
-  isLoading: false,
-  logout: async () => {},
-  refreshSession: async () => STUDENT_USER,
-  loginWithFakeIdentity: async () => STUDENT_USER,
-  hasPermission: (roles: string[]) =>
-    STUDENT_USER.roles.some((r) => roles.includes(r)),
-};
-
-// ─── Render helpers ───────────────────────────────────────────────────────────
-
-type AuthValue = typeof AUTH_ADMIN | typeof AUTH_STUDENT | typeof AUTH_LOADING;
-
-interface RenderOptions {
-  auth?: AuthValue;
-  /** Cache entries to pre-populate so matching queries skip the network. */
-  queryData?: Array<{ queryKey: unknown[]; data: unknown }>;
-}
-
-/**
- * Renders `component` inside AuthContext.Provider + QueryClientProvider.
- * Any query key absent from `queryData` will remain in isLoading=true
- * (assuming installLoadingFetch() has been called beforehand).
- */
-function renderPage(
-  component: ReturnType<typeof createElement>,
-  options: RenderOptions = {},
-): ReturnType<typeof render> {
-  const { auth = AUTH_ADMIN, queryData = [] } = options;
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: 0 } },
-  });
-  for (const { queryKey, data } of queryData) {
-    client.setQueryData(queryKey, data);
-  }
-  return render(
-    createElement(
-      AuthContext.Provider,
-      { value: auth },
-      createElement(QueryClientProvider, { client }, component),
-    ),
-  );
-}
-
-/**
- * Wraps a "loading state" test body:
- *   1. Installs the never-settling fetch stub.
- *   2. Runs `fn`.
- *   3. Unmounts via cleanup().
- *   4. Rejects all pending stub Promises so the event loop can drain.
- */
-function withLoadingCleanup(fn: () => void | Promise<void>) {
-  return async () => {
-    installLoadingFetch();
-    try {
-      await fn();
-    } finally {
-      cleanup();
-      removeLoadingFetch();
-    }
-  };
-}
-
-/**
- * Wraps an "error state" test body:
- *   1. Installs the immediately-rejecting fetch stub.
- *   2. Runs `fn` (which should await the error UI via findByText).
- *   3. Unmounts via cleanup() and restores the original fetch.
- */
-function withErrorCleanup(fn: () => void | Promise<void>) {
-  return async () => {
-    installErrorFetch();
-    try {
-      await fn();
-    } finally {
-      cleanup();
-      removeErrorFetch();
-    }
-  };
-}
-
-/** Wraps a "loaded state" test body — no fetch override needed. */
-function withCleanup(fn: () => void | Promise<void>) {
-  return async () => {
-    try {
-      await fn();
-    } finally {
-      cleanup();
-    }
-  };
-}
 
 // ─── LoadingCard component ────────────────────────────────────────────────────
 

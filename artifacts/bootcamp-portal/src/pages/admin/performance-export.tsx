@@ -8,6 +8,7 @@ import { PortalLayout } from "@/components/PortalLayout";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorCard } from "@/components/ErrorCard";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -49,6 +50,14 @@ export default function AdminPerformanceExport() {
   return (
     <PortalLayout>
       <SectionHeader title="성과자료 내보내기" description="현재 DB에 저장된 목표·실적·공개상태를 CSV로 내보냅니다." />
+      {years.isError && (
+        <ErrorCard
+          className="mb-6 max-w-xl"
+          message="사업연도 정보를 불러오지 못했습니다."
+          onRetry={() => years.refetch()}
+          isRetrying={years.isFetching}
+        />
+      )}
       <Card className="max-w-xl"><CardContent className="p-6">
         <h2 className="font-semibold">{year?.name ?? "활성 사업연도"}</h2>
         <p className="my-3 text-sm text-muted-foreground">
