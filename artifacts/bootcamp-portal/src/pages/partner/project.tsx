@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorCard } from "@/components/ErrorCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useFormDraft } from "@/hooks/useFormDraft";
@@ -117,9 +118,7 @@ export default function PartnerProject() {
       <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
         <Card><CardContent className="pt-6"><form className="space-y-4" onSubmit={submit}>
           {noOpenPeriod && (
-            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
-              현재 진행 중인 프로젝트 제안 기간이 없습니다. 제안 기간이 열리면 제출할 수 있습니다.
-            </p>
+            <NoActiveYearNotice message="현재 진행 중인 프로젝트 제안 기간이 없습니다. 제안 기간이 열리면 제출할 수 있습니다." />
           )}
           <FormField label="과제명" required><Input value={title} onChange={(event) => setTitle(event.target.value)} /></FormField>
           <FormField label="트랙"><select className="h-10 w-full rounded-md border bg-background px-3" value={track} onChange={(event) => setTrack(event.target.value)}><option value="autonomous">자율주행</option><option value="aviation">항공 모빌리티</option><option value="railway">철도 모빌리티</option><option value="infra">스마트 인프라</option></select></FormField>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 export default function PartnerEvaluation() {
   const queryClient = useQueryClient();
@@ -65,9 +66,10 @@ export default function PartnerEvaluation() {
       ) : (
         <>
       {noOpenPeriod && (
-        <p className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
-          현재 진행 중인 평가 기간이 없습니다. 평가 기간이 열리면 피드백을 저장할 수 있습니다.
-        </p>
+        <NoActiveYearNotice
+          className="mb-6"
+          message="현재 진행 중인 평가 기간이 없습니다. 평가 기간이 열리면 피드백을 저장할 수 있습니다."
+        />
       )}
       <div className="grid gap-6 lg:grid-cols-2">
         {(portfolios.data?.data ?? []).map((portfolio) => (

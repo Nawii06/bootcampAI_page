@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorCard } from "@/components/ErrorCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 
 export default function PartnerSurvey() {
   const queryClient = useQueryClient();
@@ -73,9 +74,7 @@ export default function PartnerSurvey() {
         <Card><CardContent className="pt-6">
           <form className="space-y-5" onSubmit={submit}>
             {noOpenPeriod && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
-                현재 진행 중인 수요조사 기간이 없습니다. 수요조사 기간이 열리면 제출할 수 있습니다.
-              </p>
+              <NoActiveYearNotice message="현재 진행 중인 수요조사 기간이 없습니다. 수요조사 기간이 열리면 제출할 수 있습니다." />
             )}
             <FormField label="필요 기술" required><Input value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, ROS2, 컴퓨터비전" /></FormField>
             <FormField label="산학 프로젝트 주제"><textarea className="min-h-24 w-full rounded-md border bg-background p-3 text-sm" value={topics} onChange={(event) => setTopics(event.target.value)} placeholder="한 줄에 하나의 주제" /></FormField>

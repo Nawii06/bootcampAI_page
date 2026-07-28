@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingCard } from "@/components/LoadingCard";
+import { NoActiveYearNotice } from "@/components/NoActiveYearNotice";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -465,9 +466,7 @@ export default function PartnerEmployment() {
                 </h2>
                 <form className="space-y-5" onSubmit={handleSubmit}>
                   {noActiveYear && (
-                    <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="status">
-                      현재 운영 중인 사업연도가 없습니다. 사업연도가 열리면 등록할 수 있습니다.
-                    </p>
+                    <NoActiveYearNotice message="현재 운영 중인 사업연도가 없습니다. 사업연도가 열리면 등록할 수 있습니다." />
                   )}
                   <FormField label="유형" required>
                     <Select
