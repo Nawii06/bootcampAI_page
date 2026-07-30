@@ -8,6 +8,12 @@ on:
     paths:
       - "docs/integrated-platform-spec-v0.9.0/.parts/**"
       - ".github/workflows/assemble-integrated-platform-spec.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/integrated-platform-spec-v0.9.0/.parts/**"
+      - ".github/workflows/assemble-integrated-platform-spec.yml"
 
 permissions:
   contents: write
