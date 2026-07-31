@@ -29,83 +29,22 @@ jobs:
           ref: docs/integrated-platform-spec-v0.9.0
           fetch-depth: 0
 
-      - name: Install document dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libreoffice fonts-nanum fonts-nanum-extra
-          python -m pip install --upgrade pip
-          python -m pip install python-docx
-
-      - name: Reconstruct and verify generator
+      - name: Reconstruct generator source
         run: |
           cat docs/integrated-platform-spec-v0.9.0/.parts/build_integrated_spec.py.b64.part-* \
             | tr -d '[:space:]' \
-            | base64 --decode > /tmp/build_integrated_spec.py
-          sha256sum /tmp/build_integrated_spec.py
-          test -s /tmp/build_integrated_spec.py
-          python -m py_compile /tmp/build_integrated_spec.py
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('/tmp/build_integrated_spec.py')
-          source = path.read_text(encoding='utf-8')
-          source = source.replace(
-              "OUT = Path('/mnt/data')",
-              "OUT = Path('docs/integrated-platform-spec-v0.9.0')",
-          )
-          path.write_text(source, encoding='utf-8')
-          PY
+            | base64 --decode > docs/integrated-platform-spec-v0.9.0/build_integrated_spec.py
+          sha256sum docs/integrated-platform-spec-v0.9.0/build_integrated_spec.py
+          wc -l -c docs/integrated-platform-spec-v0.9.0/build_integrated_spec.py
 
-      - name: Generate document artifacts
-        run: |
-          mkdir -p docs/integrated-platform-spec-v0.9.0
-          python /tmp/build_integrated_spec.py
-          libreoffice --headless --convert-to pdf \
-            --outdir docs/integrated-platform-spec-v0.9.0 \
-            docs/integrated-platform-spec-v0.9.0/국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.docx
-
-      - name: Add repository guide and checksums
-        run: |
-          cat > docs/integrated-platform-spec-v0.9.0/README.md <<'EOF'
-          # 부트캠프(AI) 통합운영 플랫폼 세부 명세서 v0.9.0
-
-          국립한국교통대학교 첨단산업 인재양성 부트캠프사업(AI) 통합운영 플랫폼의 본문 제1장~제25장과 부록 A~H를 통합한 검토본입니다.
-
-          ## 포함 파일
-
-          - `국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.docx`: 편집 가능한 검토용 문서
-          - `국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.pdf`: 배포·검토용 PDF
-          - `국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.md`: 검색·Diff용 전체 원문
-          - `국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0_manifest.json`: 문서 기준선과 구성 정보
-          - `checksums.sha256`: 파일 무결성 확인값
-
-          ## 기준선
-
-          - 작성기준일: 2026-07-30
-          - 저장소 기준 커밋: `2346fb2ed634c94f6d7d978dbda1ec8fe22d93ef`
-          - API 정적 집계: 116개 Endpoint
-          - DB 정적 집계: 53개 물리테이블
-          - 문서 상태: `v0.9.0 REVIEW`
-          - 현재 운영 출시판정: `NO-GO`
-
-          본 문서는 공식 승인 전 검토본입니다.
-          EOF
-          cd docs/integrated-platform-spec-v0.9.0
-          sha256sum \
-            국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.docx \
-            국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.pdf \
-            국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.md \
-            국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0_manifest.json \
-            > checksums.sha256
-          rm -rf .parts
-
-      - name: Commit generated artifacts
+      - name: Commit reconstructed generator
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/integrated-platform-spec-v0.9.0
+          git add docs/integrated-platform-spec-v0.9.0/build_integrated_spec.py
           if git diff --cached --quiet; then
-            echo "No generated changes to commit."
+            echo "No generator changes to commit."
             exit 0
           fi
-          git commit -m "docs: assemble integrated platform specification v0.9.0"
+          git commit -m "chore(docs): materialize integrated specification generator"
           git push origin HEAD:docs/integrated-platform-spec-v0.9.0
