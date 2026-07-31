@@ -1,0 +1,180 @@
+{
+  "document": "국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.docx",
+  "markdown_source": "국립한국교통대학교_부트캠프AI_통합운영플랫폼_세부명세서_v0.9.0.md",
+  "version": "0.9.0",
+  "date": "2026-07-30",
+  "repository": "Nawii06/bootcampAI_page",
+  "baseline_commit": "2346fb2ed634c94f6d7d978dbda1ec8fe22d93ef",
+  "chapters": [
+    {
+      "number": "1",
+      "title": "문서 개요",
+      "status": "COMPLETE"
+    },
+    {
+      "number": "2",
+      "title": "시스템 목적 및 적용범위",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "3",
+      "title": "사용자 및 권한 정의",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "4",
+      "title": "전체 메뉴구조",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "5",
+      "title": "공개 홈페이지 화면 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "6",
+      "title": "학생 포털 화면 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "7",
+      "title": "기업 포털 화면 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "8",
+      "title": "관리자 포털 화면 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "9",
+      "title": "교과목·교육과정 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "10",
+      "title": "비교과 프로그램 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "11",
+      "title": "학생 이수판정 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "12",
+      "title": "장학금·수혜 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "13",
+      "title": "참여기업 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "14",
+      "title": "예산관리 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "15",
+      "title": "성과·증빙 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "16",
+      "title": "CMS 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "17",
+      "title": "파일관리 기능 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "18",
+      "title": "인증·세션·권한 명세",
+      "status": "PARTIAL / BLOCKED_EXTERNAL"
+    },
+    {
+      "number": "19",
+      "title": "데이터 모델 및 관계 명세",
+      "status": "PARTIAL / REAL_ENV_REQUIRED"
+    },
+    {
+      "number": "20",
+      "title": "API 및 외부연계 명세",
+      "status": "PARTIAL / BLOCKED_EXTERNAL"
+    },
+    {
+      "number": "21",
+      "title": "개인정보·보안·감사 명세",
+      "status": "PARTIAL / BLOCKED_EXTERNAL"
+    },
+    {
+      "number": "22",
+      "title": "오류·예외처리 명세",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "23",
+      "title": "테스트 및 인수기준",
+      "status": "PARTIAL / REAL_ENV_REQUIRED"
+    },
+    {
+      "number": "24",
+      "title": "배포·백업·복구 명세",
+      "status": "PARTIAL / REAL_ENV_REQUIRED"
+    },
+    {
+      "number": "25",
+      "title": "미구현·외부정보 대기사항",
+      "status": "BLOCKED_EXTERNAL / REAL_ENV_REQUIRED"
+    }
+  ],
+  "appendices": [
+    {
+      "number": "A",
+      "title": "용어·약어집",
+      "status": "COMPLETE"
+    },
+    {
+      "number": "B",
+      "title": "역할·권한 매트릭스",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "C",
+      "title": "전체 메뉴·화면·라우트",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "D",
+      "title": "요구사항 추적표",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "E",
+      "title": "API·데이터 목록",
+      "status": "PARTIAL"
+    },
+    {
+      "number": "F",
+      "title": "테스트·인수 체크리스트",
+      "status": "PARTIAL / REAL_ENV_REQUIRED"
+    },
+    {
+      "number": "G",
+      "title": "위험·의사결정·잔여과제",
+      "status": "PARTIAL / BLOCKED_EXTERNAL"
+    },
+    {
+      "number": "H",
+      "title": "변경·승인기록",
+      "status": "PARTIAL"
+    }
+  ],
+  "api_endpoint_count": 116,
+  "physical_table_count": 53,
+  "release_decision": "NO-GO"
+}
